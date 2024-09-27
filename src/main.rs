@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use std::collections::HashMap;
 use colored::*;
 
@@ -8,9 +9,17 @@ struct Cell {
     c: usize,
 }
 
+#[derive(Clone)]
+#[derive(PartialEq)]
+enum State {
+    Unknown,
+    Queen,
+    Empty,
+}
+
 struct QueensPuzzle {
-    // Which cells have queens in them
-    board: Vec<Vec<bool>>,
+    // Cells states
+    board: Vec<Vec<State>>,
     // List of regions, and the cells that are in each region
     regions: Vec<Vec<Cell>>,
     // Dimension of board
@@ -19,7 +28,7 @@ struct QueensPuzzle {
 
 impl QueensPuzzle {
     fn new(n: usize, regions: &Vec<Vec<Cell>>) -> Self {
-        let board = vec![vec![false; n]; n];
+        let board = vec![vec![State::Unknown; n]; n];
         let regions = regions.clone();
         Self { board, regions, n }
     }
@@ -35,13 +44,13 @@ impl QueensPuzzle {
 
         for row in 0..self.n {
             if self.is_valid_move(row, col) {
-                self.board[row][col] = true;
+                self.board[row][col] = State::Queen;
 
                 if self.solve_helper(col + 1) {
                     return true;
                 }
 
-                self.board[row][col] = false;
+                self.board[row][col] = State::Unknown;
             }
         }
 
@@ -50,13 +59,13 @@ impl QueensPuzzle {
 
     fn is_valid_move(&self, row: usize, col: usize) -> bool {
         for i in 0..col {
-            if self.board[row][i] {
+            if self.board[row][i] == State::Queen {
                 return false;
             }
         }
 
         for i in 0..row {
-            if self.board[i][col] {
+            if self.board[i][col] == State::Queen {
                 return false;
             }
         }
@@ -96,10 +105,10 @@ fn generate_regions(n: usize) -> Vec<Vec<Cell>> {
     regions
 }
 
-fn read_board(input: &str) -> Result<Vec<Vec<bool>>, String> {
+fn read_board(input: &str) -> Result<Vec<Vec<State>>, String> {
     let rows: Vec<&str> = input.trim().split('\n').collect();
     let n = rows.len();
-    let mut board = vec![vec![false; n]; n];
+    let mut board = vec![vec![State::Unknown; n]; n];
 
     for (i, row) in rows.iter().enumerate() {
         if row.len() != n {
@@ -108,8 +117,8 @@ fn read_board(input: &str) -> Result<Vec<Vec<bool>>, String> {
 
         for (j, c) in row.chars().enumerate() {
             match c {
-                '0' => board[i][j] = false,
-                '1' => board[i][j] = true,
+                '0' => board[i][j] = State::Unknown,
+                '1' => board[i][j] = State::Queen,
                 _ => return Err(format!("Invalid character in row {}, column {}: {}", i + 1, j + 1, c)),
             }
         }
@@ -148,7 +157,11 @@ fn print_board_colorized(puzzle: &QueensPuzzle) {
 
     for i in 0..n {
         for j in 0..n {
-            let char = if puzzle.board[i][j] { " ♛ " } else { " . " };
+            let char = match puzzle.board[i][j] {
+                State::Queen => " ♛ ",
+                State::Empty => " . ",
+                _ => "   ",
+            };
             let cell = Cell { r: i, c: j };
             let region_index = puzzle.regions.iter().position(|region| region.contains(&cell));
 
