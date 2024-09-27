@@ -22,15 +22,18 @@ struct QueensPuzzle {
     board: Vec<Vec<State>>,
     // List of regions, and the cells that are in each region
     regions: Vec<Vec<Cell>>,
-    // Dimension of board
-    n: usize,
 }
 
 impl QueensPuzzle {
-    fn new(n: usize, regions: &Vec<Vec<Cell>>) -> Self {
+    fn new(regions: &Vec<Vec<Cell>>) -> Self {
+        let n = regions.len();
         let board = vec![vec![State::Unknown; n]; n];
         let regions = regions.clone();
-        Self { board, regions, n }
+        Self { board, regions}
+    }
+
+    fn n(&self) -> usize {
+        self.regions.len()
     }
 
     fn solve(&mut self) -> bool {
@@ -38,11 +41,11 @@ impl QueensPuzzle {
     }
 
     fn solve_helper(&mut self, col: usize) -> bool {
-        if col >= self.n {
+        if col >= self.n() {
             return true;
         }
 
-        for row in 0..self.n {
+        for row in 0..self.n() {
             if self.is_valid_move(row, col) {
                 self.board[row][col] = State::Queen;
 
@@ -86,10 +89,10 @@ impl QueensPuzzle {
 
 fn generate_puzzle(n: usize) -> QueensPuzzle {
     let regions = generate_regions(n);
-    let mut puzzle = QueensPuzzle::new(n, &regions);
+    let mut puzzle = QueensPuzzle::new(&regions);
 
     while !puzzle.solve() {
-        puzzle = QueensPuzzle::new(n, &regions);
+        puzzle = QueensPuzzle::new(&regions);
     }
 
     puzzle
@@ -149,11 +152,11 @@ fn read_regions(input: &str) -> Result<QueensPuzzle, String> {
         }
     }
 
-    Ok(QueensPuzzle::new(n, &regions))
+    Ok(QueensPuzzle::new(&regions))
 }
 
 fn print_board_colorized(puzzle: &QueensPuzzle) {
-    let n = puzzle.n;
+    let n = puzzle.n();
 
     for i in 0..n {
         for j in 0..n {
