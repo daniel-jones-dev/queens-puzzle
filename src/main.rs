@@ -29,7 +29,9 @@ impl QueensPuzzle {
         let n = regions.len();
         let board = vec![vec![State::Unknown; n]; n];
         let regions = regions.clone();
-        Self { board, regions}
+        // TODO check the regions are valid: within bounds, non-overlapping
+        //  probably do not want to enforce complete-fill though, to simplify puzzle generation
+        Self { board, regions }
     }
 
     fn n(&self) -> usize {
@@ -60,30 +62,60 @@ impl QueensPuzzle {
         false
     }
 
-    fn is_valid_move(&self, row: usize, col: usize) -> bool {
-        for i in 0..col {
-            if self.board[row][i] == State::Queen {
+    fn is_valid_move(&self, r: usize, c: usize) -> bool {
+        // If same row contains queen
+        for i in 0..c {
+            if self.board[r][i] == State::Queen {
                 return false;
             }
         }
 
-        for i in 0..row {
-            if self.board[i][col] == State::Queen {
+        // If same column contains queen
+        for i in 0..r {
+            if self.board[i][c] == State::Queen {
                 return false;
             }
         }
 
-        // for i in 0..self.n {
-        //     for j in 0..self.n {
-        //         if self.regions[i].contains(&self.board[i][j]) && self.board[i][j] {
-        //             if (i != row || j != col) && (i + j == row + col || i + col == j + row) {
-        //                 return false;
-        //             }
-        //         }
-        //     }
-        // }
+        // If diagonally-adjacent cells contain queen
+        if r > 0 {
+            if c > 0 {
+                if self.board[r - 1][c - 1] == State::Queen {
+                    return false;
+                }
+            } else if c < self.n() - 1 {
+                if self.board[r - 1][c + 1] == State::Queen {
+                    return false;
+                }
+            }
+        } else if r < self.n() - 1 {
+            if c > 0 {
+                if self.board[r + 1][c - 1] == State::Queen {
+                    return false;
+                }
+            } else if c < self.n() - 1 {
+                if self.board[r + 1][c + 1] == State::Queen {
+                    return false;
+                }
+            }
+        }
+
+        // If any cells in the region containing this cell contain queen
+        for region in &self.regions {
+            if region.contains(&Cell { r, c }) {
+                if region.iter().any(|cell| self.board[cell.r][cell.c] == State::Queen) {
+                    return false;
+                }
+            }
+        }
 
         true
+    }
+
+    fn total_in_region(&self, region: &Vec<Cell>, state: State) -> usize {
+        region.iter().fold(0, |acc, cell| {
+            if self.board[cell.r][cell.c] == state { 1 } else { 0 }
+        })
     }
 }
 
@@ -102,7 +134,7 @@ fn generate_regions(n: usize) -> Vec<Vec<Cell>> {
     let mut regions = vec![vec![]; n];
 
     for i in 0..n {
-        regions[i].push(Cell {r: i, c: i});
+        regions[i].push(Cell { r: i, c: i });
     }
 
     regions
@@ -186,8 +218,12 @@ fn colorize(cell: &str, region_index: usize) -> ColoredString {
 
 fn main() {
     let puzzle_sep_26_str = "pppppob\nppppooo\npgppwow\nggprwww\nggrrrww\ngrrrrrw\nrrryrrr";
-    let puzzle_sep_26 = read_regions(puzzle_sep_26_str).unwrap();
+    let mut puzzle_sep_26 = read_regions(puzzle_sep_26_str).unwrap();
     print_board_colorized(&puzzle_sep_26);
+    &puzzle_sep_26.solve();
+    println!();
+    print_board_colorized(&puzzle_sep_26);
+
 
     println!("Hello, world!");
 }
