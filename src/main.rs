@@ -114,7 +114,7 @@ impl QueensPuzzle {
 
     fn total_in_region(&self, region: &Vec<Cell>, state: State) -> usize {
         region.iter().fold(0, |acc, cell| {
-            if self.board[cell.r][cell.c] == state { 1 } else { 0 }
+            if self.board[cell.r][cell.c] == state { acc+1 } else { acc }
         })
     }
 }
