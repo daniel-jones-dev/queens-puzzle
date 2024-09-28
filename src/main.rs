@@ -42,6 +42,63 @@ impl QueensPuzzle {
         self.solve_helper(0)
     }
 
+    // Returns the cells occupied by queens
+    fn queens(&self) -> Vec<Cell> {
+        // TODO consider memoizing
+        let mut result = vec![];
+        for c in 0..self.n() {
+            for r in 0..self.n() {
+                if self.board[r][c] == State::Queen {
+                    result.push(Cell{r, c});
+                }
+            }
+        }
+        result
+    }
+
+    fn cells_in_same_row(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
+        (0..self.n()).filter(move |&c| c != cell.c).map(move |c| Cell{r: cell.r, c})
+    }
+
+    fn cells_in_same_col(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
+        (0..self.n()).filter(move |&r| r != cell.r).map(move |r| Cell {r, c: cell.c})
+    }
+
+    fn cells_in_same_region(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
+        // Handle case cell is not in a region -- to allow more flexible puzzles
+        let region_index = self.regions.iter().position(|region| region.contains(&cell));
+        let region = region_index.map(|index| &self.regions[index]);
+        region.into_iter().flat_map(move |region| {
+            region.iter().filter(move |&&c| c != cell).cloned()
+        })
+    }
+
+    fn cells_diagonally_adjacent(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
+        let n = self.n();
+        (0..2).flat_map(move |i| {
+            let offsets = [0, 2];
+            offsets.iter().filter_map(move |&j| {
+                if cell.r + i == 0 || cell.c + j == 0 {
+                    None
+                } else {
+                    let c = Cell { r: cell.r + i - 1, c: cell.c + j - 1 };
+                    if c.r < n && c.c < n && c != cell {
+                        Some(c)
+                    } else {
+                        None
+                    }
+                }
+            }).collect::<Vec<_>>()
+        })
+    }
+
+    fn connected_cells(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
+        self.cells_in_same_col(cell)
+            .chain(self.cells_in_same_row(cell))
+            .chain(self.cells_in_same_region(cell))
+            .chain(self.cells_diagonally_adjacent(cell))
+    }
+
     fn solve_helper(&mut self, col: usize) -> bool {
         if col >= self.n() {
             return true;
@@ -63,50 +120,8 @@ impl QueensPuzzle {
     }
 
     fn is_valid_move(&self, r: usize, c: usize) -> bool {
-        // If same row contains queen
-        for i in 0..c {
-            if self.board[r][i] == State::Queen {
-                return false;
-            }
-        }
-
-        // If same column contains queen
-        for i in 0..r {
-            if self.board[i][c] == State::Queen {
-                return false;
-            }
-        }
-
-        // If diagonally-adjacent cells contain queen
-        if r > 0 {
-            if c > 0 {
-                if self.board[r - 1][c - 1] == State::Queen {
-                    return false;
-                }
-            } else if c < self.n() - 1 {
-                if self.board[r - 1][c + 1] == State::Queen {
-                    return false;
-                }
-            }
-        } else if r < self.n() - 1 {
-            if c > 0 {
-                if self.board[r + 1][c - 1] == State::Queen {
-                    return false;
-                }
-            } else if c < self.n() - 1 {
-                if self.board[r + 1][c + 1] == State::Queen {
-                    return false;
-                }
-            }
-        }
-
-        // If any cells in the region containing this cell contain queen
-        for region in &self.regions {
-            if region.contains(&Cell { r, c }) {
-                if region.iter().any(|cell| self.board[cell.r][cell.c] == State::Queen) {
-                    return false;
-                }
-            }
+        if self.connected_cells(Cell{r, c}).any(|cell: Cell| {self.board[cell.r][cell.c] == State::Queen}) {
+            return false;
         }
 
         true
