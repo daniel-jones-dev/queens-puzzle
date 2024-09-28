@@ -152,6 +152,104 @@ impl QueensPuzzle {
     }
 }
 
+// Represents a human-understandable solve hint like "you can mark cell X as a queen because cells Y
+// and Z are empty"
+struct RuleResult {
+    // The cell(s) to be changed and the state to change them to
+    changes: Vec<(Cell, State)>,
+    // Other cells involved in the rule
+    involved: Vec<Cell>,
+}
+
+impl RuleResult {
+    fn apply(&self, puzzle: &mut QueensPuzzle) {
+        for (cell, state) in &self.changes {
+            puzzle.board[cell.r][cell.c] = state.clone();
+        }
+    }
+}
+
+trait Rule {
+    fn description(&self) -> String;
+
+    fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult>;
+}
+
+struct MarkEmpty;
+impl Rule for MarkEmpty {
+    fn description(&self) -> String {
+        "A queen in one cell indicates that all connected cells are empty, i.e. all cells \
+        in the same row, column, region, and diagonally adjacent.".to_string()
+    }
+    fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
+        let queens = puzzle.queens();
+        for queen_cell in queens {
+            let connected_cells_unknown = puzzle.connected_cells(queen_cell)
+                .filter(|cell: &Cell| {puzzle.board[cell.r][cell.c] == State::Unknown})
+                .map(|cell: Cell| {(cell, State::Empty)})
+                .collect::<Vec<_>>();
+            if !connected_cells_unknown.is_empty() {
+                return Some(RuleResult{
+                    changes: connected_cells_unknown,
+                    involved: vec![queen_cell]
+                });
+            }
+        }
+
+        None
+    }
+}
+
+struct MarkQueen;
+impl MarkQueen {
+    fn check_block_has_single_unknown_and_no_queen(&self, puzzle: &QueensPuzzle, block: &Vec<Cell>) -> Option<Cell> {
+        let mut maybe_found_unknown_cell = None;
+        for cell in block {
+            match &puzzle.board[cell.r][cell.c] {
+                State::Queen => {
+                    return None;
+                },
+                State::Unknown => {
+                    match maybe_found_unknown_cell {
+                        None => {
+                            maybe_found_unknown_cell = Some(*cell);
+                        },
+                        Some(_) => {
+                            return None;
+                        }
+                    }
+                },
+                _ => {}
+            }
+        }
+        maybe_found_unknown_cell
+    }
+}
+impl Rule for MarkQueen {
+    fn description(&self) -> String {
+        "If all cells except one in a row, column, or region are known be empty, the remaining \
+        unknown cell must be a queen.".to_string()
+    }
+
+    fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
+        let blocks = puzzle.block_iter();
+        for block in blocks {
+            match self.check_block_has_single_unknown_and_no_queen(puzzle, &block) {
+                Some(cell) => {
+                    return Some(RuleResult {
+                        changes: vec![(cell, State::Queen)],
+                        involved: block.iter().filter(|c| { cell != **c }).map(|c| {*c}).collect()
+                    })
+                }
+                None => {}
+            }
+        }
+
+        None
+    }
+}
+
+
 fn generate_puzzle(n: usize) -> QueensPuzzle {
     let regions = generate_regions(n);
     let mut puzzle = QueensPuzzle::new(&regions);
@@ -249,12 +347,33 @@ fn colorize(cell: &str, region_index: usize) -> ColoredString {
 }
 
 
+fn check_rule(puzzle: &mut QueensPuzzle, rule: &dyn Rule) {
+    match rule.check(&puzzle) {
+        Some(result) => {
+            result.apply(puzzle);
+            print_board_colorized(&puzzle);
+            println!();
+        }
+        _ => {}
+    }
+}
+
 fn main() {
     let puzzle_sep_26_str = "pppppob\nppppooo\npgppwow\nggprwww\nggrrrww\ngrrrrrw\nrrryrrr";
     let mut puzzle_sep_26 = read_regions(puzzle_sep_26_str).unwrap();
     print_board_colorized(&puzzle_sep_26);
-    &puzzle_sep_26.solve();
     println!();
+    let rule_mark_queen = MarkQueen {};
+    let rule_mark_empty = MarkEmpty {};
+    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
+    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
+
+    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
+    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
+
+    print_board_colorized(&puzzle_sep_26);
+    println!();
+    &puzzle_sep_26.solve();
     print_board_colorized(&puzzle_sep_26);
 
 
