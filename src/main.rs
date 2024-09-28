@@ -2,7 +2,7 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use colored::*;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 #[derive(PartialEq)]
 struct Cell {
     r: usize,
@@ -56,6 +56,29 @@ impl QueensPuzzle {
         result
     }
 
+    // Returns an iterator over all rows
+    fn row_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
+        (0..self.n()).map(move |r| {
+            (0..self.n()).map(move |c| Cell { r, c }).collect()
+        })
+    }
+
+    // Returns an iterator over all columns
+    fn col_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
+        (0..self.n()).map(move |c| {
+            (0..self.n()).map(move |r| Cell { r, c}).collect()
+        })
+    }
+
+    // Returns an iterator over all regions
+    fn region_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
+        self.regions.iter().map(move |r| {r.clone()})
+    }
+
+    fn block_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
+        self.row_iter().chain(self.col_iter()).chain(self.region_iter())
+    }
+
     fn cells_in_same_row(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         (0..self.n()).filter(move |&c| c != cell.c).map(move |c| Cell{r: cell.r, c})
     }
@@ -73,6 +96,7 @@ impl QueensPuzzle {
         })
     }
 
+    // Returns an iterator over cells diagonally adjacent to a cell
     fn cells_diagonally_adjacent(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         let n = self.n();
         (0..2).flat_map(move |i| {
