@@ -98,22 +98,16 @@ impl QueensPuzzle {
 
     // Returns an iterator over cells diagonally adjacent to a cell
     fn cells_diagonally_adjacent(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
-        let n = self.n();
-        (0..2).flat_map(move |i| {
-            let offsets = [0, 2];
-            offsets.iter().filter_map(move |&j| {
-                if cell.r + i == 0 || cell.c + j == 0 {
-                    None
-                } else {
-                    let c = Cell { r: cell.r + i - 1, c: cell.c + j - 1 };
-                    if c.r < n && c.c < n && c != cell {
-                        Some(c)
-                    } else {
-                        None
-                    }
-                }
-            }).collect::<Vec<_>>()
-        })
+        let offsets = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+        offsets.iter().filter_map(move |&(dr, dc)| {
+            let r = cell.r as i32 + dr;
+            let c = cell.c as i32 + dc;
+            if r >= 0 && r < self.n() as i32 && c >= 0 && c < self.n() as i32 {
+                Some(Cell { r: r as usize, c: c as usize })
+            } else {
+                None
+            }
+        }).collect::<Vec<_>>().into_iter()
     }
 
     fn connected_cells(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
