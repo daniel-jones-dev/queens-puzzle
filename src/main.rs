@@ -245,8 +245,7 @@ impl Rule for MarkQueen {
     }
 
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
-        let blocks = puzzle.block_iter();
-        for block in blocks {
+        for block in puzzle.block_iter() {
             match self.check_block_has_single_unknown_and_no_queen(puzzle, &block) {
                 Some(cell) => {
                     return Some(RuleResult {
