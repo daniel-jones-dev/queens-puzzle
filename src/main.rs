@@ -22,6 +22,12 @@ impl fmt::Debug for Cell {
     }
 }
 
+impl PartialEq<Cell> for &Cell {
+    fn eq(&self, other: &Cell) -> bool {
+        self.r == other.r && self.c == other.c
+    }
+}
+
 #[derive(Clone)]
 #[derive(PartialEq)]
 enum State {
@@ -376,30 +382,49 @@ fn read_regions(input: &str) -> Result<QueensPuzzle, String> {
     Ok(QueensPuzzle::new(&regions))
 }
 
-fn print_board_colorized(puzzle: &QueensPuzzle) {
+
+fn print_board_colorized(puzzle: &QueensPuzzle){
+    print_board_result_colorized(puzzle, None);
+}
+
+fn print_board_result_colorized(puzzle: &QueensPuzzle, rule_result: Option<RuleResult>) {
     let n = puzzle.n();
 
     for i in 0..n {
         for j in 0..n {
-            let char = match puzzle.board[i][j] {
+            let mut cell_text = match puzzle.board[i][j] {
                 State::Queen => " ♛ ",
                 State::Empty => " . ",
                 _ => "   ",
-            };
+            }.white();
             let cell = Cell { r: i, c: j };
             let region_index = puzzle.regions.iter().position(|region| region.contains(&cell));
 
-            match region_index {
-                Some(index) => print!("{} ", colorize(char, index)),
-                None => print!("{}", char),
-            }
+            cell_text = match rule_result {
+                Some(ref rule_result) => {
+                    if rule_result.changes.iter().any(|(c,_)| c==cell) {
+                        cell_text.bright_green()
+                    } else if rule_result.involved.contains(&cell) {
+                        cell_text.underline()
+                    } else {
+                        cell_text
+                    }
+                },
+                None => cell_text
+            };
+
+            cell_text = match region_index {
+                Some(index) => colorize_region(cell_text, index),
+                None => cell_text,
+            };
+            print!("{} ", cell_text);
         }
 
         println!();
     }
 }
 
-fn colorize(cell: &str, region_index: usize) -> ColoredString {
+fn colorize_region(cell: ColoredString, region_index: usize) -> ColoredString {
     let colors = vec![Color::Red, Color::Green, Color::Yellow, Color::Blue, Color::Magenta, Color::Cyan, Color::White];
     cell.on_color(colors[region_index % colors.len()])
 }
