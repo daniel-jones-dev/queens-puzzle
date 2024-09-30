@@ -1,5 +1,6 @@
 use std::cmp::PartialEq;
 use std::collections::HashMap;
+use std::fmt;
 use colored::*;
 
 #[derive(Clone, Copy)]
@@ -7,6 +8,18 @@ use colored::*;
 struct Cell {
     r: usize,
     c: usize,
+}
+
+impl fmt::Display for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.r, self.c)
+    }
+}
+
+impl fmt::Debug for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Cell({}, {})", self.r, self.c)
+    }
 }
 
 #[derive(Clone)]
