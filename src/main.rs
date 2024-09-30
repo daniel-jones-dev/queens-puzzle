@@ -75,6 +75,10 @@ impl QueensPuzzle {
         result
     }
 
+    fn is_solved(&self) -> bool {
+        self.queens().len() == self.n()
+    }
+
     // Returns an iterator over all rows
     fn row_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
         (0..self.n()).map(move |r| {
@@ -441,34 +445,49 @@ fn check_rule(puzzle: &mut QueensPuzzle, rule: &dyn Rule) {
     }
 }
 
+fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
+    let rules: Vec<Box<dyn Rule>> = vec![
+        Box::new(MarkEmpty{}),
+        Box::new(MarkQueen{}),
+        Box::new(CombinedPossibles{})];
+
+    let mut used_rules = 1;
+
+    loop {
+        for rule_index in 0..used_rules+1 {
+            if rule_index == used_rules {
+                if rule_index >= rules.len() {
+                    return None;
+                }
+                used_rules += 1;
+            }
+            let rule = &rules[rule_index];
+            match rule.check(&puzzle) {
+                Some(result) => {
+                    result.apply(puzzle);
+                    print_board_result_colorized(&puzzle, Some(result));
+                    println!();
+                    if puzzle.is_solved() {
+                        return Some(used_rules);
+                    }
+                    break;
+                }
+                None => {}
+            }
+        }
+    }
+}
+
 fn main() {
     let puzzle_sep_26_str = "pppppob\nppppooo\npgppwow\nggprwww\nggrrrww\ngrrrrrw\nrrryrrr";
     let mut puzzle_sep_26 = read_regions(puzzle_sep_26_str).unwrap();
     print_board_colorized(&puzzle_sep_26);
     println!();
-    let rule_mark_queen = MarkQueen {};
-    let rule_mark_empty = MarkEmpty {};
-    let rule_combined_possibles = CombinedPossibles {};
-    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
-    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
-
-    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
-    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
-
-    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
-    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
-    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
-    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
-    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
-    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
-    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
-    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
-    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
-    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
+    solve_logically(&mut puzzle_sep_26);
 
     print_board_colorized(&puzzle_sep_26);
     println!();
-    &puzzle_sep_26.solve();
+    let _ = &puzzle_sep_26.solve();
     print_board_colorized(&puzzle_sep_26);
 
 
