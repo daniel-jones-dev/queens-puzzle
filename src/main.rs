@@ -1,10 +1,10 @@
 use std::cmp::PartialEq;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use colored::*;
 
 #[derive(Clone, Copy)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Hash)]
 struct Cell {
     r: usize,
     c: usize,
@@ -261,6 +261,52 @@ impl Rule for MarkQueen {
     }
 }
 
+struct CombinedPossibles;
+impl Rule for CombinedPossibles {
+    fn description(&self) -> String {
+        "The involved cells are in the same block and one must contain a queen. \
+        The given cell(s) must therefore be empty".to_string()
+    }
+
+    fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
+        'block_loop: for block in puzzle.block_iter() {
+            let unknown_cells = block.iter()
+                .filter(|cell: &&Cell| {puzzle.board[cell.r][cell.c] == State::Unknown}).map(|cell| {*cell}).collect::<Vec<_>>();
+            if unknown_cells.len() >= 2 {
+                // Cells connected to all involved cells, that have unknown state
+                //  Note: option to skip hashset-intersection in first round
+                let mut maybe_coinciding_unknown_cells: Option<HashSet<Cell>> = None;
+                for unknown_cell in &unknown_cells {
+                    // Cells connected to this one that have unknown state
+                    let connected_unknown_cells = puzzle.connected_cells(*unknown_cell)
+                        .filter(|cell: &Cell| {
+                            puzzle.board[cell.r][cell.c] == State::Unknown})
+                        .collect::<HashSet<Cell>>();
+                    if connected_unknown_cells.is_empty() {
+                        continue 'block_loop;
+                    }
+                    match maybe_coinciding_unknown_cells {
+                        None => {
+                            maybe_coinciding_unknown_cells = Some(connected_unknown_cells)
+                        },
+                        Some(ref mut coinciding) => {
+                            coinciding.retain(|cell| connected_unknown_cells.contains(&cell));
+                            if coinciding.is_empty() {
+                                continue 'block_loop;
+                            }
+                        }
+                    };
+                }
+                return Some(RuleResult{
+                    changes: maybe_coinciding_unknown_cells.unwrap().iter().map(|cell| (*cell, State::Empty)).collect(),
+                    involved: unknown_cells
+                })
+            }
+        }
+        None
+    }
+}
+
 
 fn generate_puzzle(n: usize) -> QueensPuzzle {
     let regions = generate_regions(n);
@@ -377,9 +423,21 @@ fn main() {
     println!();
     let rule_mark_queen = MarkQueen {};
     let rule_mark_empty = MarkEmpty {};
+    let rule_combined_possibles = CombinedPossibles {};
     check_rule(&mut puzzle_sep_26, &rule_mark_queen);
     check_rule(&mut puzzle_sep_26, &rule_mark_empty);
 
+    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
+    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
+
+    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
+    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
+    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
+    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
+    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
+    check_rule(&mut puzzle_sep_26, &rule_mark_queen);
+    check_rule(&mut puzzle_sep_26, &rule_mark_empty);
+    check_rule(&mut puzzle_sep_26, &rule_combined_possibles);
     check_rule(&mut puzzle_sep_26, &rule_mark_queen);
     check_rule(&mut puzzle_sep_26, &rule_mark_empty);
 
