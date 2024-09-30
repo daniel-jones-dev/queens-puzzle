@@ -1,6 +1,6 @@
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
-use std::fmt;
+use std::{fmt, fs};
 use colored::*;
 
 #[derive(Clone, Copy)]
@@ -479,8 +479,8 @@ fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
 }
 
 fn main() {
-    let puzzle_sep_26_str = "pppppob\nppppooo\npgppwow\nggprwww\nggrrrww\ngrrrrrw\nrrryrrr";
-    let mut puzzle_sep_26 = read_regions(puzzle_sep_26_str).unwrap();
+    let puzzle_str = fs::read_to_string("puzzles/linkedin_20240921.txt").unwrap();
+    let mut puzzle_sep_26 = read_regions(&puzzle_str).unwrap();
     print_board_colorized(&puzzle_sep_26);
     println!();
     solve_logically(&mut puzzle_sep_26);
