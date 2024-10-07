@@ -271,8 +271,8 @@ impl Rule for MarkQueen {
     }
 }
 
-struct CombinedPossibles;
-impl Rule for CombinedPossibles {
+struct NakedSet; // Naming comes from sudokuwiki.org "Naked Pair"
+impl Rule for NakedSet {
     fn description(&self) -> String {
         "The involved cells are in the same block and one must contain a queen. \
         The given cell(s) must therefore be empty".to_string()
@@ -449,7 +449,7 @@ fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
     let rules: Vec<Box<dyn Rule>> = vec![
         Box::new(MarkEmpty{}),
         Box::new(MarkQueen{}),
-        Box::new(CombinedPossibles{})];
+        Box::new(NakedSet {})];
 
     let mut used_rules = 1;
 
