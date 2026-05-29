@@ -5,6 +5,8 @@ use crate::grid::Cell;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
 use std::{fmt, fs};
+use std::path::PathBuf;
+use clap::Parser;
 use colored::*;
 
 
@@ -461,16 +463,34 @@ fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
     }
 }
 
-fn main() {
-    let puzzle_str = fs::read_to_string("puzzles/linkedin_20240921.txt").unwrap();
-    let mut puzzle_sep_26 = read_regions(&puzzle_str).unwrap();
-    print_board_colorized(&puzzle_sep_26);
-    println!();
-    solve_logically(&mut puzzle_sep_26);
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Puzzle file to solve
+    puzzle: PathBuf,
+}
 
-    print_board_colorized(&puzzle_sep_26);
-    println!();
-    let _ = &puzzle_sep_26.solve();
-    print_board_colorized(&puzzle_sep_26);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
 
+    let puzzle_str = fs::read_to_string(&args.puzzle).map_err(|e| {
+        eprintln!("Failed to read puzzle file {}: {}", args.puzzle.display(), e);
+        std::process::exit(1);
+    }).unwrap();
+
+    let mut puzzle = read_regions(&puzzle_str).map_err(|e| {
+        eprintln!("Failed to parse puzzle: {}", e);
+        std::process::exit(1);
+    }).unwrap();
+
+    print_board_colorized(&puzzle);
+    println!();
+    solve_logically(&mut puzzle);
+
+    print_board_colorized(&puzzle);
+    println!();
+    let _ = &puzzle.solve();
+    print_board_colorized(&puzzle);
+
+    Ok(())
 }
