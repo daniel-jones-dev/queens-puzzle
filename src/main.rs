@@ -1,36 +1,16 @@
+mod grid;
+
+use crate::grid::Grid;
+use crate::grid::Cell;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
 use std::{fmt, fs};
 use colored::*;
 
-#[derive(Clone, Copy)]
-#[derive(PartialEq, Eq, Hash)]
-struct Cell {
-    r: usize,
-    c: usize,
-}
 
-impl fmt::Display for Cell {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}, {})", self.r, self.c)
-    }
-}
-
-impl fmt::Debug for Cell {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cell({}, {})", self.r, self.c)
-    }
-}
-
-impl PartialEq<Cell> for &Cell {
-    fn eq(&self, other: &Cell) -> bool {
-        self.r == other.r && self.c == other.c
-    }
-}
-
-#[derive(Clone)]
-#[derive(PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 enum State {
+    #[default]
     Unknown,
     Queen,
     Empty,
@@ -38,7 +18,8 @@ enum State {
 
 struct QueensPuzzle {
     // Cells states
-    board: Vec<Vec<State>>,
+    // board: Vec<Vec<State>>,
+    board: Grid<State>,
     // List of regions, and the cells that are in each region
     regions: Vec<Vec<Cell>>,
 }
@@ -46,7 +27,7 @@ struct QueensPuzzle {
 impl QueensPuzzle {
     fn new(regions: &Vec<Vec<Cell>>) -> Self {
         let n = regions.len();
-        let board = vec![vec![State::Unknown; n]; n];
+        let board = Grid::new(n, n);
         let regions = regions.clone();
         // TODO check the regions are valid: within bounds, non-overlapping
         //  probably do not want to enforce complete-fill though, to simplify puzzle generation
@@ -67,8 +48,9 @@ impl QueensPuzzle {
         let mut result = vec![];
         for c in 0..self.n() {
             for r in 0..self.n() {
-                if self.board[r][c] == State::Queen {
-                    result.push(Cell{r, c});
+                let c = Cell{ row: r, col: c };
+                if self.board[c] == State::Queen {
+                    result.push(c);
                 }
             }
         }
@@ -82,14 +64,14 @@ impl QueensPuzzle {
     // Returns an iterator over all rows
     fn row_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
         (0..self.n()).map(move |r| {
-            (0..self.n()).map(move |c| Cell { r, c }).collect()
+            (0..self.n()).map(move |c| Cell { row: r, col: c }).collect()
         })
     }
 
     // Returns an iterator over all columns
     fn col_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
         (0..self.n()).map(move |c| {
-            (0..self.n()).map(move |r| Cell { r, c}).collect()
+            (0..self.n()).map(move |r| Cell { row: r, col: c }).collect()
         })
     }
 
@@ -103,11 +85,11 @@ impl QueensPuzzle {
     }
 
     fn cells_in_same_row(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
-        (0..self.n()).filter(move |&c| c != cell.c).map(move |c| Cell{r: cell.r, c})
+        (0..self.n()).filter(move |&c| c != cell.col).map(move |c| Cell{ row: cell.row, col: c })
     }
 
     fn cells_in_same_col(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
-        (0..self.n()).filter(move |&r| r != cell.r).map(move |r| Cell {r, c: cell.c})
+        (0..self.n()).filter(move |&r| r != cell.row).map(move |r| Cell { row: r, col: cell.col })
     }
 
     fn cells_in_same_region(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
@@ -123,10 +105,10 @@ impl QueensPuzzle {
     fn cells_diagonally_adjacent(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         let offsets = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
         offsets.iter().filter_map(move |&(dr, dc)| {
-            let r = cell.r as i32 + dr;
-            let c = cell.c as i32 + dc;
+            let r = cell.row as i32 + dr;
+            let c = cell.col as i32 + dc;
             if r >= 0 && r < self.n() as i32 && c >= 0 && c < self.n() as i32 {
-                Some(Cell { r: r as usize, c: c as usize })
+                Some(Cell { row: r as usize, col: c as usize })
             } else {
                 None
             }
@@ -146,22 +128,23 @@ impl QueensPuzzle {
         }
 
         for row in 0..self.n() {
-            if self.is_valid_move(row, col) {
-                self.board[row][col] = State::Queen;
+            let cell = Cell{row, col};
+            if self.is_valid_move(cell) {
+                self.board[cell] = State::Queen;
 
                 if self.solve_helper(col + 1) {
                     return true;
                 }
 
-                self.board[row][col] = State::Unknown;
+                self.board[cell] = State::Unknown;
             }
         }
 
         false
     }
 
-    fn is_valid_move(&self, r: usize, c: usize) -> bool {
-        if self.connected_cells(Cell{r, c}).any(|cell: Cell| {self.board[cell.r][cell.c] == State::Queen}) {
+    fn is_valid_move(&self, cell: Cell) -> bool {
+        if self.connected_cells(cell).any(|cell: Cell| {self.board[cell] == State::Queen}) {
             return false;
         }
 
@@ -170,7 +153,7 @@ impl QueensPuzzle {
 
     fn total_in_region(&self, region: &Vec<Cell>, state: State) -> usize {
         region.iter().fold(0, |acc, cell| {
-            if self.board[cell.r][cell.c] == state { acc+1 } else { acc }
+            if self.board[cell] == state { acc+1 } else { acc }
         })
     }
 }
@@ -187,7 +170,7 @@ struct RuleResult {
 impl RuleResult {
     fn apply(&self, puzzle: &mut QueensPuzzle) {
         for (cell, state) in &self.changes {
-            puzzle.board[cell.r][cell.c] = state.clone();
+            puzzle.board[cell] = state.clone();
         }
     }
 }
@@ -208,7 +191,7 @@ impl Rule for MarkEmpty {
         let queens = puzzle.queens();
         for queen_cell in queens {
             let connected_cells_unknown = puzzle.connected_cells(queen_cell)
-                .filter(|cell: &Cell| {puzzle.board[cell.r][cell.c] == State::Unknown})
+                .filter(|cell: &Cell| {puzzle.board[cell] == State::Unknown})
                 .map(|cell: Cell| {(cell, State::Empty)})
                 .collect::<Vec<_>>();
             if !connected_cells_unknown.is_empty() {
@@ -228,7 +211,7 @@ impl MarkQueen {
     fn check_block_has_single_unknown_and_no_queen(&self, puzzle: &QueensPuzzle, block: &Vec<Cell>) -> Option<Cell> {
         let mut maybe_found_unknown_cell = None;
         for cell in block {
-            match &puzzle.board[cell.r][cell.c] {
+            match &puzzle.board[cell] {
                 State::Queen => {
                     return None;
                 },
@@ -281,7 +264,7 @@ impl Rule for NakedSet {
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
         'block_loop: for block in puzzle.block_iter() {
             let unknown_cells = block.iter()
-                .filter(|cell: &&Cell| {puzzle.board[cell.r][cell.c] == State::Unknown}).map(|cell| {*cell}).collect::<Vec<_>>();
+                .filter(|cell: &&Cell| {puzzle.board[*cell] == State::Unknown}).map(|cell| {*cell}).collect::<Vec<_>>();
             if unknown_cells.len() >= 2 {
                 // Cells connected to all involved cells, that have unknown state
                 //  Note: option to skip hashset-intersection in first round
@@ -290,7 +273,7 @@ impl Rule for NakedSet {
                     // Cells connected to this one that have unknown state
                     let connected_unknown_cells = puzzle.connected_cells(*unknown_cell)
                         .filter(|cell: &Cell| {
-                            puzzle.board[cell.r][cell.c] == State::Unknown})
+                            puzzle.board[cell] == State::Unknown})
                         .collect::<HashSet<Cell>>();
                     if connected_unknown_cells.is_empty() {
                         continue 'block_loop;
@@ -333,7 +316,7 @@ fn generate_regions(n: usize) -> Vec<Vec<Cell>> {
     let mut regions = vec![vec![]; n];
 
     for i in 0..n {
-        regions[i].push(Cell { r: i, c: i });
+        regions[i].push(Cell { row: i, col: i });
     }
 
     regions
@@ -376,7 +359,7 @@ fn read_regions(input: &str) -> Result<QueensPuzzle, String> {
             if ch.is_ascii_alphabetic() {
                 let region_count = region_map.len();
                 let region_index = *region_map.entry(ch).or_insert(region_count);
-                regions[region_index].push(Cell { r, c });
+                regions[region_index].push(Cell { row: r, col: c });
             } else if ch != ' ' {
                 return Err(format!("Invalid character in row {}, column {}: {}", r + 1, c + 1, ch));
             }
@@ -394,14 +377,14 @@ fn print_board_colorized(puzzle: &QueensPuzzle){
 fn print_board_result_colorized(puzzle: &QueensPuzzle, rule_result: Option<RuleResult>) {
     let n = puzzle.n();
 
-    for i in 0..n {
-        for j in 0..n {
-            let mut cell_text = match puzzle.board[i][j] {
+    for row in 0..n {
+        for col in 0..n {
+            let cell = Cell { row, col };
+            let mut cell_text = match puzzle.board[cell] {
                 State::Queen => " ♛ ",
                 State::Empty => " . ",
                 _ => "   ",
             }.white();
-            let cell = Cell { r: i, c: j };
             let region_index = puzzle.regions.iter().position(|region| region.contains(&cell));
 
             cell_text = match rule_result {
@@ -490,6 +473,4 @@ fn main() {
     let _ = &puzzle_sep_26.solve();
     print_board_colorized(&puzzle_sep_26);
 
-
-    println!("Hello, world!");
 }
