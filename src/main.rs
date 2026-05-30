@@ -1,3 +1,4 @@
+mod archived_queens;
 mod grid;
 
 use crate::grid::Grid;
@@ -467,21 +468,43 @@ fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
 #[command(version, about, long_about = None)]
 struct Args {
     /// Puzzle file to solve
-    puzzle: PathBuf,
+    #[arg(short, long)]
+    puzzle: Option<PathBuf>,
+
+    #[arg(short, long)]
+    archived_queens_json: Option<PathBuf>,
+
+    /// Turn debugging information on
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    debug: u8,
+}
+
+fn read_puzzle_text(path: PathBuf) -> QueensPuzzle {
+    let puzzle_str = fs::read_to_string(&path).map_err(|e| {
+        eprintln!("Failed to read puzzle file {}: {}", path.display(), e);
+        std::process::exit(1);
+    }).unwrap();
+
+    let puzzle = read_regions(&puzzle_str).map_err(|e| {
+        eprintln!("Failed to parse puzzle: {}", e);
+        std::process::exit(1);
+    }).unwrap();
+
+    puzzle
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let puzzle_str = fs::read_to_string(&args.puzzle).map_err(|e| {
-        eprintln!("Failed to read puzzle file {}: {}", args.puzzle.display(), e);
-        std::process::exit(1);
-    }).unwrap();
+    let mut puzzle = match args.puzzle {
+        Some(puzzle_path) => read_puzzle_text(puzzle_path),
+        None => match args.archived_queens_json {
+            Some(path) => archived_queens::read_first(path)?,
+            None => panic!("invalid options"),
+        }
+    };
 
-    let mut puzzle = read_regions(&puzzle_str).map_err(|e| {
-        eprintln!("Failed to parse puzzle: {}", e);
-        std::process::exit(1);
-    }).unwrap();
+
 
     print_board_colorized(&puzzle);
     println!();
