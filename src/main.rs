@@ -168,6 +168,8 @@ struct RuleResult {
     changes: Vec<(Cell, State)>,
     // Other cells involved in the rule
     involved: Vec<Cell>,
+    // Explanation
+    description: String,
 }
 
 impl RuleResult {
@@ -200,7 +202,8 @@ impl Rule for MarkEmpty {
             if !connected_cells_unknown.is_empty() {
                 return Some(RuleResult{
                     changes: connected_cells_unknown,
-                    involved: vec![queen_cell]
+                    involved: vec![queen_cell],
+                    description: self.description()
                 });
             }
         }
@@ -246,7 +249,8 @@ impl Rule for MarkQueen {
                 Some(cell) => {
                     return Some(RuleResult {
                         changes: vec![(cell, State::Queen)],
-                        involved: block.iter().filter(|c| { cell != **c }).map(|c| {*c}).collect()
+                        involved: block.iter().filter(|c| { cell != **c }).map(|c| {*c}).collect(),
+                        description: self.description()
                     })
                 }
                 None => {}
@@ -295,7 +299,8 @@ impl Rule for NakedSet {
                 }
                 return Some(RuleResult{
                     changes: maybe_coinciding_unknown_cells.unwrap().iter().map(|cell| (*cell, State::Empty)).collect(),
-                    involved: unknown_cells
+                    involved: unknown_cells,
+                    description: self.description()
                 })
             }
         }
