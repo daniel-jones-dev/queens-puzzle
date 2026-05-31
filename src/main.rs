@@ -5,11 +5,10 @@ use crate::grid::Grid;
 use crate::grid::Cell;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
-use std::{fmt, fs};
+use std::fs;
 use std::path::PathBuf;
 use clap::Parser;
 use colored::*;
-
 
 #[derive(Clone, Default, PartialEq)]
 enum State {
@@ -20,18 +19,16 @@ enum State {
 }
 
 struct QueensPuzzle {
-    // Cells states
-    // board: Vec<Vec<State>>,
+    /// Cells states
     board: Grid<State>,
-    // List of regions, and the cells that are in each region
+    /// List of regions with each containing the cells that are in the region
     regions: Vec<Vec<Cell>>,
 }
 
 impl QueensPuzzle {
-    fn new(regions: &Vec<Vec<Cell>>) -> Self {
+    fn new(regions: Vec<Vec<Cell>>) -> Self {
         let n = regions.len();
         let board = Grid::new(n, n);
-        let regions = regions.clone();
         // TODO check the regions are valid: within bounds, non-overlapping
         //  probably do not want to enforce complete-fill though, to simplify puzzle generation
         Self { board, regions }
@@ -196,12 +193,11 @@ impl Rule for MarkEmpty {
         let queens = puzzle.queens();
         for queen_cell in queens {
             let connected_cells_unknown = puzzle.connected_cells(queen_cell)
-                .filter(|cell: &Cell| {puzzle.board[cell] == State::Unknown})
-                .map(|cell: Cell| {(cell, State::Empty)})
-                .collect::<Vec<_>>();
+                .filter(|cell: &Cell| {puzzle.board[cell] == State::Unknown}).collect::<Vec<_>>();
             if !connected_cells_unknown.is_empty() {
                 return Some(RuleResult{
-                    changes: connected_cells_unknown,
+                    changes: connected_cells_unknown.into_iter().map(|cell: Cell| {(cell, State::Empty)})
+                        .collect::<Vec<_>>(),
                     involved: vec![queen_cell],
                     description: self.description()
                 });
@@ -311,10 +307,10 @@ impl Rule for NakedSet {
 
 fn generate_puzzle(n: usize) -> QueensPuzzle {
     let regions = generate_regions(n);
-    let mut puzzle = QueensPuzzle::new(&regions);
+    let mut puzzle = QueensPuzzle::new(regions.clone());
 
     while !puzzle.solve() {
-        puzzle = QueensPuzzle::new(&regions);
+        puzzle = QueensPuzzle::new(regions.clone());
     }
 
     puzzle
@@ -374,15 +370,15 @@ fn read_regions(input: &str) -> Result<QueensPuzzle, String> {
         }
     }
 
-    Ok(QueensPuzzle::new(&regions))
+    Ok(QueensPuzzle::new(regions))
 }
 
 
 fn print_board_colorized(puzzle: &QueensPuzzle){
-    print_board_result_colorized(puzzle, None);
+    print_board_result_colorized(puzzle, &None);
 }
 
-fn print_board_result_colorized(puzzle: &QueensPuzzle, rule_result: Option<RuleResult>) {
+fn print_board_result_colorized(puzzle: &QueensPuzzle, rule_result: &Option<RuleResult>) {
     let n = puzzle.n();
 
     for row in 0..n {
@@ -416,6 +412,12 @@ fn print_board_result_colorized(puzzle: &QueensPuzzle, rule_result: Option<RuleR
         }
 
         println!();
+    }
+    match rule_result {
+        Some(ref result) => {
+            println!("{}", result.description);
+        }
+        None => {}
     }
 }
 
@@ -468,8 +470,7 @@ fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
             match rule.check(&puzzle) {
                 Some(result) => {
                     result.apply(puzzle);
-                    print_board_result_colorized(&puzzle, Some(result));
-                    println!();
+                    print_board_result_colorized(&puzzle, &Some(result));
                     if puzzle.is_solved() {
                         return Some(used_rules);
                     }
