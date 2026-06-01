@@ -81,15 +81,25 @@ impl<T: Default> Grid<T> {
             .map(move |row| Cell { row, col: cell.col })
     }
 
+    /// Returns a hashset of cells in given row
+    pub fn row_iter(&self, row: usize) -> HashSet<Cell> {
+        (0..self.width()).map(move |col| Cell { row, col }).collect::<HashSet<Cell>>()
+    }
+
     /// Returns an iterator over all rows
-    pub fn row_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+    pub fn all_rows_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
         (0..self.height()).map(move |r| {
             ((0..self.width()).map(move |c| Cell { row: r, col: c }).collect(), r)
         })
     }
 
+    /// Returns a hashset of cells in given column
+    pub fn col_iter(&self, col: usize) -> HashSet<Cell> {
+        (0..self.height()).map(move |row| Cell { row, col }).collect::<HashSet<Cell>>()
+    }
+
     /// Returns an iterator over all columns
-    pub fn col_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+    pub fn all_cols_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
         (0..self.width()).map(move |c| {
             ((0..self.height()).map(move |r| Cell { row: r, col: c }).collect(), c)
         })
@@ -229,7 +239,7 @@ mod tests {
             vec![cell![1, 0], cell![1, 1]].into_iter().collect(),
             vec![cell![2, 0], cell![2, 1]].into_iter().collect(),
         ];
-        let actual_rows: Vec<HashSet<Cell>> = grid.row_iter().map(|(row, _)| row).collect();
+        let actual_rows: Vec<HashSet<Cell>> = grid.all_rows_iter().map(|(row, _)| row).collect();
         assert_eq!(actual_rows, expected_rows);
     }
 
@@ -240,7 +250,7 @@ mod tests {
             vec![cell![0, 0], cell![1, 0], cell![2, 0]].into_iter().collect(),
             vec![cell![0, 1], cell![1, 1], cell![2, 1]].into_iter().collect(),
         ];
-        let actual_rows: Vec<HashSet<Cell>> = grid.col_iter().map(|(col, _)| col).collect();
+        let actual_rows: Vec<HashSet<Cell>> = grid.all_cols_iter().map(|(col, _)| col).collect();
         assert_eq!(actual_rows, expected_rows);
     }
 

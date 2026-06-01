@@ -92,26 +92,36 @@ impl QueensPuzzle {
         self.cell_regions[cell]
     }
 
+    /// Returns a hashset of cells in given row
+    pub fn row_iter(&self, row: usize) -> HashSet<Cell> {
+        self.board.row_iter(row)
+    }
+
     /// Returns an iterator over all rows, returning the cell-set and row index
-    pub(crate) fn row_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
-        self.board.row_iter()
+    pub(crate) fn all_rows_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+        self.board.all_rows_iter()
+    }
+
+    /// Returns a hashset of cells in given column
+    pub fn col_iter(&self, col: usize) -> HashSet<Cell> {
+        self.board.col_iter(col)
     }
 
     /// Returns an iterator over all columns, returning the cell-set and col index
-    pub(crate) fn col_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
-        self.board.col_iter()
+    pub(crate) fn all_cols_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+        self.board.all_cols_iter()
     }
 
     /// Returns an iterator over all regions, returning the cell-set and region index
-    pub(crate) fn region_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+    pub(crate) fn all_regions_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
         self.regions.iter().enumerate().map(|(i, cells)| (cells.clone(), i))
     }
 
     /// Returns an iterator over all blocks (rows, columns, regions), returning the cell-set, block-index, and block type
-    pub(crate) fn block_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize, BlockType)> + '_ {
-        self.row_iter().map(|(cells, index)| (cells, index, BlockType::Row))
-            .chain(self.col_iter().map(|(cells, index)| (cells, index, BlockType::Column)))
-            .chain(self.region_iter().map(|(cells, index)| (cells, index, BlockType::Region)))
+    pub(crate) fn all_blocks_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize, BlockType)> + '_ {
+        self.all_rows_iter().map(|(cells, index)| (cells, index, BlockType::Row))
+            .chain(self.all_cols_iter().map(|(cells, index)| (cells, index, BlockType::Column)))
+            .chain(self.all_regions_iter().map(|(cells, index)| (cells, index, BlockType::Region)))
     }
 
     /// Returns an iterator over cells in the same row as the given cell, excluding the given cell
@@ -217,7 +227,7 @@ mod tests {
         let puzzle = build_test_puzzle();
         assert_eq!(puzzle.n(), 4);
         assert_eq!(puzzle.is_solved(), false);
-        assert_eq!(puzzle.region_iter().count(), 4);
+        assert_eq!(puzzle.all_regions_iter().count(), 4);
 
     }
     
