@@ -29,6 +29,40 @@ impl Display for BlockType {
     }
 }
 
+pub fn region_color_name(block_index: usize) -> &'static str {
+    match block_index {
+        0 => "purple",
+        1 => "orange",
+        2 => "blue",
+        3 => "green",
+        4 => "white",
+        5 => "red",
+        6 => "yellow",
+        7 => "grey",
+        8 => "pink",
+        9 => "sea green",
+        10 => "teal",
+        _ => unreachable!("region index out of bounds"),
+    }
+}
+
+pub fn column_name(block_index: usize) -> String {
+    // Columns use letters A, B, C, ..
+    format!("{}", (block_index as u8 + b'A') as char)
+}
+
+pub fn row_name(block_index: usize) -> String {
+    format!("{}", block_index + 1)
+}
+
+pub fn block_name(block_type: BlockType, block_index: usize) -> String {
+    match block_type {
+        BlockType::Column => format!("Column {}", column_name(block_index)),
+        BlockType::Row => format!("Row {}", row_name(block_index)),
+        BlockType::Region => format!("Region {}", region_color_name(block_index)),
+    }
+}
+
 pub struct QueensPuzzle {
     /// Cell states
     board: Grid<State>,
@@ -199,7 +233,7 @@ mod tests {
     use std::collections::HashSet;
     use crate::Cell;
     use crate::cell;
-    use crate::puzzle::QueensPuzzle;
+    use crate::puzzle::{column_name, row_name, QueensPuzzle};
 
     /// Test puzzle with the following setup:
     ///
@@ -220,6 +254,22 @@ mod tests {
         vec![cell![1, 0]],
         vec![cell![1, 2], cell![1, 3], cell![2, 2], cell![2, 3], cell![3, 2], cell![3, 3]],
         vec![cell![1, 1], cell![2, 0], cell![2, 1], cell![3, 0], cell![3, 1]]])
+    }
+
+    #[test]
+    fn test_column_name() {
+        assert_eq!(column_name(0), "A");
+        assert_eq!(column_name(1), "B");
+        assert_eq!(column_name(2), "C");
+        assert_eq!(column_name(3), "D");
+        assert_eq!(column_name(4), "E");
+        assert_eq!(column_name(5), "F");
+        assert_eq!(column_name(6), "G");
+        assert_eq!(column_name(7), "H");
+        assert_eq!(column_name(8), "I");
+        assert_eq!(column_name(9), "J");
+        assert_eq!(column_name(10), "K");
+        assert_eq!(column_name(11), "L");
     }
 
     #[test]

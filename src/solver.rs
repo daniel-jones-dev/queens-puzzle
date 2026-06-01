@@ -1,7 +1,9 @@
+use std::collections::hash_map::Iter;
 use std::cmp::max;
 use std::collections::HashSet;
+use std::fmt::{format, Display};
 use crate::grid::Cell;
-use crate::puzzle::{QueensPuzzle, State};
+use crate::puzzle::{block_name, column_name, region_color_name, row_name, QueensPuzzle, State};
 use itertools::Itertools;
 
 pub mod brute_force;
@@ -88,8 +90,9 @@ impl Rule for MarkQueen {
                 return Some(RuleResult {
                     changes: vec![(single_unknown_cell, State::Queen)],
                     involved: block_cells.iter().filter(|c| { single_unknown_cell != **c }).map(|c| {*c}).collect(),
-                    description: format!("This {block_type} must contain a queen, and no other \
-                     cell except this one can contain a queen, so it must be a queen")
+                    description: format!("{} must contain a queen, and no cell except {} can \
+                    contain a queen, so it must be a queen",
+                                         block_name(block_type, block_index), single_unknown_cell)
                 })
             }
         }
@@ -149,8 +152,8 @@ impl Rule for NakedSet {
             return Some(RuleResult{
                 changes: common_connected_unknowns.into_iter().map(|cell| (cell, State::Empty)).collect(),
                 involved: unknown_cells,
-                description: format!("One of these cells in the {block_type} must be a queen, so \
-                these cells must be empty")
+                description: format!("One of these cells in {} must be a queen, so these cells \
+                must be empty", block_name(block_type, block_index))
             })
         }
         None
@@ -159,6 +162,16 @@ impl Rule for NakedSet {
 
 struct HiddenSet { // Naming comes from sudokuwiki.org "Hidden Pair"
     n: usize,
+}
+
+fn oxford_comma(items: impl Iterator<Item: Display>) -> String {
+    let v: Vec<_> = items.collect();
+    match v.len() {
+        0 => "".to_string(),
+        1 => format!("{}", v[0]),
+        2 => format!("{} and {}", v[0], v[1]),
+        _ => v[0..v.len()-1].iter().map(|item| format!("{}, ", item)).collect::<String>() + &format!("and {}", v[v.len()-1])
+    }
 }
 
 impl Rule for HiddenSet {
@@ -180,6 +193,9 @@ impl Rule for HiddenSet {
             let involved_cells: HashSet<Cell> = permutation.iter()
                 .flat_map(|(region, _)| region.iter().copied()).collect();
 
+            // Unknowns to change found, whether they are in rows or columns, and the row/col indices
+            let mut unknowns: Option<(HashSet<Cell>, bool, HashSet<usize>)> = None;
+
             // Determine the distinct rows covered by these regions
             let row_indices: HashSet<usize> = permutation.iter()
                 // Find distinct rows covered by each region
@@ -187,42 +203,60 @@ impl Rule for HiddenSet {
                 // Combine each region's rows by union
                 .reduce(|a, b| a.union(&b).cloned().collect()).unwrap();
 
+
             // If there are only N rows
             if row_indices.len() <= self.n {
                 // Find unknowns in these rows not involved in these regions
-                let unknowns: HashSet<Cell> = row_indices.iter()
+                let unknowns_cells: HashSet<Cell> = row_indices.iter()
                     .flat_map(|row| puzzle.row_iter(*row))
                     .filter(|cell| puzzle[cell] == State::Unknown)
                     .filter(|cell| !involved_cells.contains(cell))
                     .collect();
-
-                return Some(RuleResult{
-                    changes: unknowns.into_iter().map(|cell| (cell, State::Empty)).collect(),
-                    involved: involved_cells.into_iter().collect(),
-                    description: format!("These {0} regions are confined to {0} rows, so other cells in these rows must be empty", self.n)
-                })
+                if unknowns_cells.len() > 0 {
+                    unknowns = Some((unknowns_cells, false, row_indices));
+                }
             }
+            // If no row candidates found, check columns
+            if unknowns.is_none() {
+                let col_indices: HashSet<usize> = permutation.iter()
+                    // Find distinct columns covered by each region
+                    .map(|(region, _)| region.iter().map(|cell| cell.col).collect::<HashSet<usize>>())
+                    // Combine each region's columns by union
+                    .reduce(|a, b| a.union(&b).cloned().collect()).unwrap();
 
-            let col_indices: HashSet<usize> = permutation.iter()
-                // Find distinct columns covered by each region
-                .map(|(region, _)| region.iter().map(|cell| cell.col).collect::<HashSet<usize>>())
-                // Combine each region's columns by union
-                .reduce(|a, b| a.union(&b).cloned().collect()).unwrap();
+                // If there are only N cols
+                if col_indices.len() <= self.n {
+                    // Find unknowns in these columns that are not involved in these regions
+                    let unknowns_cells: HashSet<Cell> = col_indices.iter()
+                        .flat_map(|col| puzzle.col_iter(*col))
+                        .filter(|cell| puzzle[cell] == State::Unknown)
+                        .filter(|cell| !involved_cells.contains(cell))
+                        .collect();
+                    if unknowns_cells.len() > 0 {
+                        unknowns = Some((unknowns_cells, true, col_indices));
+                    }
+                }
+            }
+            match unknowns {
+                None => continue,
+                Some((unknowns_cells, is_col, row_or_col_indices)) => {
+                    let regions_sorted = permutation.iter().map(|(_, region)| {region.clone()}).sorted();
+                    let regions_group = format!("The {} regions",
+                                                oxford_comma(regions_sorted.map(|region| {region_color_name(region)})));
+                    let row_or_cols = if is_col { "columns" } else { "rows" };
+                    let row_or_col_indices_sorted = row_or_col_indices.iter().map(|index| {index.clone()}).sorted();
+                    let row_or_col_group = format!("{row_or_cols} {}",
+                                                   oxford_comma(row_or_col_indices_sorted.map(|index| {if is_col {column_name(index)} else {row_name(index)}})));
+                    if is_col { "columns" } else { "rows" };
+                    let description = format!("{regions_group} are confined to {row_or_col_group}, so other cells \
+                     in these {row_or_cols} must be empty");
 
-            // If there are only N cols
-            if col_indices.len() <= self.n {
-                // Find unknowns in these columns that are not involved in these regions
-                let unknowns: HashSet<Cell> = col_indices.iter()
-                    .flat_map(|col| puzzle.col_iter(*col))
-                    .filter(|cell| puzzle[cell] == State::Unknown)
-                    .filter(|cell| !involved_cells.contains(cell))
-                    .collect();
-
-                return Some(RuleResult{
-                    changes: unknowns.into_iter().map(|cell| (cell, State::Empty)).collect(),
-                    involved: involved_cells.into_iter().collect(),
-                    description: format!("These {0} regions are confined to {0} rows, so other cells in these rows must be empty", self.n)
-                })
+                    return Some(RuleResult{
+                        changes: unknowns_cells.into_iter().map(|cell| (cell, State::Empty)).collect(),
+                        involved: involved_cells.into_iter().collect(),
+                        description,
+                    })
+                }
             }
         }
 
