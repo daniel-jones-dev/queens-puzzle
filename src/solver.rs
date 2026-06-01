@@ -69,7 +69,7 @@ impl MarkQueen {
         if block_cells.iter().any(|cell| puzzle[cell] == State::Queen) {
             return None;
         }
-        match block_cells.iter().exactly_one() {
+        match block_cells.iter().filter(|cell| puzzle[*cell] == State::Unknown).exactly_one() {
             Ok(cell) => Some(*cell),
             Err(..) => None
         }
