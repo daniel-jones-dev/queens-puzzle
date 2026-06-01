@@ -157,6 +157,79 @@ impl Rule for NakedSet {
     }
 }
 
+struct HiddenSet { // Naming comes from sudokuwiki.org "Hidden Pair"
+    n: usize,
+}
+
+impl Rule for HiddenSet {
+    fn description(&self) -> String {
+        "The involved cells are in the same N regions that must contain N queens,\
+        and these blocks are wholly within N rows/columns. \
+        Therefore all other cells in the same rows/columns are empty.".to_string()
+    }
+
+    fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
+        // Search for N unsolved regions whose cells lie wholly within N rows or columns
+
+        // Filter out unsolved regions, ie not containing a queen
+        let unsolved_regions: Vec<(HashSet<Cell>, usize)> = puzzle.all_regions_iter().filter(
+            |(region, _)| {!region.iter().any(|cell| {puzzle[cell] == State::Queen})}).collect();
+
+        // Check each permutation of N unsolved regions
+        for permutation in unsolved_regions.iter().permutations(self.n) {
+            let involved_cells: HashSet<Cell> = permutation.iter()
+                .flat_map(|(region, _)| region.iter().copied()).collect();
+
+            // Determine the distinct rows covered by these regions
+            let row_indices: HashSet<usize> = permutation.iter()
+                // Find distinct rows covered by each region
+                .map(|(region, _)| region.iter().map(|cell| cell.row).collect::<HashSet<usize>>())
+                // Combine each region's rows by union
+                .reduce(|a, b| a.union(&b).cloned().collect()).unwrap();
+
+            // If there are only N rows
+            if row_indices.len() <= self.n {
+                // Find unknowns in these rows not involved in these regions
+                let unknowns: HashSet<Cell> = row_indices.iter()
+                    .flat_map(|row| puzzle.row_iter(*row))
+                    .filter(|cell| puzzle[cell] == State::Unknown)
+                    .filter(|cell| !involved_cells.contains(cell))
+                    .collect();
+
+                return Some(RuleResult{
+                    changes: unknowns.into_iter().map(|cell| (cell, State::Empty)).collect(),
+                    involved: involved_cells.into_iter().collect(),
+                    description: format!("These {0} regions are confined to {0} rows, so other cells in these rows must be empty", self.n)
+                })
+            }
+
+            let col_indices: HashSet<usize> = permutation.iter()
+                // Find distinct columns covered by each region
+                .map(|(region, _)| region.iter().map(|cell| cell.col).collect::<HashSet<usize>>())
+                // Combine each region's columns by union
+                .reduce(|a, b| a.union(&b).cloned().collect()).unwrap();
+
+            // If there are only N cols
+            if col_indices.len() <= self.n {
+                // Find unknowns in these columns that are not involved in these regions
+                let unknowns: HashSet<Cell> = col_indices.iter()
+                    .flat_map(|col| puzzle.col_iter(*col))
+                    .filter(|cell| puzzle[cell] == State::Unknown)
+                    .filter(|cell| !involved_cells.contains(cell))
+                    .collect();
+
+                return Some(RuleResult{
+                    changes: unknowns.into_iter().map(|cell| (cell, State::Empty)).collect(),
+                    involved: involved_cells.into_iter().collect(),
+                    description: format!("These {0} regions are confined to {0} rows, so other cells in these rows must be empty", self.n)
+                })
+            }
+        }
+
+        None
+    }
+}
+
 fn check_rule(puzzle: &mut QueensPuzzle, rule: &dyn Rule) {
     match rule.check(&puzzle) {
         Some(result) => {
@@ -174,9 +247,13 @@ pub fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
         Box::new(MarkQueen{}),
         Box::new(NakedSet {n: 2}),
         Box::new(NakedSet {n: 3}),
+        Box::new(HiddenSet{n: 2}),
         Box::new(NakedSet {n: 4}),
         Box::new(NakedSet {n: 5}),
-        Box::new(NakedSet {n: 12})];
+        Box::new(HiddenSet{n: 3}),
+        Box::new(NakedSet {n: 12}),
+        Box::new(HiddenSet{n: 4}),
+        Box::new(HiddenSet{n: 6})];
 
     let mut max_used_rule = 0;
 
