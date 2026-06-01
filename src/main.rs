@@ -48,7 +48,7 @@ fn print_board_result_colorized(puzzle: &QueensPuzzle, rule_result: &Option<Rule
                 State::Empty => " x ",
                 _ => "   ",
             }.white();
-            let region_index = puzzle.region_iter().position(|region| region.contains(&cell));
+            let region_index = puzzle.region_iter().position(|(region, _)| region.contains(&cell));
 
             cell_text = match rule_result {
                 Some(ref rule_result) => {

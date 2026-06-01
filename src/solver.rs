@@ -64,7 +64,7 @@ struct MarkQueen;
 
 impl MarkQueen {
     /// Checks if the given block has exactly one unknown cell and no queens
-    fn check_block_has_single_unknown_and_no_queen(&self, puzzle: &QueensPuzzle, block_cells: &Vec<Cell>) -> Option<Cell> {
+    fn check_block_has_single_unknown_and_no_queen(&self, puzzle: &QueensPuzzle, block_cells: &HashSet<Cell>) -> Option<Cell> {
         if block_cells.iter().any(|cell| puzzle[cell] == State::Queen) {
             return None;
         }
@@ -82,7 +82,7 @@ impl Rule for MarkQueen {
     }
 
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
-        for (block_cells, block_type) in puzzle.block_iter() {
+        for (block_cells, block_index, block_type) in puzzle.block_iter() {
             if let Some(single_unknown_cell) = self.check_block_has_single_unknown_and_no_queen(puzzle, &block_cells) {
                 return Some(RuleResult {
                     changes: vec![(single_unknown_cell, State::Queen)],
@@ -115,7 +115,7 @@ impl Rule for NakedSet {
     }
 
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
-        for (block_cells, block_type) in puzzle.block_iter() {
+        for (block_cells, block_index, block_type) in puzzle.block_iter() {
             // Check there are no queens and at least two unknown cells
             if block_cells.iter().any(|cell| puzzle[*cell] == State::Queen) {
                 continue;

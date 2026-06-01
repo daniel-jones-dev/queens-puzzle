@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::ops::{Index, IndexMut};
 use crate::grid::{Cell, Grid};
@@ -29,20 +30,37 @@ impl Display for BlockType {
 }
 
 pub struct QueensPuzzle {
-    /// Cells states
+    /// Cell states
     board: Grid<State>,
+    /// Which region each cell belongs to
+    cell_regions: Grid<Option<u8>>,
     /// List of regions with each containing the cells that are in the region
-    regions: Vec<Vec<Cell>>,
-    // TODO Add Grid<region> to remember which region each cell belongs to
+    regions: Vec<HashSet<Cell>>,
 }
 
 impl QueensPuzzle {
-    pub(crate) fn new(regions: Vec<Vec<Cell>>) -> Self {
-        let n = regions.len();
+    pub(crate) fn new(region_vecs: Vec<Vec<Cell>>) -> Self {
+        let n = region_vecs.len();
         let board = Grid::new(n, n);
-        // TODO check the regions are valid: within bounds, non-overlapping
-        //  probably do not want to enforce complete-fill though, to simplify puzzle generation
-        Self { board, regions }
+        let mut cell_regions = Grid::new(n, n);
+        let mut regions = vec![];
+
+        for (region_index, region) in region_vecs.into_iter().enumerate() {
+            if region.is_empty() {
+                panic!("region {region_index} is empty")
+            }
+            region.iter().for_each(|cell| {
+                cell_regions[cell] = match cell_regions[cell] {
+                    Some(set_region) => panic!("cell {cell} is overlapping in regions {set_region} and {region_index}"),
+                    None => Some(region_index as u8),
+                }
+            });
+
+            let region: HashSet<Cell> = region.into_iter().collect();
+            regions.push(region)
+        }
+
+        Self { board, cell_regions, regions }
     }
 
     pub(crate) fn n(&self) -> usize {
@@ -69,46 +87,54 @@ impl QueensPuzzle {
         self.queens().len() == self.n()
     }
 
-    /// Returns an iterator over all rows
-    pub(crate) fn row_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
-        (0..self.n()).map(move |r| {
-            (0..self.n()).map(move |c| Cell { row: r, col: c }).collect()
-        })
+    /// Returns the region index for a given cell, if any
+    pub fn cell_region(&self, cell: Cell) -> Option<u8> {
+        self.cell_regions[cell]
     }
 
-    // Returns an iterator over all columns
-    pub(crate) fn col_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
-        (0..self.n()).map(move |c| {
-            (0..self.n()).map(move |r| Cell { row: r, col: c }).collect()
-        })
+    /// Returns an iterator over all rows, returning the cell-set and row index
+    pub(crate) fn row_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+        self.board.row_iter()
     }
 
-    // Returns an iterator over all regions
-    pub(crate) fn region_iter(&self) -> impl Iterator<Item = Vec<Cell>> + '_ {
-        self.regions.iter().map(move |r| {r.clone()})
+    /// Returns an iterator over all columns, returning the cell-set and col index
+    pub(crate) fn col_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+        self.board.col_iter()
     }
 
-    pub(crate) fn block_iter(&self) -> impl Iterator<Item = (Vec<Cell>, BlockType)> + '_ {
-        self.row_iter().map(|cells| (cells, BlockType::Row))
-            .chain(self.col_iter().map(|cells| (cells, BlockType::Column)))
-            .chain(self.region_iter().map(|cells| (cells, BlockType::Region)))
+    /// Returns an iterator over all regions, returning the cell-set and region index
+    pub(crate) fn region_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+        self.regions.iter().enumerate().map(|(i, cells)| (cells.clone(), i))
     }
 
+    /// Returns an iterator over all blocks (rows, columns, regions), returning the cell-set, block-index, and block type
+    pub(crate) fn block_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize, BlockType)> + '_ {
+        self.row_iter().map(|(cells, index)| (cells, index, BlockType::Row))
+            .chain(self.col_iter().map(|(cells, index)| (cells, index, BlockType::Column)))
+            .chain(self.region_iter().map(|(cells, index)| (cells, index, BlockType::Region)))
+    }
+
+    /// Returns an iterator over cells in the same row as the given cell, excluding the given cell
     pub(crate) fn cells_in_same_row(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         self.board.cells_in_same_row(cell)
     }
 
+    /// Returns an iterator over cells in the same column as the given cell, excluding the given cell
     pub(crate) fn cells_in_same_col(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         self.board.cells_in_same_col(cell)
     }
 
+    /// Returns an iterator over cells in the same region as the given cell, excluding the given cell
     fn cells_in_same_region(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
-        match self.regions.iter().find(|region| region.contains(&cell)) {
-            None => vec![].into_iter(), // Handle case cell is not in a region
-            Some(cells_in_region) => {
-                cells_in_region.clone().into_iter().filter(|c| c != cell).collect::<Vec<Cell>>().into_iter()
-            }
+        match self.cell_regions[cell] {
+            None => vec![],
+            Some(region_index) => self.regions[region_index as usize]
+                .iter()
+                .filter(|&&c| c != cell)
+                .copied()
+                .collect(),
         }
+        .into_iter()
     }
 
     /// Returns an iterator over the four cells diagonally adjacent to a cell
@@ -156,5 +182,63 @@ impl<B: Borrow<Cell>> Index<B> for QueensPuzzle {
 impl<B: Borrow<Cell>> IndexMut<B> for QueensPuzzle {
     fn index_mut(&mut self, cell: B) -> &mut State {
         &mut self.board[cell]
+    }
+}
+
+mod tests {
+    use std::collections::HashSet;
+    use crate::Cell;
+    use crate::cell;
+    use crate::puzzle::QueensPuzzle;
+
+    /// Test puzzle with the following setup:
+    ///
+    ///  Queens:
+    ///  [ ] [ ] [1] [ ]
+    ///  [2] [ ] [ ] [ ]
+    ///  [ ] [ ] [ ] [3]
+    ///  [ ] [4] [ ] [ ]
+    ///  Regions:
+    ///  [1] [1] [1] [1]
+    ///  [2] [4] [3] [3]
+    ///  [4] [4] [3] [3]
+    ///  [4] [4] [3] [3]
+    ///
+    fn build_test_puzzle() -> QueensPuzzle {
+        QueensPuzzle::new(vec![
+        vec![cell![0, 0], cell![0, 1], cell![0, 2], cell![0, 3]],
+        vec![cell![1, 0]],
+        vec![cell![1, 2], cell![1, 3], cell![2, 2], cell![2, 3], cell![3, 2], cell![3, 3]],
+        vec![cell![1, 1], cell![2, 0], cell![2, 1], cell![3, 0], cell![3, 1]]])
+    }
+
+    #[test]
+    fn setup() {
+        let puzzle = build_test_puzzle();
+        assert_eq!(puzzle.n(), 4);
+        assert_eq!(puzzle.is_solved(), false);
+        assert_eq!(puzzle.region_iter().count(), 4);
+
+    }
+    
+    #[test]
+    fn connected_cells() {
+        let puzzle = build_test_puzzle();
+        // Cell 0,0
+        let expected_cells: HashSet<Cell> = vec![
+            cell![0, 1], cell![0, 2], cell![0, 3], // Same row
+            cell![1, 0], cell![2, 0], cell![3, 0], // Same column
+            cell![1, 1] // diagonally adjacent
+        ].into_iter().collect();
+        assert_eq!(expected_cells, puzzle.connected_cells(cell![0, 0]).into_iter().collect());
+
+        // Cell 3,0
+        let expected_cells: HashSet<Cell> = vec![
+            cell![3, 1], cell![3, 2], cell![3, 3], // Same row
+            cell![0, 0], cell![1, 0], cell![2, 0], // Same column
+            cell![2, 1], // diagonally adjacent
+            cell![1, 1] // same region
+        ].into_iter().collect();
+        assert_eq!(expected_cells, puzzle.connected_cells(cell![3, 0]).into_iter().collect());
     }
 }

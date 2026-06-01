@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::fmt;
 use std::ops::{Index, IndexMut};
 
@@ -13,6 +14,8 @@ impl Cell {
         Cell { row, col }
     }
 }
+
+#[macro_export]
 macro_rules! cell {
     ($row:expr, $col:expr) => {
         Cell::new($row, $col)
@@ -40,21 +43,21 @@ impl PartialEq<Cell> for &Cell {
 /// Represents a two-dimensional grid of cells with a specified width and height.
 pub struct Grid<T: Default> {
     data: Vec<T>,
-    width: usize,
     height: usize,
+    width: usize,
 }
 
 impl<T: Default> Grid<T> {
     /// Creates a new grid with the specified width and height, initializing all cells with the default value.
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(height: usize, width: usize) -> Self {
         let mut data = Vec::with_capacity(width * height);
         for _ in 0..width * height {
             data.push(T::default());
         }
         Grid {
             data,
-            width,
             height,
+            width,
         }
     }
 
@@ -78,8 +81,22 @@ impl<T: Default> Grid<T> {
             .map(move |row| Cell { row, col: cell.col })
     }
 
+    /// Returns an iterator over all rows
+    pub fn row_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+        (0..self.height()).map(move |r| {
+            ((0..self.width()).map(move |c| Cell { row: r, col: c }).collect(), r)
+        })
+    }
+
+    /// Returns an iterator over all columns
+    pub fn col_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
+        (0..self.width()).map(move |c| {
+            ((0..self.height()).map(move |r| Cell { row: r, col: c }).collect(), c)
+        })
+    }
+
     /// Returns an iterator over the (up to) four cells up/down/left/right adjacent to a cell
-    pub fn cells_cardinal_adjacent(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
+    pub fn cells_cardinally_adjacent(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         let mut result = vec![];
         if cell.col > 0 {
             result.push(Cell {
@@ -162,29 +179,29 @@ mod tests {
 
     #[test]
     fn default() {
-        let grid: Grid<u32> = Grid::new(2, 3);
+        let grid: Grid<u32> = Grid::new(3, 2);
         assert_eq!(grid.width(), 2);
         assert_eq!(grid.height(), 3);
-        assert_eq!(grid[Cell { row: 0, col: 0 }], 0);
-        assert_eq!(grid[Cell { row: 0, col: 1 }], 0);
-        assert_eq!(grid[Cell { row: 1, col: 0 }], 0);
-        assert_eq!(grid[Cell { row: 1, col: 1 }], 0);
-        assert_eq!(grid[Cell { row: 2, col: 0 }], 0);
-        assert_eq!(grid[Cell { row: 2, col: 1 }], 0);
+        assert_eq!(grid[cell![0, 0]], 0);
+        assert_eq!(grid[cell![0, 1]], 0);
+        assert_eq!(grid[cell![1, 0]], 0);
+        assert_eq!(grid[cell![1, 1]], 0);
+        assert_eq!(grid[cell![2, 0]], 0);
+        assert_eq!(grid[cell![2, 1]], 0);
     }
 
     #[test]
     fn setter() {
-        let mut grid: Grid<u32> = Grid::new(2, 3);
-        grid[Cell { row: 0, col: 0 }] = 3;
-        grid[Cell { row: 2, col: 1 }] = 5;
-        assert_eq!(grid[Cell { row: 0, col: 0 }], 3);
-        assert_eq!(grid[Cell { row: 2, col: 1 }], 5);
+        let mut grid: Grid<u32> = Grid::new(3, 2);
+        grid[cell![0, 0]] = 3;
+        grid[cell![2, 1]] = 5;
+        assert_eq!(grid[cell![0, 0]], 3);
+        assert_eq!(grid[cell![2, 1]], 5);
     }
 
     #[test]
     fn cells_in_same_col() {
-        let grid: Grid<u32> = Grid::new(2, 3);
+        let grid: Grid<u32> = Grid::new(3, 2);
         let col1: HashSet<_> = vec![cell![0, 1], cell![2, 1]].into_iter().collect();
         assert_eq!(
             grid.cells_in_same_col(cell![1, 1])
@@ -195,24 +212,47 @@ mod tests {
 
     #[test]
     fn cells_in_same_row() {
-        let grid: Grid<u32> = Grid::new(2, 3);
-        let row1: HashSet<_> = vec![cell![1, 2]].into_iter().collect();
+        let grid: Grid<u32> = Grid::new(3, 2);
+        let row1: HashSet<_> = vec![cell![2, 1]].into_iter().collect();
         assert_eq!(
-            grid.cells_in_same_row(cell![1, 1])
+            grid.cells_in_same_row(cell![2, 0])
                 .collect::<HashSet<Cell>>(),
             row1
         );
     }
 
     #[test]
-    fn cells_cardinal_adjacent() {
+    fn row_iter() {
+        let grid: Grid<u32> = Grid::new(3, 2);
+        let expected_rows: Vec<HashSet<Cell>> = vec![
+            vec![cell![0, 0], cell![0, 1]].into_iter().collect(),
+            vec![cell![1, 0], cell![1, 1]].into_iter().collect(),
+            vec![cell![2, 0], cell![2, 1]].into_iter().collect(),
+        ];
+        let actual_rows: Vec<HashSet<Cell>> = grid.row_iter().map(|(row, _)| row).collect();
+        assert_eq!(actual_rows, expected_rows);
+    }
+
+    #[test]
+    fn col_iter() {
+        let grid: Grid<u32> = Grid::new(3, 2);
+        let expected_rows: Vec<HashSet<Cell>> = vec![
+            vec![cell![0, 0], cell![1, 0], cell![2, 0]].into_iter().collect(),
+            vec![cell![0, 1], cell![1, 1], cell![2, 1]].into_iter().collect(),
+        ];
+        let actual_rows: Vec<HashSet<Cell>> = grid.col_iter().map(|(col, _)| col).collect();
+        assert_eq!(actual_rows, expected_rows);
+    }
+
+    #[test]
+    fn cells_cardinally_adjacent() {
         let grid: Grid<u32> = Grid::new(3, 3);
         let cell = cell![1, 1];
         let adjacent_cells: HashSet<_> = vec![cell![0, 1], cell![2, 1], cell![1, 0], cell![1, 2]]
             .into_iter()
             .collect();
         assert_eq!(
-            grid.cells_cardinal_adjacent(cell)
+            grid.cells_cardinally_adjacent(cell)
                 .collect::<HashSet<Cell>>(),
             adjacent_cells
         );
@@ -221,7 +261,7 @@ mod tests {
         let cell = cell![2, 2];
         let adjacent_cells: HashSet<_> = vec![cell![1, 2], cell![2, 1]].into_iter().collect();
         assert_eq!(
-            grid.cells_cardinal_adjacent(cell)
+            grid.cells_cardinally_adjacent(cell)
                 .collect::<HashSet<Cell>>(),
             adjacent_cells
         );
