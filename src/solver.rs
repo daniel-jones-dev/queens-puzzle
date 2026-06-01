@@ -107,7 +107,9 @@ impl Rule for MarkQueen {
 ///     [ ][x][x][ ]
 ///   </code>
 /// Remark: Naming comes from sudokuwiki.org "Naked Pair"
-struct NakedSet;
+struct NakedSet {
+    n: usize,
+}
 
 impl Rule for NakedSet {
     fn description(&self) -> String {
@@ -124,7 +126,7 @@ impl Rule for NakedSet {
 
             let unknown_cells = block_cells.into_iter()
                 .filter(|cell| {puzzle[cell] == State::Unknown}).collect::<Vec<_>>();
-            if unknown_cells.len() <= 1 {
+            if unknown_cells.len() <= self.n {
                 continue;
             }
 
@@ -170,7 +172,11 @@ pub fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
     let rules: Vec<Box<dyn Rule>> = vec![
         Box::new(MarkEmpty{}),
         Box::new(MarkQueen{}),
-        Box::new(NakedSet {})];
+        Box::new(NakedSet {n: 2}),
+        Box::new(NakedSet {n: 3}),
+        Box::new(NakedSet {n: 4}),
+        Box::new(NakedSet {n: 5}),
+        Box::new(NakedSet {n: 12})];
 
     let mut max_used_rule = 0;
 
