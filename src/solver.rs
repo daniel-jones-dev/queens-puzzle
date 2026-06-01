@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashSet;
 use crate::grid::Cell;
 use crate::puzzle::{QueensPuzzle, State};
@@ -171,28 +172,20 @@ pub fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
         Box::new(MarkQueen{}),
         Box::new(NakedSet {})];
 
-    let mut used_rules = 1;
+    let mut max_used_rule = 0;
 
-    loop {
-        for rule_index in 0..used_rules+1 {
-            if rule_index == used_rules {
-                if rule_index >= rules.len() {
-                    return None;
+    'solver: loop {
+        for (rule_index, rule) in rules.iter().enumerate() {
+            if let Some(result) = rule.check(puzzle) {
+                max_used_rule = max(rule_index, max_used_rule);
+                result.apply(puzzle);
+                crate::print_board_result_colorized(puzzle, &Some(result));
+                if puzzle.is_solved() {
+                    return Some(max_used_rule);
                 }
-                used_rules += 1;
-            }
-            let rule = &rules[rule_index];
-            match rule.check(&puzzle) {
-                Some(result) => {
-                    result.apply(puzzle);
-                    crate::print_board_result_colorized(&puzzle, &Some(result));
-                    if puzzle.is_solved() {
-                        return Some(used_rules);
-                    }
-                    break;
-                }
-                None => {}
+                continue 'solver;
             }
         }
+        return None;
     }
 }
