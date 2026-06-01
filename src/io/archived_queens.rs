@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use serde::Deserialize;
 use crate::grid::Cell;
-use crate::QueensPuzzle;
+use crate::puzzle::QueensPuzzle;
 
 #[derive(Deserialize, Clone)]
 pub struct PuzzleData {
