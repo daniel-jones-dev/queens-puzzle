@@ -15,9 +15,10 @@ fn generate_puzzle(n: usize) -> QueensPuzzle {
     let regions = generate_regions(n);
     let mut puzzle = QueensPuzzle::new(regions.clone());
 
+    /* TODO Fix
     while !solver::brute_force::solve(&mut puzzle) {
         puzzle = QueensPuzzle::new(regions.clone());
-    }
+    }*/
 
     puzzle
 }
@@ -138,7 +139,9 @@ fn solve_puzzle(mut puzzle: &mut QueensPuzzle) {
     println!();
     if !puzzle.is_solved() {
         println!("Resorting to brute force");
-        let _ = solver::brute_force::solve(&mut puzzle);
+        let mut solutions = vec![];
+        let num_solutions = solver::brute_force::solve(&mut puzzle, &mut solutions);
+        println!("Found {} solutions", num_solutions);
+        solutions.iter().for_each(|solution| print_board_colorized(solution));
     }
-    print_board_colorized(&puzzle);
 }

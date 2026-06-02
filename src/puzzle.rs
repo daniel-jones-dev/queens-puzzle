@@ -63,6 +63,7 @@ pub fn block_name(block_type: BlockType, block_index: usize) -> String {
     }
 }
 
+#[derive(Clone)]
 pub struct QueensPuzzle {
     /// Cell states
     board: Grid<State>,

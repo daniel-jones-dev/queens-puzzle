@@ -41,6 +41,7 @@ impl PartialEq<Cell> for &Cell {
 }
 
 /// Represents a two-dimensional grid of cells with a specified width and height.
+#[derive(Clone)]
 pub struct Grid<T: Default> {
     data: Vec<T>,
     height: usize,

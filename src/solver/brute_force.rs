@@ -4,36 +4,45 @@ use crate::puzzle::{QueensPuzzle, State};
 /// Recursively solve a puzzle by brute-forcing.
 /// Solves the puzzle by checking each column for a valid queen placement and recursively
 /// trying to place queens in later columns.
-/// Returns true if a solution is found, false otherwise.
-/// Modifies the puzzle in place.
-pub fn solve(puzzle: &mut QueensPuzzle) -> bool {
-    solve_helper(puzzle, 0)
+/// Returns the number of solutions found and writes solutions into the given vector.
+pub fn solve(puzzle: &mut QueensPuzzle, solutions: &mut Vec<QueensPuzzle>) -> usize {
+    solutions.clear();
+    solve_helper(puzzle, 0, solutions)
 }
 
-fn solve_helper(puzzle: &mut QueensPuzzle, col: usize) -> bool {
-    if col >= puzzle.n() {
-        return true;
-    }
+fn solve_helper(puzzle: &mut QueensPuzzle, col: usize, solutions: &mut Vec<QueensPuzzle>) -> usize {
+    // Stop at 10 solutions
+    if solutions.len() >= 10 { return 0 }
 
     // If the current column already has a queen, continue to the next column
     if puzzle.queens().iter().any(|cell| cell.col == col) {
-        return solve_helper(puzzle, col + 1);
+        return solve_helper(puzzle, col + 1, solutions);
     }
+
+    let mut num_found_solutions = 0;
 
     for row in 0..puzzle.n() {
         let cell = Cell{row, col};
         if puzzle.is_valid_move(cell) {
             puzzle[cell] = State::Queen;
-            // TODO identify cells connected to this queen that are unknown, and mark them as empty
 
-            if solve_helper(puzzle, col + 1) {
-                return true;
+            // identify cells in this row that are unknown, and mark them as empty
+            let unknown_in_row = puzzle.row_iter(row).into_iter()
+                .filter(|cell: &Cell| puzzle[cell] == State::Unknown).collect::<Vec<_>>();
+            unknown_in_row.iter().for_each(|cell| puzzle[*cell] = State::Empty);
+
+            if col == puzzle.n() - 1 {
+                solutions.push(puzzle.clone());
+                num_found_solutions += 1;
+            } else {
+                num_found_solutions += solve_helper(puzzle, col + 1, solutions);
             }
 
-            // TODO clear the cells marked empty above
+            // clear the cells marked empty above
+            unknown_in_row.iter().for_each(|cell| puzzle[*cell] = State::Unknown);
             puzzle[cell] = State::Unknown;
         }
     }
 
-    false
+    num_found_solutions
 }
