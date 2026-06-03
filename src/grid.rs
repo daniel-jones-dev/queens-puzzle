@@ -70,6 +70,10 @@ impl<T: Default> Grid<T> {
         self.width
     }
 
+    pub fn all_cells(&self) -> impl Iterator<Item = Cell> + use<'_, T> {
+        (0..self.height()).flat_map(move |row| (0..self.width()).map(move |col| Cell { row, col }))
+    }
+
     pub fn cells_in_same_row(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         (0..self.width())
             .filter(move |&col| col != cell.col)

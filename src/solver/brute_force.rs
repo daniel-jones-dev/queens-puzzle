@@ -7,19 +7,18 @@ use crate::puzzle::{QueensPuzzle, State};
 /// Returns the number of solutions found and writes solutions into the given vector.
 pub fn solve(puzzle: &mut QueensPuzzle, solutions: &mut Vec<QueensPuzzle>) -> usize {
     solutions.clear();
-    solve_helper(puzzle, 0, solutions)
+    solve_helper(puzzle, 0, solutions);
+    solutions.len()
 }
 
-fn solve_helper(puzzle: &mut QueensPuzzle, col: usize, solutions: &mut Vec<QueensPuzzle>) -> usize {
+fn solve_helper(puzzle: &mut QueensPuzzle, col: usize, solutions: &mut Vec<QueensPuzzle>) {
     // Stop at 10 solutions
-    if solutions.len() >= 10 { return 0 }
+    if solutions.len() >= 10 { return }
 
     // If the current column already has a queen, continue to the next column
     if puzzle.queens().iter().any(|cell| cell.col == col) {
         return solve_helper(puzzle, col + 1, solutions);
     }
-
-    let mut num_found_solutions = 0;
 
     for row in 0..puzzle.n() {
         let cell = Cell{row, col};
@@ -33,9 +32,8 @@ fn solve_helper(puzzle: &mut QueensPuzzle, col: usize, solutions: &mut Vec<Queen
 
             if col == puzzle.n() - 1 {
                 solutions.push(puzzle.clone());
-                num_found_solutions += 1;
             } else {
-                num_found_solutions += solve_helper(puzzle, col + 1, solutions);
+                solve_helper(puzzle, col + 1, solutions);
             }
 
             // clear the cells marked empty above
@@ -43,6 +41,4 @@ fn solve_helper(puzzle: &mut QueensPuzzle, col: usize, solutions: &mut Vec<Queen
             puzzle[cell] = State::Unknown;
         }
     }
-
-    num_found_solutions
 }

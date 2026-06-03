@@ -2,37 +2,15 @@ mod io;
 mod grid;
 mod puzzle;
 mod solver;
+mod generator;
 
 use crate::grid::Cell;
 use std::path::PathBuf;
 use clap::Parser;
 use colored::*;
 use puzzle::{QueensPuzzle, State};
-use solver::RuleResult;
-
-
-fn generate_puzzle(n: usize) -> QueensPuzzle {
-    let regions = generate_regions(n);
-    let mut puzzle = QueensPuzzle::new(regions.clone());
-
-    /* TODO Fix
-    while !solver::brute_force::solve(&mut puzzle) {
-        puzzle = QueensPuzzle::new(regions.clone());
-    }*/
-
-    puzzle
-}
-
-fn generate_regions(n: usize) -> Vec<Vec<Cell>> {
-    let mut regions = vec![vec![]; n];
-
-    for i in 0..n {
-        regions[i].push(Cell { row: i, col: i });
-    }
-
-    regions
-}
-
+use solver::rule::RuleResult;
+use crate::generator::generate_puzzles;
 
 fn print_board_colorized(puzzle: &QueensPuzzle){
     print_board_result_colorized(puzzle, &None);
@@ -124,8 +102,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             None => panic!("invalid options"),
         }
     };
+    let puzzles = generate_puzzles(5, 1);
+    for mut puzzle in puzzles.into_iter() {
+        print_board_colorized(&puzzle);
+        solve_puzzle(&mut puzzle);
+    }
 
-    solve_puzzle(&mut puzzle);
+    //solve_puzzle(&mut puzzle);
+
 
     Ok(())
 }

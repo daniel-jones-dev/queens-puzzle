@@ -48,18 +48,26 @@ pub fn region_color_name(block_index: usize) -> &'static str {
 
 pub fn column_name(block_index: usize) -> String {
     // Columns use letters A, B, C, ..
-    format!("{}", (block_index as u8 + b'A') as char)
+    format!("Column {}", (block_index as u8 + b'A') as char)
 }
 
 pub fn row_name(block_index: usize) -> String {
-    format!("{}", block_index + 1)
+    format!("Row {}", block_index + 1)
+}
+
+pub fn region_name(block_index: usize) -> String {
+    format!("Region {}", region_color_name(block_index))
+}
+
+pub fn cell_name(cell: Cell) -> String {
+    format!("Cell {}{}", (cell.col as u8 + b'A') as char, cell.row + 1)
 }
 
 pub fn block_name(block_type: BlockType, block_index: usize) -> String {
     match block_type {
-        BlockType::Column => format!("Column {}", column_name(block_index)),
-        BlockType::Row => format!("Row {}", row_name(block_index)),
-        BlockType::Region => format!("Region {}", region_color_name(block_index)),
+        BlockType::Column => column_name(block_index),
+        BlockType::Row => row_name(block_index),
+        BlockType::Region => region_name(block_index),
     }
 }
 
@@ -74,6 +82,13 @@ pub struct QueensPuzzle {
 }
 
 impl QueensPuzzle {
+    pub fn empty_puzzle(n: usize) -> Self {
+        let board = Grid::new(n, n);
+        let cell_regions = Grid::new(n, n);
+        let regions = vec![];
+        Self { board, cell_regions, regions }
+    }
+
     pub(crate) fn new(region_vecs: Vec<Vec<Cell>>) -> Self {
         let n = region_vecs.len();
         let board = Grid::new(n, n);
@@ -127,9 +142,29 @@ impl QueensPuzzle {
         self.cell_regions[cell]
     }
 
+    /// Assigns a region to a cell
+    pub fn assign_cell_region(&mut self, cell: Cell, region: u8) {
+        if self.cell_regions[cell].is_some() {panic!("cell {cell} already has a region")}
+        self.cell_regions[cell] = Some(region);
+        self.regions[region as usize].insert(cell);
+    }
+
+    /// Unassigns a region from a cell
+    pub fn unassign_cell_region(&mut self, cell: Cell) {
+        if self.cell_regions[cell].is_none() {panic!("cell {cell} does not have a region")}
+        let region = self.cell_regions[cell].unwrap();
+        self.regions[region as usize].remove(&cell);
+        self.cell_regions[cell] = None;
+    }
+
     /// Returns a hashset of cells in given row
     pub fn row_iter(&self, row: usize) -> HashSet<Cell> {
         self.board.row_iter(row)
+    }
+
+    /// Returns an iterator over all cells in the puzzle
+    pub fn all_cells(&self) -> impl Iterator<Item = Cell> + use<'_> {
+        self.board.all_cells()
     }
 
     /// Returns an iterator over all rows, returning the cell-set and row index
@@ -187,6 +222,10 @@ impl QueensPuzzle {
         self.board.cells_diagonally_adjacent(cell)
     }
 
+    pub fn cells_cardinally_adjacent(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
+        self.board.cells_cardinally_adjacent(cell)
+    }
+
     pub fn connected_cells(&self, cell: Cell) -> impl Iterator<Item = Cell> + '_ {
         self.cells_in_same_col(cell)
             .chain(self.cells_in_same_row(cell))
@@ -195,7 +234,7 @@ impl QueensPuzzle {
     }
 
     pub(crate) fn is_valid_move(&self, cell: Cell) -> bool {
-        if self.board[cell] != State::Unknown {
+        if self.board[cell] != State::Unknown || self.cell_regions[cell].is_none() {
             return false;
         }
 
@@ -259,18 +298,18 @@ mod tests {
 
     #[test]
     fn test_column_name() {
-        assert_eq!(column_name(0), "A");
-        assert_eq!(column_name(1), "B");
-        assert_eq!(column_name(2), "C");
-        assert_eq!(column_name(3), "D");
-        assert_eq!(column_name(4), "E");
-        assert_eq!(column_name(5), "F");
-        assert_eq!(column_name(6), "G");
-        assert_eq!(column_name(7), "H");
-        assert_eq!(column_name(8), "I");
-        assert_eq!(column_name(9), "J");
-        assert_eq!(column_name(10), "K");
-        assert_eq!(column_name(11), "L");
+        assert_eq!(column_name(0), "Column A");
+        assert_eq!(column_name(1), "Column B");
+        assert_eq!(column_name(2), "Column C");
+        assert_eq!(column_name(3), "Column D");
+        assert_eq!(column_name(4), "Column E");
+        assert_eq!(column_name(5), "Column F");
+        assert_eq!(column_name(6), "Column G");
+        assert_eq!(column_name(7), "Column H");
+        assert_eq!(column_name(8), "Column I");
+        assert_eq!(column_name(9), "Column J");
+        assert_eq!(column_name(10), "Column K");
+        assert_eq!(column_name(11), "Column L");
     }
 
     #[test]
