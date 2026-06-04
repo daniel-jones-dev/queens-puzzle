@@ -2,7 +2,6 @@ use crate::grid::Cell;
 use rand::prelude::{SliceRandom, StdRng};
 
 struct ShuffleQueensState {
-    queens: Vec<Cell>, // TODO remove, use ordered rows_used to get queens
     rows_used: Vec<usize>,
     rows_free: Vec<usize>,
     solutions: Vec<Vec<Cell>>,
@@ -11,7 +10,6 @@ struct ShuffleQueensState {
 
 pub fn shuffle_queens(n: usize, rng: &mut StdRng) -> Option<Vec<Cell>> {
     let mut state = ShuffleQueensState{
-        queens: vec![],
         rows_used: vec![],
         rows_free: (0..n).collect(),
         solutions: vec![],
@@ -23,7 +21,6 @@ pub fn shuffle_queens(n: usize, rng: &mut StdRng) -> Option<Vec<Cell>> {
 
 pub fn shuffle_queens_all(n: usize, rng: &mut StdRng) -> Vec<Vec<Cell>> {
     let mut state = ShuffleQueensState{
-        queens: vec![],
         rows_used: vec![],
         rows_free: (0..n).collect(),
         solutions: vec![],
@@ -51,18 +48,18 @@ fn shuffle_queens_helper(
     rows_available.shuffle(rng);
 
     for row in rows_available {
-        state.queens.push(Cell { col, row });
         state.rows_used.push(row);
         state.rows_free.retain(|&r| r != row);
         if state.rows_free.is_empty() {
-            state.solutions.push(state.queens.clone());
+            let solution = state.rows_used.iter().enumerate()
+                .map(|(i, &row)| Cell { col: i, row }).collect();
+            state.solutions.push(solution);
             if state.solutions.len() >= state.solutions_limit {
                 return;
             }
         } else {
             shuffle_queens_helper(state, col + 1, Some(row), rng);
         }
-        state.queens.pop();
         state.rows_used.pop();
         state.rows_free.push(row);
         state.rows_free.sort();
