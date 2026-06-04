@@ -107,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn solve_puzzle(mut puzzle: &mut QueensPuzzle) {
     print_board_colorized(&puzzle);
     println!();
-    solver::solve_logically(&mut puzzle);
+    solver::solve_and_rate_puzzle(&mut puzzle);
 
     print_board_colorized(&puzzle);
     println!();

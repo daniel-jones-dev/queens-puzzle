@@ -1,5 +1,4 @@
 use std::cmp::max;
-use std::error::Error;
 use std::fmt::Display;
 use crate::puzzle::QueensPuzzle;
 use rule::Rule;
@@ -18,16 +17,12 @@ mod rule_hidden_set;
 mod rule_pointers;
 
 /// The difficulty to solve a puzzle.
+#[derive(Copy, Clone)]
 pub enum Difficulty {
     Trivial,
     Easy,
     Medium,
     Hard,
-}
-
-pub fn solve_and_rate_puzzle(puzzle: &mut QueensPuzzle) -> Result<Difficulty, Box<dyn Error>> {
-    // TODO
-    Ok(Difficulty::Easy)
 }
 
 fn oxford_comma(items: impl Iterator<Item: Display>) -> String {
@@ -40,22 +35,27 @@ fn oxford_comma(items: impl Iterator<Item: Display>) -> String {
     }
 }
 
-pub fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
+/// Solves the given puzzle by applying logical rules in order of increasing difficulty.
+/// The puzzle may be not started, partially completed, or already solved.
+/// The puzzle is modified in place.
+/// TODO Return the list of changes applied
+pub fn solve_and_rate_puzzle(puzzle: &mut QueensPuzzle) -> Option<Difficulty> {
     let rules: Vec<(Box<dyn Rule>, Difficulty)> = vec![
         (Box::new(MarkQueen{}), Difficulty::Trivial),
         (Box::new(MarkEmpty{}), Difficulty::Trivial),
         (Box::new(Pointers{check_row: true }), Difficulty::Easy),
         (Box::new(Pointers{check_row: false }), Difficulty::Easy),
+        // TODO Rule for 2 or 3 possibles next to each other, to cross out neighbours
         (Box::new(NakedSet {n: 2}), Difficulty::Medium),
         (Box::new(NakedSet {n: 3}), Difficulty::Medium),
-        (Box::new(HiddenSet{n: 2}), Difficulty::Medium),
-        (Box::new(NakedSet {n: 4}), Difficulty::Medium),
-        (Box::new(NakedSet {n: 5}), Difficulty::Medium),
-        (Box::new(HiddenSet{n: 3}), Difficulty::Medium),
-        (Box::new(NakedSet {n: 12}), Difficulty::Medium),
-        (Box::new(HiddenSet{n: 4}), Difficulty::Medium),
-        (Box::new(HiddenSet{n: 5}), Difficulty::Medium),
-        (Box::new(HiddenSet{n: 6}), Difficulty::Medium),
+        (Box::new(HiddenSet{n: 2}), Difficulty::Hard),
+        (Box::new(NakedSet {n: 4}), Difficulty::Hard),
+        (Box::new(NakedSet {n: 5}), Difficulty::Hard),
+        (Box::new(HiddenSet{n: 3}), Difficulty::Hard),
+        (Box::new(NakedSet {n: 12}), Difficulty::Hard),
+        (Box::new(HiddenSet{n: 4}), Difficulty::Hard),
+        (Box::new(HiddenSet{n: 5}), Difficulty::Hard),
+        (Box::new(HiddenSet{n: 6}), Difficulty::Hard),
     ];
 
     let mut max_used_rule = 0;
@@ -67,7 +67,7 @@ pub fn solve_logically(puzzle: &mut QueensPuzzle) -> Option<usize> {
                 result.apply(puzzle);
                 crate::print_board_result_colorized(puzzle, &Some(result));
                 if puzzle.is_solved() {
-                    return Some(max_used_rule);
+                    return Some(rules.get(max_used_rule).unwrap().1);
                 }
                 continue 'solver;
             }
