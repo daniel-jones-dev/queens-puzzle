@@ -18,7 +18,7 @@ pub fn generate_puzzles(n: usize, num: usize) -> Vec<QueensPuzzle> {
 
 fn generate_puzzle_helper(puzzle: &mut QueensPuzzle, rng: &mut StdRng) -> bool {
     // Shuffle every cell that is not assigned to a region and neighbors an existing region
-    let mut unregioned_neighbouring_cells =puzzle.all_cells()
+    let mut unregioned_neighbouring_cells = puzzle.all_cells()
         .filter(|cell| {puzzle.cell_region(*cell).is_none()})
         .filter(|cell| {puzzle.cells_cardinally_adjacent(*cell).any(|cell| {puzzle.cell_region(cell).is_some()})})
         .collect::<Vec<Cell>>();
@@ -38,6 +38,9 @@ fn generate_puzzle_helper(puzzle: &mut QueensPuzzle, rng: &mut StdRng) -> bool {
             puzzle.assign_cell_region(cell, region);
             print_board_colorized(puzzle);
             println!();
+
+            // TODO when growing a region, check if there are now unregioned "islands" within.
+            //  These cells must be assigned to this region, so immediately assign them for speed.
 
             // Check the puzzle still has a unique solution
             let mut solutions = vec![];
