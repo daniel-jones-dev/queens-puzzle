@@ -11,6 +11,7 @@ use colored::*;
 use puzzle::{QueensPuzzle, State};
 use solver::rule::RuleResult;
 use crate::generator::generate_puzzles;
+use crate::puzzle::region_color;
 
 fn print_board_colorized(puzzle: &QueensPuzzle){
     print_board_result_colorized(puzzle, &None);
@@ -60,20 +61,9 @@ fn print_board_result_colorized(puzzle: &QueensPuzzle, rule_result: &Option<Rule
 }
 
 fn colorize_region(cell: ColoredString, region_index: usize) -> ColoredString {
-    const PURPLE: Color = Color::TrueColor {r: 187, g: 163, b: 226};
-    const ORANGE: Color = Color::TrueColor {r: 255, g: 201, b: 146};
-    const BLUE: Color = Color::TrueColor {r: 150, g: 190, b: 255};
-    const GREEN: Color = Color::TrueColor {r: 179, g: 223, b: 160};
-    const WHITE: Color = Color::TrueColor {r: 223, g: 223, b: 223};
-    const RED: Color = Color::TrueColor {r: 255, g: 123, b: 96};
-    const YELLOW: Color = Color::TrueColor {r: 230, g: 243, b: 136};
-    const GREY: Color = Color::TrueColor {r: 185, g: 178, b: 158};
-    const PINK: Color = Color::TrueColor {r: 223, g: 160, b: 191};
-    const SEA_GREEN: Color = Color::TrueColor {r: 163, g: 210, b: 216};
-    const TEAL: Color = Color::TrueColor {r: 98, g: 239, b: 234};
-
-    let colors = vec![PURPLE, ORANGE, BLUE, GREEN, WHITE, RED, YELLOW, GREY, PINK, SEA_GREEN, TEAL];
-    cell.on_color(colors[region_index % colors.len()])
+    let color = region_color(region_index);
+    let color = Color::TrueColor{ r: color.r, g: color.g, b:color.b };
+    cell.on_color(color)
 }
 
 

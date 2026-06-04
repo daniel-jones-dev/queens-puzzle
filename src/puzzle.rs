@@ -42,8 +42,34 @@ pub fn region_color_name(block_index: usize) -> &'static str {
         8 => "pink",
         9 => "sea green",
         10 => "teal",
+        11 => "brown",
         _ => unreachable!("region index out of bounds"),
     }
+}
+
+#[derive(Copy, Clone)]
+pub struct Color {
+    pub(crate) r: u8,
+    pub(crate) g: u8,
+    pub(crate) b: u8,
+}
+
+pub fn region_color(block_index: usize) -> Color {
+    const PURPLE: Color = Color {r: 187, g: 163, b: 226};
+    const ORANGE: Color = Color {r: 255, g: 201, b: 146};
+    const BLUE: Color = Color {r: 150, g: 190, b: 255};
+    const GREEN: Color = Color {r: 179, g: 223, b: 160};
+    const WHITE: Color = Color {r: 223, g: 223, b: 223};
+    const RED: Color = Color {r: 255, g: 123, b: 96};
+    const YELLOW: Color = Color {r: 230, g: 243, b: 136};
+    const GREY: Color = Color {r: 185, g: 178, b: 158};
+    const PINK: Color = Color {r: 223, g: 160, b: 191};
+    const SEA_GREEN: Color = Color {r: 163, g: 210, b: 216};
+    const TEAL: Color = Color {r: 98, g: 239, b: 234};
+    const BROWN: Color = Color {r: 166, g: 90, b: 47};
+
+    let colors = vec![PURPLE, ORANGE, BLUE, GREEN, WHITE, RED, YELLOW, GREY, PINK, SEA_GREEN, TEAL, BROWN];
+    colors[block_index % colors.len()].clone()
 }
 
 pub fn column_name(block_index: usize) -> String {
