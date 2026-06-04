@@ -7,10 +7,6 @@ use crate::puzzle::{region_color_name, QueensPuzzle};
 use rand::prelude::*;
 use crate::{print_board_colorized, solver};
 
-fn neighbouring_unregioned_cells(puzzle: &QueensPuzzle, cell: Cell) -> impl Iterator<Item=Cell> + use<'_> {
-    puzzle.cells_cardinally_adjacent(cell).filter(|cell| {puzzle.cell_region(*cell).is_none()})
-}
-
 pub fn generate_puzzles(n: usize, num: usize) -> Vec<QueensPuzzle> {
     let mut result = vec![];
     for i in 0..num {
@@ -80,14 +76,4 @@ pub fn generate_puzzle(n: usize, seed: u64) -> QueensPuzzle {
     generate_puzzle_helper(&mut puzzle, &mut rng);
 
     puzzle
-}
-
-pub fn generate_regions(n: usize) -> Vec<Vec<Cell>> {
-    let mut regions = vec![vec![]; n];
-
-    for i in 0..n {
-        regions[i].push(Cell { row: i, col: i });
-    }
-
-    regions
 }
