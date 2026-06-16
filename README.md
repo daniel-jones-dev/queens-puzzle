@@ -1,5 +1,9 @@
 # Queens puzzle
 
+[![CI](https://github.com/daniel-jones-dev/queens-puzzle/actions/workflows/ci.yml/badge.svg)](https://github.com/daniel-jones-dev/queens-puzzle/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Rust 2021](https://img.shields.io/badge/Rust-2021-orange.svg)](https://doc.rust-lang.org/edition-guide/rust-2021/)
+
 A solver and generator for the **Queens** puzzle (as featured daily on LinkedIn), written in Rust.
 
 In Queens, an *n×n* board is divided into *n* coloured regions. The goal is to place *n* queens so that:
@@ -33,7 +37,13 @@ difficulty, and generate brand-new puzzles that have a unique solution.
 Requires a [Rust toolchain](https://www.rust-lang.org/tools/install).
 
 ```sh
-git clone <repo-url>
+cargo install --git https://github.com/daniel-jones-dev/queens-puzzle
+```
+
+Or build from source:
+
+```sh
+git clone https://github.com/daniel-jones-dev/queens-puzzle
 cd queens-puzzle
 cargo build --release
 ```
