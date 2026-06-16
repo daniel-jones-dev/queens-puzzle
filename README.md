@@ -174,3 +174,7 @@ Ideas for future work, roughly in priority order:
 - **Performance**: memoise `queens()` rather than rescanning the board.
 - **Refactor** the core puzzle representation (grid, cell state, IO, change list) into its own module/crate.
 - **Fetch command** to download puzzles directly from the archive API.
+
+## License
+
+Released under the [MIT License](LICENSE).
