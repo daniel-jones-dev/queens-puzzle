@@ -1,10 +1,10 @@
+use crate::grid::Cell;
+use crate::puzzle::QueensPuzzle;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
-use serde::Deserialize;
-use crate::grid::Cell;
-use crate::puzzle::QueensPuzzle;
 
 #[derive(Deserialize, Clone)]
 #[allow(dead_code)] // `date` and `grid` are parsed for completeness but not used by the solver
@@ -22,7 +22,7 @@ pub struct PuzzleData {
 
 pub fn parse_file(path: PathBuf) -> Result<HashMap<u32, PuzzleData>, Box<dyn Error>> {
     let json = fs::read_to_string(path)?;
-    let result: Vec<PuzzleData> = serde_json::from_str(&*json)?;
+    let result: Vec<PuzzleData> = serde_json::from_str(&json)?;
     Ok(HashMap::from_iter(result.into_iter().map(|p| (p.id, p))))
 }
 
@@ -35,7 +35,11 @@ pub fn read_data(data: &PuzzleData) -> Result<QueensPuzzle, Box<dyn Error>> {
 
     for row in 0..n {
         if data.regions[row].len() != n {
-            return Err(format!("invalid puzzle data: row {row} has length {}, expected {n}", data.regions[row].len()).into());
+            return Err(format!(
+                "invalid puzzle data: row {row} has length {}, expected {n}",
+                data.regions[row].len()
+            )
+            .into());
         }
         for col in 0..n {
             let region_id = data.regions[row][col];
@@ -56,8 +60,13 @@ pub fn read_data(data: &PuzzleData) -> Result<QueensPuzzle, Box<dyn Error>> {
 pub fn read(path: PathBuf, id: Option<u32>) -> Result<QueensPuzzle, Box<dyn Error>> {
     let map = parse_file(path)?;
     let data = match id {
-        Some(id) => map.get(&id).ok_or_else(|| format!("puzzle id {id} not found in archive"))?,
-        None => map.values().min_by_key(|p| p.id).ok_or("archive contains no puzzles")?,
+        Some(id) => map
+            .get(&id)
+            .ok_or_else(|| format!("puzzle id {id} not found in archive"))?,
+        None => map
+            .values()
+            .min_by_key(|p| p.id)
+            .ok_or("archive contains no puzzles")?,
     };
     read_data(data)
 }

@@ -1,24 +1,30 @@
 mod shuffle_queens;
 
-use std::collections::HashSet;
 use crate::grid::Cell;
 use crate::puzzle::{region_color_name, QueensPuzzle};
+use std::collections::HashSet;
 
-use rand::prelude::*;
-use log::trace;
 use crate::{format_board, solver};
+use log::trace;
+use rand::prelude::*;
 
 /// Generates `num` puzzles of size `n`; puzzle `i` is generated with `seed + i`.
 pub fn generate_puzzles(n: usize, num: usize, seed: u64) -> Vec<QueensPuzzle> {
-    (0..num as u64).map(|i| generate_puzzle(n, seed + i)).collect()
+    (0..num as u64)
+        .map(|i| generate_puzzle(n, seed + i))
+        .collect()
 }
-
 
 fn generate_puzzle_helper(puzzle: &mut QueensPuzzle, rng: &mut StdRng) -> bool {
     // Shuffle every cell that is not assigned to a region and neighbors an existing region
-    let mut unregioned_neighbouring_cells = puzzle.all_cells()
-        .filter(|cell| {puzzle.cell_region(*cell).is_none()})
-        .filter(|cell| {puzzle.cells_cardinally_adjacent(*cell).any(|cell| {puzzle.cell_region(cell).is_some()})})
+    let mut unregioned_neighbouring_cells = puzzle
+        .all_cells()
+        .filter(|cell| puzzle.cell_region(*cell).is_none())
+        .filter(|cell| {
+            puzzle
+                .cells_cardinally_adjacent(*cell)
+                .any(|cell| puzzle.cell_region(cell).is_some())
+        })
         .collect::<Vec<Cell>>();
     if unregioned_neighbouring_cells.is_empty() {
         return true;
@@ -28,11 +34,17 @@ fn generate_puzzle_helper(puzzle: &mut QueensPuzzle, rng: &mut StdRng) -> bool {
 
     for cell in unregioned_neighbouring_cells {
         // Get set of neighboring regions of the cell
-        let neighboring_regions = puzzle.cells_cardinally_adjacent(cell)
-            .filter_map(|cell| {puzzle.cell_region(cell)}).collect::<HashSet<_>>();
+        let neighboring_regions = puzzle
+            .cells_cardinally_adjacent(cell)
+            .filter_map(|cell| puzzle.cell_region(cell))
+            .collect::<HashSet<_>>();
         for region in neighboring_regions {
             // Grow the region
-            trace!("+++ Growing Region {} to include cell {}", region_color_name(region as usize), cell);
+            trace!(
+                "+++ Growing Region {} to include cell {}",
+                region_color_name(region as usize),
+                cell
+            );
             puzzle.assign_cell_region(cell, region);
             trace!("{}", format_board(puzzle));
 
@@ -45,17 +57,22 @@ fn generate_puzzle_helper(puzzle: &mut QueensPuzzle, rng: &mut StdRng) -> bool {
             }
 
             // Shrink the region again
-            trace!("--- Shrinking cell {} from Region {}", cell, region_color_name(region as usize));
+            trace!(
+                "--- Shrinking cell {} from Region {}",
+                cell,
+                region_color_name(region as usize)
+            );
             puzzle.unassign_cell_region(cell);
             trace!("{}", format_board(puzzle));
 
-            if num_solutions != 1 { return false }
+            if num_solutions != 1 {
+                return false;
+            }
         }
     }
 
     false
 }
-
 
 pub fn generate_puzzle(n: usize, seed: u64) -> QueensPuzzle {
     let mut rng = StdRng::seed_from_u64(seed);
@@ -64,7 +81,7 @@ pub fn generate_puzzle(n: usize, seed: u64) -> QueensPuzzle {
     let queens = shuffle_queens::shuffle_queens(n, &mut rng).unwrap();
 
     // Start puzzle by giving each queen a one-cell region
-    let mut puzzle = QueensPuzzle::new(queens.into_iter().map(|cell: Cell| {vec![cell]}).collect());
+    let mut puzzle = QueensPuzzle::new(queens.into_iter().map(|cell: Cell| vec![cell]).collect());
 
     // Note: puzzle is guaranteed to have a unique solution, since single-celled regions match the shuffled queens
 

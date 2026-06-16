@@ -1,19 +1,19 @@
-mod io;
+mod generator;
 mod grid;
+mod io;
 mod puzzle;
 mod solver;
-mod generator;
 
+use crate::generator::generate_puzzles;
 use crate::grid::Cell;
-use std::fmt::Write as _;
-use std::path::PathBuf;
+use crate::puzzle::region_color;
 use clap::{Parser, Subcommand};
 use colored::*;
 use log::{info, LevelFilter};
 use puzzle::{QueensPuzzle, State};
 use solver::rule::RuleResult;
-use crate::generator::generate_puzzles;
-use crate::puzzle::region_color;
+use std::fmt::Write as _;
+use std::path::PathBuf;
 
 /// Solver and generator for the LinkedIn Queens puzzle.
 #[derive(Parser, Debug)]
@@ -148,8 +148,11 @@ fn format_board_result(puzzle: &QueensPuzzle, rule_result: &Option<RuleResult>) 
                 State::Queen => " ♛ ",
                 State::Empty => " x ",
                 _ => "   ",
-            }.white();
-            let region_index = puzzle.all_regions_iter().position(|(region, _)| region.contains(&cell));
+            }
+            .white();
+            let region_index = puzzle
+                .all_regions_iter()
+                .position(|(region, _)| region.contains(&cell));
 
             cell_text = match rule_result {
                 Some(rule_result) => {
@@ -182,6 +185,10 @@ fn format_board_result(puzzle: &QueensPuzzle, rule_result: &Option<RuleResult>) 
 
 fn colorize_region(cell: ColoredString, region_index: usize) -> ColoredString {
     let color = region_color(region_index);
-    let color = Color::TrueColor { r: color.r, g: color.g, b: color.b };
+    let color = Color::TrueColor {
+        r: color.r,
+        g: color.g,
+        b: color.b,
+    };
     cell.on_color(color)
 }

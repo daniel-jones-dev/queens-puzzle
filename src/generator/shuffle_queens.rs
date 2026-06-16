@@ -9,7 +9,7 @@ struct ShuffleQueensState {
 }
 
 pub fn shuffle_queens(n: usize, rng: &mut StdRng) -> Option<Vec<Cell>> {
-    let mut state = ShuffleQueensState{
+    let mut state = ShuffleQueensState {
         rows_used: vec![],
         rows_free: (0..n).collect(),
         solutions: vec![],
@@ -19,6 +19,7 @@ pub fn shuffle_queens(n: usize, rng: &mut StdRng) -> Option<Vec<Cell>> {
     state.solutions.into_iter().next()
 }
 
+#[allow(clippy::only_used_in_recursion)]
 fn shuffle_queens_helper(
     state: &mut ShuffleQueensState,
     col: usize,
@@ -28,11 +29,12 @@ fn shuffle_queens_helper(
     // Filter free rows by removing neighbors from row above
     let mut rows_available = match row_above {
         None => state.rows_free.clone(),
-        Some(row_above) => {
-            state.rows_free.iter().filter(|row| {
-                row > &&(row_above + 1) || (row_above > 1 && row < &&(row_above - 1))
-            }).cloned().collect()
-        },
+        Some(row_above) => state
+            .rows_free
+            .iter()
+            .filter(|row| row > &&(row_above + 1) || (row_above > 1 && row < &&(row_above - 1)))
+            .cloned()
+            .collect(),
     };
     rows_available.shuffle(rng);
 
@@ -40,8 +42,12 @@ fn shuffle_queens_helper(
         state.rows_used.push(row);
         state.rows_free.retain(|&r| r != row);
         if state.rows_free.is_empty() {
-            let solution = state.rows_used.iter().enumerate()
-                .map(|(i, &row)| Cell { col: i, row }).collect();
+            let solution = state
+                .rows_used
+                .iter()
+                .enumerate()
+                .map(|(i, &row)| Cell { col: i, row })
+                .collect();
             state.solutions.push(solution);
             if state.solutions.len() >= state.solutions_limit {
                 return;

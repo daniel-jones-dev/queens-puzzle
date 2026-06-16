@@ -1,8 +1,8 @@
+use crate::grid::{Cell, Grid};
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::ops::{Index, IndexMut};
-use crate::grid::{Cell, Grid};
 
 /// Represents the state of a cell
 #[derive(Copy, Clone, Default, PartialEq)]
@@ -16,7 +16,7 @@ pub enum State {
 pub enum BlockType {
     Column,
     Row,
-    Region
+    Region,
 }
 
 impl Display for BlockType {
@@ -55,21 +55,71 @@ pub struct Color {
 }
 
 pub fn region_color(block_index: usize) -> Color {
-    const PURPLE: Color = Color {r: 187, g: 163, b: 226};
-    const ORANGE: Color = Color {r: 255, g: 201, b: 146};
-    const BLUE: Color = Color {r: 150, g: 190, b: 255};
-    const GREEN: Color = Color {r: 179, g: 223, b: 160};
-    const WHITE: Color = Color {r: 223, g: 223, b: 223};
-    const RED: Color = Color {r: 255, g: 123, b: 96};
-    const YELLOW: Color = Color {r: 230, g: 243, b: 136};
-    const GREY: Color = Color {r: 185, g: 178, b: 158};
-    const PINK: Color = Color {r: 223, g: 160, b: 191};
-    const SEA_GREEN: Color = Color {r: 163, g: 210, b: 216};
-    const TEAL: Color = Color {r: 98, g: 239, b: 234};
-    const BROWN: Color = Color {r: 166, g: 90, b: 47};
+    const PURPLE: Color = Color {
+        r: 187,
+        g: 163,
+        b: 226,
+    };
+    const ORANGE: Color = Color {
+        r: 255,
+        g: 201,
+        b: 146,
+    };
+    const BLUE: Color = Color {
+        r: 150,
+        g: 190,
+        b: 255,
+    };
+    const GREEN: Color = Color {
+        r: 179,
+        g: 223,
+        b: 160,
+    };
+    const WHITE: Color = Color {
+        r: 223,
+        g: 223,
+        b: 223,
+    };
+    const RED: Color = Color {
+        r: 255,
+        g: 123,
+        b: 96,
+    };
+    const YELLOW: Color = Color {
+        r: 230,
+        g: 243,
+        b: 136,
+    };
+    const GREY: Color = Color {
+        r: 185,
+        g: 178,
+        b: 158,
+    };
+    const PINK: Color = Color {
+        r: 223,
+        g: 160,
+        b: 191,
+    };
+    const SEA_GREEN: Color = Color {
+        r: 163,
+        g: 210,
+        b: 216,
+    };
+    const TEAL: Color = Color {
+        r: 98,
+        g: 239,
+        b: 234,
+    };
+    const BROWN: Color = Color {
+        r: 166,
+        g: 90,
+        b: 47,
+    };
 
-    let colors = vec![PURPLE, ORANGE, BLUE, GREEN, WHITE, RED, YELLOW, GREY, PINK, SEA_GREEN, TEAL, BROWN];
-    colors[block_index % colors.len()].clone()
+    let colors = vec![
+        PURPLE, ORANGE, BLUE, GREEN, WHITE, RED, YELLOW, GREY, PINK, SEA_GREEN, TEAL, BROWN,
+    ];
+    colors[block_index % colors.len()]
 }
 
 pub fn column_name(block_index: usize) -> String {
@@ -120,7 +170,9 @@ impl QueensPuzzle {
             }
             region.iter().for_each(|cell| {
                 cell_regions[cell] = match cell_regions[cell] {
-                    Some(set_region) => panic!("cell {cell} is overlapping in regions {set_region} and {region_index}"),
+                    Some(set_region) => panic!(
+                        "cell {cell} is overlapping in regions {set_region} and {region_index}"
+                    ),
                     None => Some(region_index as u8),
                 }
             });
@@ -129,20 +181,23 @@ impl QueensPuzzle {
             regions.push(region)
         }
 
-        Self { board, cell_regions, regions }
+        Self {
+            board,
+            cell_regions,
+            regions,
+        }
     }
 
     pub(crate) fn n(&self) -> usize {
         self.regions.len()
     }
 
-
     /// Returns the cells occupied by queens
     pub fn queens(&self) -> Vec<Cell> {
         let mut result = vec![];
         for c in 0..self.n() {
             for r in 0..self.n() {
-                let c = Cell{ row: r, col: c };
+                let c = Cell { row: r, col: c };
                 if self.board[c] == State::Queen {
                     result.push(c);
                 }
@@ -162,14 +217,18 @@ impl QueensPuzzle {
 
     /// Assigns a region to a cell
     pub fn assign_cell_region(&mut self, cell: Cell, region: u8) {
-        if self.cell_regions[cell].is_some() {panic!("cell {cell} already has a region")}
+        if self.cell_regions[cell].is_some() {
+            panic!("cell {cell} already has a region")
+        }
         self.cell_regions[cell] = Some(region);
         self.regions[region as usize].insert(cell);
     }
 
     /// Unassigns a region from a cell
     pub fn unassign_cell_region(&mut self, cell: Cell) {
-        if self.cell_regions[cell].is_none() {panic!("cell {cell} does not have a region")}
+        if self.cell_regions[cell].is_none() {
+            panic!("cell {cell} does not have a region")
+        }
         let region = self.cell_regions[cell].unwrap();
         self.regions[region as usize].remove(&cell);
         self.cell_regions[cell] = None;
@@ -202,14 +261,26 @@ impl QueensPuzzle {
 
     /// Returns an iterator over all regions, returning the cell-set and region index
     pub(crate) fn all_regions_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize)> + '_ {
-        self.regions.iter().enumerate().map(|(i, cells)| (cells.clone(), i))
+        self.regions
+            .iter()
+            .enumerate()
+            .map(|(i, cells)| (cells.clone(), i))
     }
 
     /// Returns an iterator over all blocks (rows, columns, regions), returning the cell-set, block-index, and block type
-    pub(crate) fn all_blocks_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize, BlockType)> + '_ {
-        self.all_rows_iter().map(|(cells, index)| (cells, index, BlockType::Row))
-            .chain(self.all_cols_iter().map(|(cells, index)| (cells, index, BlockType::Column)))
-            .chain(self.all_regions_iter().map(|(cells, index)| (cells, index, BlockType::Region)))
+    pub(crate) fn all_blocks_iter(
+        &self,
+    ) -> impl Iterator<Item = (HashSet<Cell>, usize, BlockType)> + '_ {
+        self.all_rows_iter()
+            .map(|(cells, index)| (cells, index, BlockType::Row))
+            .chain(
+                self.all_cols_iter()
+                    .map(|(cells, index)| (cells, index, BlockType::Column)),
+            )
+            .chain(
+                self.all_regions_iter()
+                    .map(|(cells, index)| (cells, index, BlockType::Region)),
+            )
     }
 
     /// Returns an iterator over cells in the same row as the given cell, excluding the given cell
@@ -256,14 +327,16 @@ impl QueensPuzzle {
             return false;
         }
 
-        if self.connected_cells(cell).any(|cell: Cell| {self.board[cell] == State::Queen}) {
+        if self
+            .connected_cells(cell)
+            .any(|cell: Cell| self.board[cell] == State::Queen)
+        {
             return false;
         }
 
         true
     }
 }
-
 
 // Index by Cell
 
@@ -283,10 +356,10 @@ impl<B: Borrow<Cell>> IndexMut<B> for QueensPuzzle {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-    use crate::Cell;
     use crate::cell;
     use crate::puzzle::{column_name, QueensPuzzle};
+    use crate::Cell;
+    use std::collections::HashSet;
 
     /// Test puzzle with the following setup:
     ///
@@ -303,10 +376,24 @@ mod tests {
     ///
     fn build_test_puzzle() -> QueensPuzzle {
         QueensPuzzle::new(vec![
-        vec![cell![0, 0], cell![0, 1], cell![0, 2], cell![0, 3]],
-        vec![cell![1, 0]],
-        vec![cell![1, 2], cell![1, 3], cell![2, 2], cell![2, 3], cell![3, 2], cell![3, 3]],
-        vec![cell![1, 1], cell![2, 0], cell![2, 1], cell![3, 0], cell![3, 1]]])
+            vec![cell![0, 0], cell![0, 1], cell![0, 2], cell![0, 3]],
+            vec![cell![1, 0]],
+            vec![
+                cell![1, 2],
+                cell![1, 3],
+                cell![2, 2],
+                cell![2, 3],
+                cell![3, 2],
+                cell![3, 3],
+            ],
+            vec![
+                cell![1, 1],
+                cell![2, 0],
+                cell![2, 1],
+                cell![3, 0],
+                cell![3, 1],
+            ],
+        ])
     }
 
     #[test]
@@ -331,27 +418,44 @@ mod tests {
         assert_eq!(puzzle.n(), 4);
         assert_eq!(puzzle.is_solved(), false);
         assert_eq!(puzzle.all_regions_iter().count(), 4);
-
     }
-    
+
     #[test]
     fn connected_cells() {
         let puzzle = build_test_puzzle();
         // Cell 0,0
         let expected_cells: HashSet<Cell> = vec![
-            cell![0, 1], cell![0, 2], cell![0, 3], // Same row
-            cell![1, 0], cell![2, 0], cell![3, 0], // Same column
-            cell![1, 1] // diagonally adjacent
-        ].into_iter().collect();
-        assert_eq!(expected_cells, puzzle.connected_cells(cell![0, 0]).into_iter().collect());
+            cell![0, 1],
+            cell![0, 2],
+            cell![0, 3], // Same row
+            cell![1, 0],
+            cell![2, 0],
+            cell![3, 0], // Same column
+            cell![1, 1], // diagonally adjacent
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            expected_cells,
+            puzzle.connected_cells(cell![0, 0]).into_iter().collect()
+        );
 
         // Cell 3,0
         let expected_cells: HashSet<Cell> = vec![
-            cell![3, 1], cell![3, 2], cell![3, 3], // Same row
-            cell![0, 0], cell![1, 0], cell![2, 0], // Same column
+            cell![3, 1],
+            cell![3, 2],
+            cell![3, 3], // Same row
+            cell![0, 0],
+            cell![1, 0],
+            cell![2, 0], // Same column
             cell![2, 1], // diagonally adjacent
-            cell![1, 1] // same region
-        ].into_iter().collect();
-        assert_eq!(expected_cells, puzzle.connected_cells(cell![3, 0]).into_iter().collect());
+            cell![1, 1], // same region
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            expected_cells,
+            puzzle.connected_cells(cell![3, 0]).into_iter().collect()
+        );
     }
 }
