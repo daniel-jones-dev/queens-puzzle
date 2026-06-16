@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/daniel-jones-dev/queens-puzzle/actions/workflows/ci.yml/badge.svg)](https://github.com/daniel-jones-dev/queens-puzzle/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Rust 2021](https://img.shields.io/badge/Rust-2021-orange.svg)](https://doc.rust-lang.org/edition-guide/rust-2021/)
+[![Rust 2024](https://img.shields.io/badge/Rust-2024-orange.svg)](https://doc.rust-lang.org/edition-guide/rust-2024/)
 
 A solver and generator for the **Queens** puzzle (as featured daily on LinkedIn), written in Rust.
 

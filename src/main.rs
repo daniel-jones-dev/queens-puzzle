@@ -152,7 +152,7 @@ fn format_board_result(puzzle: &QueensPuzzle, rule_result: &Option<RuleResult>) 
             let region_index = puzzle.all_regions_iter().position(|(region, _)| region.contains(&cell));
 
             cell_text = match rule_result {
-                Some(ref rule_result) => {
+                Some(rule_result) => {
                     if rule_result.changes.iter().any(|(c, _)| *c == cell) {
                         cell_text.bright_green()
                     } else if rule_result.involved.contains(&cell) {
