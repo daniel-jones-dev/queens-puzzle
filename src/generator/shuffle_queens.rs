@@ -19,17 +19,6 @@ pub fn shuffle_queens(n: usize, rng: &mut StdRng) -> Option<Vec<Cell>> {
     state.solutions.into_iter().next()
 }
 
-pub fn shuffle_queens_all(n: usize, rng: &mut StdRng) -> Vec<Vec<Cell>> {
-    let mut state = ShuffleQueensState{
-        rows_used: vec![],
-        rows_free: (0..n).collect(),
-        solutions: vec![],
-        solutions_limit: usize::MAX,
-    };
-    shuffle_queens_helper(&mut state, 0, None, rng);
-    state.solutions
-}
-
 fn shuffle_queens_helper(
     state: &mut ShuffleQueensState,
     col: usize,

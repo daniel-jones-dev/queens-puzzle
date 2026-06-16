@@ -20,25 +20,8 @@ impl RuleResult {
     }
 }
 
-// TODO need a rule that checks if the remaining unknowns for a region are all in one row or
-//  column, pretty easy to see
-// TODO Should split up the NakedSet rule, sometimes it's hard to see.
-//  e.g. cases when all cells in a row (of multiple colors) cross out some cells in the next row,
-//  because they share the same color and are nearby another color.
-
+/// A logical deduction technique. `check` inspects the puzzle and, if the technique applies,
+/// returns a [`RuleResult`] describing the deduction (without mutating the puzzle).
 pub trait Rule {
-    fn description(&self) -> String;
-
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult>;
-}
-
-fn check_rule(puzzle: &mut QueensPuzzle, rule: &dyn Rule) {
-    match rule.check(&puzzle) {
-        Some(result) => {
-            result.apply(puzzle);
-            crate::print_board_colorized(&puzzle);
-            println!();
-        }
-        _ => {}
-    }
 }

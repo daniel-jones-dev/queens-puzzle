@@ -7,6 +7,7 @@ use crate::grid::Cell;
 use crate::puzzle::QueensPuzzle;
 
 #[derive(Deserialize, Clone)]
+#[allow(dead_code)] // `date` and `grid` are parsed for completeness but not used by the solver
 pub struct PuzzleData {
     /// Integer ID of the puzzle
     id: u32,
@@ -27,26 +28,36 @@ pub fn parse_file(path: PathBuf) -> Result<HashMap<u32, PuzzleData>, Box<dyn Err
 
 pub fn read_data(data: &PuzzleData) -> Result<QueensPuzzle, Box<dyn Error>> {
     let n = data.regions.len();
-    let mut regions: Vec<Vec<Cell>> = vec![vec![]; n];
+    // Map each region id to a contiguous index, since archived puzzles do not always number their
+    // regions 0..n-1 (e.g. puzzle 77 skips some ids).
+    let mut region_indices: HashMap<u8, usize> = HashMap::new();
+    let mut regions: Vec<Vec<Cell>> = vec![];
+
     for row in 0..n {
         if data.regions[row].len() != n {
-            panic!("invalid region {row} in puzzle data, wrong length")
+            return Err(format!("invalid puzzle data: row {row} has length {}, expected {n}", data.regions[row].len()).into());
         }
         for col in 0..n {
-            let cell = Cell{row, col};
-
-            let this_cells_region = data.regions[row][col] as usize;
-            if this_cells_region >= n {
-                panic!("invalid region {row}, {col} in puzzle data, region number too high")
+            let region_id = data.regions[row][col];
+            let next_index = region_indices.len();
+            let index = *region_indices.entry(region_id).or_insert(next_index);
+            if index == regions.len() {
+                regions.push(vec![]);
             }
-            regions[this_cells_region].push(cell);
+            regions[index].push(Cell { row, col });
         }
     }
 
     Ok(QueensPuzzle::new(regions))
 }
 
-pub fn read_first(path: PathBuf)-> Result<QueensPuzzle, Box<dyn Error>> {
+/// Reads a single puzzle from an archive file. With `id`, reads that puzzle; otherwise reads the
+/// puzzle with the lowest id.
+pub fn read(path: PathBuf, id: Option<u32>) -> Result<QueensPuzzle, Box<dyn Error>> {
     let map = parse_file(path)?;
-    Ok(read_data(&map.iter().next().unwrap().1)?)
+    let data = match id {
+        Some(id) => map.get(&id).ok_or_else(|| format!("puzzle id {id} not found in archive"))?,
+        None => map.values().min_by_key(|p| p.id).ok_or("archive contains no puzzles")?,
+    };
+    read_data(data)
 }

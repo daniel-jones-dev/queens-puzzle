@@ -5,16 +5,7 @@ use crate::solver::rule::{Rule, RuleResult};
 use itertools::Itertools;
 use std::collections::HashSet;
 
-
-// TODO need a rule that checks if the remaining unknowns for a region are all in one row or
-//  column, pretty easy to see
-
 impl Rule for Pointers {
-    fn description(&self) -> String {
-        "This region has only these cells remaining, and they are all in the same \
-        row/column, therefore the other cells in the row/column must be empty.".to_string()
-    }
-
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
         // Loop through all regions
         for (region_cells, region_index) in puzzle.all_regions_iter() {

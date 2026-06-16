@@ -10,12 +10,6 @@ pub struct HiddenSet { // Naming comes from sudokuwiki.org "Hidden Pair"
 }
 
 impl Rule for HiddenSet {
-    fn description(&self) -> String {
-        "The involved cells are in the same N regions that must contain N queens,\
-        and these blocks are wholly within N rows/columns. \
-        Therefore all other cells in the same rows/columns are empty.".to_string()
-    }
-
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
         // Search for N unsolved regions whose cells lie wholly within N rows or columns
 

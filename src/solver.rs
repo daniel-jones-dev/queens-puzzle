@@ -1,5 +1,6 @@
 use std::cmp::max;
 use std::fmt::Display;
+use log::debug;
 use crate::puzzle::QueensPuzzle;
 use rule::Rule;
 use rule_hidden_set::HiddenSet;
@@ -17,7 +18,7 @@ mod rule_hidden_set;
 mod rule_pointers;
 
 /// The difficulty to solve a puzzle.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Difficulty {
     Trivial,
     Easy,
@@ -35,17 +36,16 @@ fn oxford_comma(items: impl Iterator<Item: Display>) -> String {
     }
 }
 
-/// Solves the given puzzle by applying logical rules in order of increasing difficulty.
-/// The puzzle may be not started, partially completed, or already solved.
-/// The puzzle is modified in place.
-/// TODO Return the list of changes applied
+/// Solves the given puzzle by applying logical rules in order of increasing difficulty,
+/// returning the difficulty of the hardest rule needed, or `None` if it could not be solved
+/// logically. The puzzle may be not started, partially completed, or already solved, and is
+/// modified in place.
 pub fn solve_and_rate_puzzle(puzzle: &mut QueensPuzzle) -> Option<Difficulty> {
     let rules: Vec<(Box<dyn Rule>, Difficulty)> = vec![
         (Box::new(MarkQueen{}), Difficulty::Trivial),
         (Box::new(MarkEmpty{}), Difficulty::Trivial),
         (Box::new(Pointers{check_row: true }), Difficulty::Easy),
         (Box::new(Pointers{check_row: false }), Difficulty::Easy),
-        // TODO Rule for 2 or 3 possibles next to each other, to cross out neighbours
         (Box::new(NakedSet {n: 2}), Difficulty::Medium),
         (Box::new(NakedSet {n: 3}), Difficulty::Medium),
         (Box::new(HiddenSet{n: 2}), Difficulty::Hard),
@@ -65,7 +65,7 @@ pub fn solve_and_rate_puzzle(puzzle: &mut QueensPuzzle) -> Option<Difficulty> {
             if let Some(result) = rule.check(puzzle) {
                 max_used_rule = max(rule_index, max_used_rule);
                 result.apply(puzzle);
-                crate::print_board_result_colorized(puzzle, &Some(result));
+                debug!("{}", crate::format_board_result(puzzle, &Some(result)));
                 if puzzle.is_solved() {
                     return Some(rules.get(max_used_rule).unwrap().1);
                 }

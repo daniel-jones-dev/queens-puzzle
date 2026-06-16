@@ -188,6 +188,7 @@ impl<T: Default, B: Borrow<Cell>> IndexMut<B> for Grid<T> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use crate::grid::{Cell, Grid};
     use std::collections::HashSet;

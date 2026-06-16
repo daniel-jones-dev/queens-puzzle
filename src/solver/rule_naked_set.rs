@@ -4,11 +4,6 @@ use crate::puzzle::{block_name, QueensPuzzle, State};
 use crate::solver::rule::{Rule, RuleResult};
 
 impl Rule for NakedSet {
-    fn description(&self) -> String {
-        "The involved cells are in the same block and one must contain a queen. \
-        The given cell(s) must therefore be empty".to_string()
-    }
-
     fn check(&self, puzzle: &QueensPuzzle) -> Option<RuleResult> {
         for (block_cells, block_index, block_type) in puzzle.all_blocks_iter() {
             // Check there are no queens and at least N unknown cells

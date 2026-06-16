@@ -15,9 +15,15 @@ fn solve_helper(puzzle: &mut QueensPuzzle, col: usize, solutions: &mut Vec<Queen
     // Stop at 10 solutions
     if solutions.len() >= 10 { return }
 
-    // If the current column already has a queen, continue to the next column
+    // If the current column already has a queen, it is satisfied: record a solution if this is the
+    // last column, otherwise move on to the next.
     if puzzle.queens().iter().any(|cell| cell.col == col) {
-        return solve_helper(puzzle, col + 1, solutions);
+        if col == puzzle.n() - 1 {
+            solutions.push(puzzle.clone());
+        } else {
+            solve_helper(puzzle, col + 1, solutions);
+        }
+        return;
     }
 
     for row in 0..puzzle.n() {

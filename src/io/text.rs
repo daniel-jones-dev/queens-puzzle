@@ -2,29 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use crate::grid::Cell;
-use crate::puzzle::{QueensPuzzle, State};
-
-fn read_board(input: &str) -> Result<Vec<Vec<State>>, String> {
-    let rows: Vec<&str> = input.trim().split('\n').collect();
-    let n = rows.len();
-    let mut board = vec![vec![State::Unknown; n]; n];
-
-    for (i, row) in rows.iter().enumerate() {
-        if row.len() != n {
-            return Err(format!("Invalid row length in row {}: expected {}, found {}", i + 1, n, row.len()));
-        }
-
-        for (j, c) in row.chars().enumerate() {
-            match c {
-                '0' => board[i][j] = State::Unknown,
-                '1' => board[i][j] = State::Queen,
-                _ => return Err(format!("Invalid character in row {}, column {}: {}", i + 1, j + 1, c)),
-            }
-        }
-    }
-
-    Ok(board)
-}
+use crate::puzzle::QueensPuzzle;
 
 fn read_regions(input: &str) -> Result<QueensPuzzle, String> {
     let rows: Vec<&str> = input.trim().split('\n').collect();

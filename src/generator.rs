@@ -5,14 +5,12 @@ use crate::grid::Cell;
 use crate::puzzle::{region_color_name, QueensPuzzle};
 
 use rand::prelude::*;
-use crate::{print_board_colorized, solver};
+use log::trace;
+use crate::{format_board, solver};
 
-pub fn generate_puzzles(n: usize, num: usize) -> Vec<QueensPuzzle> {
-    let mut result = vec![];
-    for i in 0..num {
-        result.push(generate_puzzle(n, i as u64));
-    }
-    result
+/// Generates `num` puzzles of size `n`; puzzle `i` is generated with `seed + i`.
+pub fn generate_puzzles(n: usize, num: usize, seed: u64) -> Vec<QueensPuzzle> {
+    (0..num as u64).map(|i| generate_puzzle(n, seed + i)).collect()
 }
 
 
@@ -34,13 +32,9 @@ fn generate_puzzle_helper(puzzle: &mut QueensPuzzle, rng: &mut StdRng) -> bool {
             .filter_map(|cell| {puzzle.cell_region(cell)}).collect::<HashSet<_>>();
         for region in neighboring_regions {
             // Grow the region
-            println!("+++ Growing Region {} to include cell {}", region_color_name(region as usize), cell);
+            trace!("+++ Growing Region {} to include cell {}", region_color_name(region as usize), cell);
             puzzle.assign_cell_region(cell, region);
-            print_board_colorized(puzzle);
-            println!();
-
-            // TODO when growing a region, check if there are now unregioned "islands" within.
-            //  These cells must be assigned to this region, so immediately assign them for speed.
+            trace!("{}", format_board(puzzle));
 
             // Check the puzzle still has a unique solution
             let mut solutions = vec![];
@@ -51,10 +45,9 @@ fn generate_puzzle_helper(puzzle: &mut QueensPuzzle, rng: &mut StdRng) -> bool {
             }
 
             // Shrink the region again
-            println!("--- Shrinking cell {} from Region {}", cell, region_color_name(region as usize));
+            trace!("--- Shrinking cell {} from Region {}", cell, region_color_name(region as usize));
             puzzle.unassign_cell_region(cell);
-            print_board_colorized(puzzle);
-            println!();
+            trace!("{}", format_board(puzzle));
 
             if num_solutions != 1 { return false }
         }

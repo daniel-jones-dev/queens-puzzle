@@ -108,13 +108,6 @@ pub struct QueensPuzzle {
 }
 
 impl QueensPuzzle {
-    pub fn empty_puzzle(n: usize) -> Self {
-        let board = Grid::new(n, n);
-        let cell_regions = Grid::new(n, n);
-        let regions = vec![];
-        Self { board, cell_regions, regions }
-    }
-
     pub(crate) fn new(region_vecs: Vec<Vec<Cell>>) -> Self {
         let n = region_vecs.len();
         let board = Grid::new(n, n);
@@ -146,7 +139,6 @@ impl QueensPuzzle {
 
     /// Returns the cells occupied by queens
     pub fn queens(&self) -> Vec<Cell> {
-        // TODO consider memoizing
         let mut result = vec![];
         for c in 0..self.n() {
             for r in 0..self.n() {
@@ -270,12 +262,6 @@ impl QueensPuzzle {
 
         true
     }
-
-    fn total_in_region(&self, region: &Vec<Cell>, state: State) -> usize {
-        region.iter().fold(0, |acc, cell| {
-            if self.board[cell] == state { acc+1 } else { acc }
-        })
-    }
 }
 
 
@@ -295,11 +281,12 @@ impl<B: Borrow<Cell>> IndexMut<B> for QueensPuzzle {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use std::collections::HashSet;
     use crate::Cell;
     use crate::cell;
-    use crate::puzzle::{column_name, row_name, QueensPuzzle};
+    use crate::puzzle::{column_name, QueensPuzzle};
 
     /// Test puzzle with the following setup:
     ///
