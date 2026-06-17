@@ -173,7 +173,10 @@ source.)
 
 Ideas for future work, roughly in priority order:
 
-- **WASM** viewer to run in the browser.
+- **Web UI** — a React frontend backed by the Rust solver/generator compiled to WASM via
+  `wasm-bindgen`. The UI should support playing puzzles interactively, editing or drawing custom
+  boards, stepping through the solver's deductions one move at a time, and generating new puzzles
+  on demand.
 - **More solving techniques**, to reduce reliance on brute force:
   - a rule for when a region's remaining unknowns all lie in a single row or column;
   - a rule for two or three candidate cells adjacent to each other crossing out their shared neighbours;
