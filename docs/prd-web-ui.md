@@ -4,6 +4,8 @@
 
 Build a browser-based UI for the Queens puzzle — replacing the terminal-only experience with an interactive, visual board that any player can use without installing Rust. The Rust solver and generator are compiled to WebAssembly via `wasm-bindgen` and called directly from a React frontend.
 
+feedback: please respect the line length limit.
+
 ## Goals
 
 - Let anyone play a Queens puzzle in the browser with no install step; host statically on GitHub Pages.
@@ -13,6 +15,7 @@ Build a browser-based UI for the Queens puzzle — replacing the terminal-only e
   the full puzzle JSON embedded directly in the URL.
 - Rust core changes are welcome where needed (e.g. splitting into a library crate, exposing a
   step-by-step solver loop).
+  - feedback: but the focus is on the web UI.
 
 ## Non-goals
 
@@ -25,11 +28,16 @@ Build a browser-based UI for the Queens puzzle — replacing the terminal-only e
 
 ## Open decision: puzzle JSON format
 
+
+
 Before milestone 2 begins, settle on the canonical JSON representation. The frontend, WASM API, URL
 sharing, and import all use this format. All options use `null` to represent a cell whose region is
 not yet assigned (needed for the in-progress editor state).
 
+feedback: go with option A. document the format. we can remove the other two options, they are no longer needed.
+
 **Option A — flat grid pair**
+feedback: n seems redundant
 ```json
 {
   "n": 7,
@@ -84,6 +92,8 @@ visible in the README screenshot.
 - A "solved" banner appears when the player has placed exactly n non-attacking queens (one per row,
   column, and region, none diagonally adjacent).
 
+feedback: save the puzzle state in the browser's local storage. (also later for editing)
+
 ### 2. Improved interactive board
 
 Quality-of-life features layered on top of the basic board.
@@ -122,6 +132,8 @@ time) rather than running to completion internally.
 - "Solve" runs to completion or reports "brute force required" if logical solving gets stuck.
 - Board state matches what the CLI would produce for the same puzzle.
 
+feedback: dont apply the hint immediately, highlight the cells and show the description. with an apply button, the user can apply the hint and see the result.
+
 ### 4. Change history (undo/redo)
 
 Record every state-changing action (player move, hint application, solve step) in a history list.
@@ -155,6 +167,8 @@ Two encoding modes:
 - **Embedded**: the full puzzle JSON is base64-encoded and embedded directly in the URL fragment, so
   no external fetch is needed and the link works entirely offline.
 
+feedback: sharing should allow both sharing the partially solved puzzle and sharing the cleared state.
+
 **Acceptance criteria**
 - Visiting a share URL restores the puzzle (and state if embedded) without any manual import step.
 - The Share dialog shows both forms of URL and lets the user copy either.
@@ -166,12 +180,19 @@ An "Edit" mode lets the user paint region colours onto cells to build a board fr
 paint stroke assigns the selected region colour. Cells may remain unassigned (`null` region) while
 editing. Switching back to "Play" mode loads the painted layout as a puzzle.
 
+feedback: show unassigned regions as "transparent" checkerboard? suggestions welcome. cannot use grey as that is one of the standard colours 
+
 **Acceptance criteria**
 - The user can assign any of the 12 region colours to any cell.
+  - feedback: limit to the n colours for the board size 
 - The editor validates that the board is fully assigned and each of the n regions appears at least
   once before allowing the switch to Play mode.
 - Painted puzzles can be solved and stepped through exactly like generated ones.
 - The finished board can be exported as JSON (using the canonical format).
+
+feedback: add a shuffle region colours button
+feedback: undo and redo should work in editing too
+feedback: edit mode should be separate to play mode – should be a button to switch to play mode
 
 ### 8. Puzzle generation
 
@@ -181,6 +202,10 @@ loads the result into the board as a fresh puzzle.
 **Acceptance criteria**
 - Generated puzzles have exactly one solution (guaranteed by the generator).
 - The difficulty rating is displayed after generation.
+
+feedback: let user choose seed
+
+feedback: make sure the generator doesnt hang the ui
 
 ---
 
