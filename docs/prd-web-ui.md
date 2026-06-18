@@ -7,13 +7,17 @@ Build a browser-based UI for the Queens puzzle — replacing the terminal-only e
 ## Goals
 
 - Let anyone play a Queens puzzle in the browser with no install step.
+  - User feedback. I want eventually to be able to host this on GitHub pages as well.
 - Expose the solver as a hint/step-through tool so players can learn solving techniques.
 - Allow generating new puzzles on demand and loading custom puzzles.
+  - user feedback: I'd like to have it possible that a URL can be shared where the URL either contains a link to an existing file like check to infile accessible via web and also that the entire JSON content of the other given puzzle can be embedded into the URL.
 - Keep the Rust core unchanged; only add a WASM boundary on top of it.
+  - User feedback: changes to the rust code is fine we might need to make some changes for example to open the solver loop up to make it step-able like each iteration one by one
 
 ## Non-goals
 
 - Mobile-native app (responsive web is  ^).
+  - user feedback: There seems to be a typo above. 
 - User accounts, leaderboards, or persistence beyond a single session.
 - Multiplayer or real-time collaboration.
 - Replacing the CLI; both targets coexist in the same workspace.
@@ -26,10 +30,22 @@ Build a browser-based UI for the Queens puzzle — replacing the terminal-only e
 
 The board is an n×n grid rendered with each cell's region colour. Players click a cell to cycle its state: Unknown → Queen → Empty → Unknown. The board enforces no rules on its own; illegal placements are allowed so that players can explore freely.
 
+user feedback: Match the appearance of the example image from the readme for example, like region colors and also bold region boundaries.
+
+user feedback: I think at this milestone it also makes sense to decide on a JSON representation for the puzzles: unsolved and partially solved or fully solved. Present different alternatives in our chat, ill decide which to finalize on. This representation should then be what the front end uses.
+
 **Acceptance criteria**
 - Clicking a cell cycles its state.
 - Region colours match the existing palette (`region_color` in `puzzle.rs`).
+  - user feedback: I would like the front end colors to match the example image in the readme and the CLI colors should match that as well. 
 - A "solved" banner appears when the player has placed exactly n non-attacking queens (one per row, column, and region, none diagonally adjacent).
+
+user feedback: I want to have an additional milestone with improved functionality for the interactive board. For example,:
+ -  an option, a toggleable option that auto-crosses cells, for example, when a queen is placed, then any cells directly adjacent or in the same row, column or region, get crossed out,
+ - add another toggleable option for showing a clock, which defaults to on.
+ - Drag, selecting across cells should cross them all out.
+
+user feedback: This milestone shouldn't require any changes to the rust code, I think, aside from those colour modifications if there are any.
 
 ### 2. Solver step-through
 
@@ -40,6 +56,8 @@ A "Hint" button applies the next logical deduction and highlights the cells invo
 - Changed cells are visually highlighted (green); involved cells are visually distinguished (e.g. underlined or outlined).
 - "Solve" runs to completion or reports "brute force required" if logical solving gets stuck.
 - The board state shown matches the state the CLI would produce.
+
+user feedback: I think this milestone, or maybe immediately after it, is a good time to implement change history for puzzles to enable an undo redo button.
 
 ### 3. Puzzle generation
 
@@ -60,6 +78,10 @@ An "Edit" mode lets the user paint region colours onto cells to build a board fr
 - Painted puzzles can be solved and stepped through exactly like generated ones.
 
 ### 5. Puzzle import
+
+user feedback: The text format representation in the readme, it doesn't make much sense, I think, I think Jason has better. The only real benefit that the text representation had previously was it kind of is more nice visually, but with a front end and editor that is no longer necessary.
+
+user feedback: the puzzle import milestone. So this number five makes sense to come earlier in the process, I think, immediately after the solver step-through milestone, would make sense
 
 A text field accepts the text format described in the README (n lines × n characters). Submitting it loads the puzzle into the board.
 
@@ -83,6 +105,8 @@ queens-puzzle/         (existing Rust workspace)
     ├── package.json
     └── src/
 ```
+
+feedback: It might make sense for the milestones that require rust code changes to actually split the existing rust code into a library in addition to the CLI binary that we have.
 
 The `wasm` crate is a `cdylib` that re-exports the core types. The `web` app imports the compiled WASM package.
 
