@@ -360,3 +360,23 @@ Items deferred from this PRD for future consideration:
 - **Default puzzle variety**: the app always opens to the same README example puzzle. A returning
   player will see a puzzle they have already solved. Options to consider: a daily puzzle fetched
   from the archive, a random puzzle on load, or a "next puzzle" button after solving.
+
+
+
+
+# feedback
+1. yes it clears first. we should check if the board has a non-empty state and if so ask for confirmation before clearing.
+2. reset should clear the puzzle state (to all Unknown cells) and clear history (no undo available)
+3. yes it persists till the user does something
+4. sure requrie confirmation
+5. should be allowed, but the play button should show an "!" and require confirmation if the puzzle doesnt have a unique solution
+6. probably should be moved to 8
+7. next_hint should be (&self) not mut self, correct it
+8. add the clasing_queens function to the rust lib
+9. sure, it should be changed to accept reassignment
+10. None should be trested as "unknown" difficulty
+11. I think these two features should be merged, and sharing partial state should be possible. Share button copies any partial state, importing loads any partial state.
+12. clicking any other dimmed cell sohuld dismiss the hint, and change that cell
+13. its not so complicated, a click starting and ending in one cell is functionally the same as a drag across cells.
+14. stay as empty
+15. right, the region color function should be truth, but maybe with duplication to CSS
