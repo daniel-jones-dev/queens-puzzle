@@ -62,6 +62,8 @@ visible in the README screenshot.
 Puzzle state (cell states) is persisted to browser `localStorage` on every change so that closing
 and reopening the tab restores the session.
 
+feedback: initialize with the same puzzle (but unsolved) as the example image in the README.
+
 **Acceptance criteria**
 - Clicking a cell cycles Unknown → Empty → Queen → Unknown; empty renders as a small cross.
 - Region colours match the README example image; the same palette is used by the CLI.
@@ -98,6 +100,9 @@ Quality-of-life features layered on top of the basic board.
 A "Hint" button identifies the next logical deduction, highlights the affected cells, and shows the
 explanation — but does **not** apply the change immediately. An "Apply" button then commits the
 hint to the board. A "Solve" button runs all steps to completion without pausing.
+feedback: when showing a hint, all other cells should be slightly dimmed, the cells to be changed should be highlighted with green borders
+
+feedback: or the user can make the corresponding changes manually, when theyre all applied return to normal UI
 
 The solver loop in Rust needs to be refactored to expose individual steps (one rule application at a
 time) rather than running to completion internally.
@@ -108,6 +113,8 @@ time) rather than running to completion internally.
 - "Apply" commits the pending hint; the highlight clears.
 - "Solve" runs to completion or reports "brute force required" if logical solving gets stuck.
 - Board state after "Solve" matches what the CLI would produce for the same puzzle.
+
+feedback: we dont need the solve button i think?
 
 ### 4. Change history (undo/redo)
 
@@ -176,6 +183,8 @@ Board state in edit mode is also persisted to `localStorage`.
 - Undo/redo works for paint strokes in edit mode.
 - Painted puzzles can be solved and stepped through exactly like generated ones.
 - The finished board can be exported as JSON.
+
+feedback: add a follow up milestone that shows (calculates in the background) if the partially edited puzzle has a solution (or multiple) and how difficult it is
 
 ### 8. Puzzle generation
 
