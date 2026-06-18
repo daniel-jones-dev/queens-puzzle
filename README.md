@@ -108,17 +108,17 @@ watch the generator grow and shrink regions as it searches.
 ### Text format
 
 An *n*-line file where each line has *n* characters. Each character is a letter identifying the
-region that cell belongs to; cells sharing a letter belong to the same region. For example, a 7×7
-puzzle:
+region that cell belongs to; cells sharing a letter belong to the same region. For example, the 7×7
+puzzle shown in the introduction would be represented as:
 
 ```
-pppppob
-ppppooo
-pgppwow
-ggprwww
-ggrrrww
-grrrrrw
-rrryrrr
+ppppppp
+ooopppb
+ggggggb
+ggggwww
+grggwww
+gggywww
+gggywww
 ```
 
 ### Archived JSON format
