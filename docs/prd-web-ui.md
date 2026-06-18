@@ -49,34 +49,41 @@ and export. `n` is omitted; it is inferred from the length of the `regions` arra
 ### 1. Interactive board
 
 The board is an n×n grid rendered to match the visual style of the README example image: each cell
-fills with its region colour and region boundaries are drawn with bold borders. Players click a cell
-to cycle its state: **Unknown → Empty (cross) → Queen → Unknown**. Two clicks are needed to place a
-queen (first click marks the cell empty, second places the queen); this is intentional, matching the
-game's design of explicitly eliminating cells. "Empty" renders as a small cross, as shown in the
-README example image. The board enforces no rules on its own.
+fills with its region colour and region boundaries are drawn with bold borders. Clicking a cell that
+is **Empty** or **Queen** cycles its state: **Empty → Queen → Unknown**. Clicking or dragging over
+an Unknown cell marks it as empty (see feature 2). Two interactions are needed to place a queen
+(first marks the cell empty, second places the queen); this is intentional, matching the game's
+design of explicitly eliminating cells. "Empty" renders as a small cross, as shown in the README
+example image. The board enforces no rules on its own.
 
 The app loads with the puzzle from the README example image (the 7×7 puzzle defined in the README
 text format) in its initial unsolved state. This serves as the default starting puzzle.
 
-A **Reset** button clears all cell states back to Unknown. It shows a confirmation dialog first.
+A **Reset** button clears all cell states back to Unknown and clears the undo/redo history. It shows
+a confirmation dialog first.
 
-Region colours must be consistent across the CLI and the web UI — both should match the colours
-visible in the README screenshot.
+Region colours are defined by `region_color()` in `puzzle.rs`, which is the single source of truth
+for the colour palette. The CLI uses this function directly; the web UI duplicates the same values
+as CSS constants so both targets stay in sync.
 
 Puzzle state (cell states) is persisted to browser `localStorage` on every change so that closing
 and reopening the tab restores the session.
 
-When the puzzle is solved, a congratulations banner is shown at the top of the page.
+When the puzzle is solved, a congratulations banner is shown at the top of the page and persists
+until the player interacts with the board.
 
 **Acceptance criteria**
 - On first load (no `localStorage` data), the README example puzzle is shown fully unsolved.
-- Clicking a cell cycles Unknown → Empty → Queen → Unknown; empty renders as a small cross.
-- Region colours match the README example image; the same palette is used by the CLI.
+- Clicking an Empty cell cycles to Queen; clicking a Queen cycles to Unknown.
+- Clicking or dragging over an Unknown cell marks it as empty (see feature 2 for drag details).
+- Region colours match the values defined in `region_color()` in `puzzle.rs`; the web UI duplicates
+  those values as CSS constants, and the CLI uses the same function.
 - Bold borders are drawn between cells that belong to different regions.
-- Reset shows a confirmation dialog, then resets all cells to Unknown on confirm.
+- Reset shows a confirmation dialog, then resets all cells to Unknown and clears history on confirm.
 - Board state is saved to `localStorage` on every change and restored on page load.
-- A congratulations banner is shown at the top of the page when the player places exactly n
-  non-attacking queens (one per row, column, and region, none diagonally adjacent).
+- A congratulations banner is shown when the player places exactly n non-attacking queens (one per
+  row, column, and region, none diagonally adjacent); it persists until the player interacts with
+  the board.
 
 ### 2. Improved interactive board
 
@@ -90,8 +97,11 @@ Quality-of-life features layered on top of the basic board.
 - **Timer** (toggle, default on): a running clock showing elapsed time since the first interaction,
   persisted to `localStorage` and resumed on page load. The timer is written to `localStorage` on
   every tick (once per second); no separate debounce is needed since the value is a single integer.
-- **Drag-to-cross**: clicking and dragging (or touch-and-drag on mobile) marks cells as empty. The
-  gesture only initiates when the starting cell is Unknown; queens are never overwritten.
+- **Drag-to-cross**: clicking and dragging (or touch-and-drag on mobile) marks Unknown cells as
+  empty. The gesture initiates when the pointer-down cell is Unknown; queens are never overwritten;
+  cells that are already empty remain empty during drag. No distance threshold is needed — a
+  pointer-down and pointer-up on the same Unknown cell is treated as a single-cell drag and marks
+  that cell as empty. Dragging over already-empty cells has no effect.
 
 **Acceptance criteria**
 - Hovering a cell applies a darkening effect without altering its region background colour.
@@ -100,9 +110,11 @@ Quality-of-life features layered on top of the basic board.
   and clears auto-crosses when toggled off.
 - Timer shows MM:SS, starts on first interaction, stops when the puzzle is solved, and resumes from
   the saved value on page reload.
-- Drag only starts when the pointer-down (or touch-start) cell is Unknown; queens are never changed
-  to empty by drag. Touch events (`touchstart`, `touchmove`, `touchend`) are supported alongside
-  mouse events.
+- Drag only initiates when the pointer-down cell is Unknown. Dragging over a queen has no effect.
+  Dragging over an already-empty cell has no effect (it stays empty).
+- A single click (pointer-down and pointer-up on the same Unknown cell) is treated as a one-cell
+  drag: the cell is marked empty. No minimum travel distance is required.
+- Touch events (`touchstart`, `touchmove`, `touchend`) are supported alongside mouse events.
 - No Rust changes required for this milestone.
 
 ### 3. Solver step-through
@@ -113,25 +125,29 @@ A "Hint" button identifies the next logical deduction and enters **hint mode**:
 - Cells that would be changed are highlighted with green borders.
 - The hint description is shown in a panel.
 - The user can press **Apply** to commit all hint changes at once, or manually click each affected
-  cell. Clicks in hint mode still cycle normally (Unknown → Empty → Queen → Unknown); when a cell
-  reaches the hinted target state it is counted as applied. Once all changes are applied, hint mode
-  exits automatically.
-- A dismiss control exits hint mode without applying any changes. The exact design is deferred to
-  implementation review.
+  cell. Clicks on affected cells still cycle normally (Empty → Queen → Unknown for non-unknown
+  cells, or mark-as-empty for Unknown cells); when a cell reaches the hinted target state it is
+  counted as applied. Once all changes are applied, hint mode exits automatically.
+- Clicking any dimmed (non-involved) cell dismisses hint mode and processes the click normally
+  (cycling that cell's state or marking it empty if Unknown).
+- A dismiss control also exits hint mode without applying any changes.
 
 If no logical step is available (the puzzle requires brute force), pressing Hint shows a message:
 "No logical step found — try a different approach."
 
 The Rust solver loop needs to be refactored to expose individual steps (one rule application at a
-time) rather than running to completion internally.
+time) rather than running to completion internally. `next_hint` does not mutate the puzzle; the
+implementation clones puzzle state internally before running the solver step.
 
 **Acceptance criteria**
 - "Hint" enters hint mode: non-involved cells dim, cells-to-change gain green borders, description
   is shown; the board is not mutated.
 - "Apply" commits all pending changes and exits hint mode.
-- Clicking an affected cell cycles it normally; reaching the hinted state counts as applying that
-  cell's change; hint mode exits once all changes are applied.
-- A dismiss control is available to exit hint mode without applying changes.
+- Clicking an affected cell processes the click normally; reaching the hinted state counts as
+  applying that cell's change; hint mode exits once all changes are applied.
+- Clicking any dimmed (non-involved) cell dismisses hint mode and also applies the click to that
+  cell (cycling it or marking it empty).
+- A dismiss control is available to exit hint mode without applying any changes.
 - When no logical step exists, Hint shows "No logical step found — try a different approach."
 - Board state after a fully applied hint matches what the CLI would produce for the same step.
 
@@ -145,34 +161,34 @@ play mode and edit mode.
 - Undo reverts the most recent action; redo re-applies it.
 - Hint Apply steps are individually undoable.
 - Editor paint strokes are undoable.
-- History is cleared when a new puzzle is loaded.
+- History is cleared when a new puzzle is loaded or when Reset is used.
 
-### 5. Puzzle import
+### 5. Puzzle import and share
 
-A JSON import dialog accepts the canonical puzzle JSON format. It always loads the puzzle in its
-unsolved state — any `states` present in the JSON are ignored. URL-based loading (feature 6) uses
-the same JSON parser but applies states when they are present (see feature 6).
+A JSON import dialog accepts the canonical puzzle JSON format and loads the puzzle, restoring any
+`states` present in the JSON. Visiting a share URL (feature 6 below) uses the same parser and
+applies the same behaviour.
 
 **Acceptance criteria**
-- Valid JSON puzzles load correctly; the board is shown fully unsolved regardless of any states in
-  the file.
+- Valid JSON puzzles load correctly; any `states` in the JSON are restored.
+- Importing a puzzle clears undo/redo history.
 - An inline error message is shown for malformed or invalid input.
 
 ### 6. Shareable URLs
 
-A "Share" button produces a URL encoding the current puzzle. The Share dialog offers two variants,
-both using base64-encoded JSON embedded in the URL fragment (no external fetch required):
+A "Share" button copies a URL encoding the current puzzle to the clipboard. The URL uses
+base64-encoded JSON embedded in the URL fragment (no external fetch required) and always encodes
+the current state: `regions` are always included; `states` is included if any progress has been
+made (i.e. at least one cell is not Unknown). If no progress has been made, `states` is omitted and
+the recipient starts with an unsolved board.
 
-- **Share puzzle** — encodes only the `regions` grid; the recipient starts with an unsolved board.
-- **Share progress** — encodes `regions` + `states`; the recipient's board is restored to the
-  sender's current state.
-
-Visiting a share URL uses the same JSON parser as import but applies states when present, so
-progress links restore the board state.
+Visiting a share URL uses the same JSON parser as import: `regions` and `states` (if present) are
+restored.
 
 **Acceptance criteria**
-- Visiting a share URL restores the puzzle (and state if a progress link) with no manual import.
-- The Share dialog presents both variants and lets the user copy either URL.
+- Visiting a share URL restores the puzzle and any partial state; if no states were encoded the
+  board starts unsolved.
+- The Share button copies a single URL to the clipboard.
 - A malformed or tampered share URL shows a clear error rather than a blank board.
 
 ### 7. Custom puzzle editor
@@ -184,7 +200,8 @@ pattern (the standard "no colour" indicator, distinct from all 12 region colours
 **Editor entry points:**
 
 - **From play mode** — an "Edit this puzzle" button loads the current play board's region layout
-  into the editor (states stripped, regions preserved). Switching back to Play shows a confirmation
+  into the editor (states stripped, regions preserved). If the editor already has existing work, a
+  confirmation dialog is shown before overwriting it. Switching back to Play shows a confirmation
   dialog ("This will replace your current puzzle — continue?") before loading the editor board.
 - **Fresh board** — entering edit mode without using "Edit this puzzle" starts with an empty n×n
   grid (all cells unassigned). The board size n is selected via a size picker (4–12, default 8).
@@ -192,7 +209,9 @@ pattern (the standard "no colour" indicator, distinct from all 12 region colours
 **Within the editor**, a toolbar offers:
 
 - **Scatter queens** — places n queens randomly and assigns each a single-cell region, giving a
-  solvable scaffold of n isolated regions to grow. (Mirrors the generator's first step.)
+  solvable scaffold of n isolated regions to grow. (Mirrors the generator's first step.) If the
+  board already has any non-empty cells, a confirmation dialog is shown before clearing. On confirm,
+  the board is cleared first and then the queens are placed.
 - **Shuffle colours** — randomly reassigns which colour index maps to which region, without
   changing region shapes.
 
@@ -201,17 +220,23 @@ The colour palette in the editor is limited to n colours (where n is the current
 Undo/redo (milestone 4) applies in edit mode. Board state in edit mode is persisted to
 `localStorage`.
 
+Switching to Play mode validates that all cells are assigned and each of the n regions appears at
+least once. When editor live analysis is available (milestone 8), the Play button additionally shows
+a "!" indicator if the puzzle does not have a unique solution; clicking it in that state requires an
+extra confirmation step before switching.
+
 **Acceptance criteria**
-- "Edit this puzzle" in play mode loads the current region layout into the editor.
+- "Edit this puzzle" in play mode loads the current region layout into the editor; if the editor
+  already has existing work, a confirmation dialog is shown first.
 - Fresh-board entry starts with an empty grid; size is set by the size picker.
-- Scatter queens populates n isolated one-cell regions placed at random non-attacking positions.
+- Scatter queens checks if the board has any non-empty state; if so, shows a confirmation dialog
+  before clearing. On confirm, places n non-attacking queens with isolated one-cell regions.
 - The user can assign any of the n region colours to any cell.
 - Unassigned cells render as a checkerboard pattern.
 - Shuffle colours reassigns the colour palette randomly without changing region shapes.
 - Undo/redo works for all paint strokes and scatter-queens operations.
-- Switching from Edit to Play shows a confirmation dialog before replacing the play board.
-- The editor validates that all cells are assigned and each of the n regions appears at least once
-  before allowing the switch to Play mode.
+- Switching from Edit to Play validates completeness (all cells assigned, n regions present) and
+  shows a confirmation dialog before replacing the play board.
 - Painted puzzles can be solved and stepped through exactly like generated ones.
 - The finished board can be exported as JSON.
 
@@ -220,6 +245,10 @@ Undo/redo (milestone 4) applies in edit mode. Board state in edit mode is persis
 While in Edit mode, a background Web Worker continuously analyses the current (possibly partial)
 board and shows a live indicator. The indicator is debounced at 300ms and the solution count is
 capped at 10. Any in-progress analysis is cancelled immediately when the board changes.
+
+When the analysis result is available, the Play button in the editor shows a "!" indicator if the
+puzzle does not have a unique solution; clicking it requires an extra confirmation step before
+switching to Play mode.
 
 Indicator states:
 
@@ -233,6 +262,8 @@ Indicator states:
 - Previous analysis is cancelled when the board changes.
 - Analysis runs in a Web Worker and does not block the UI.
 - All four indicator states are displayed correctly.
+- Play button shows "!" when analysis reports anything other than unique solution; clicking "!"
+  shows an extra confirmation dialog before allowing the switch to Play mode.
 
 ### 9. Puzzle generation
 
@@ -291,12 +322,19 @@ impl WasmPuzzle {
     pub fn to_json(&self) -> String;
     pub fn n(&self) -> usize;
     pub fn cell_region(&self, row: usize, col: usize) -> Option<u8>;
+    // Reassignment is accepted: if the cell already belongs to another region it is silently
+    // overwritten. Pass None to unassign.
     pub fn set_cell_region(&mut self, row: usize, col: usize, region: Option<u8>);
     pub fn cell_state(&self, row: usize, col: usize) -> u8;  // 0=Unknown 1=Queen 2=Empty
     pub fn set_cell_state(&mut self, row: usize, col: usize, state: u8);
-    pub fn next_hint(&mut self) -> Option<WasmHint>;
+    // Does not mutate self; clones puzzle state internally before running the solver step.
+    pub fn next_hint(&self) -> Option<WasmHint>;
     pub fn is_solved(&self) -> bool;
+    // Returns None when the puzzle has not been analysed or difficulty cannot be determined;
+    // the UI displays this as "Unknown difficulty".
     pub fn difficulty(&self) -> Option<String>;
+    // Returns flattened [row, col, ...] pairs for all queens currently in conflict.
+    pub fn clashing_queens(&self) -> Vec<u32>;
 }
 
 #[wasm_bindgen]
@@ -340,13 +378,13 @@ No state management library is needed at this scale; React `useState` / `useRedu
 | # | Milestone | Deliverable |
 |---|-----------|-------------|
 | 1 | WASM scaffold | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from a browser console; Web Worker WASM init proved out |
-| 2 | Playable board | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset; localStorage |
+| 2 | Playable board | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset (clears history); localStorage |
 | 3 | Improved board | Hover highlight, clashing queens, auto-cross toggle, timer (with localStorage), drag-to-cross (mouse + touch) |
-| 4 | Solver step-through | Hint mode (dim + green borders + description); Apply; manual apply; dismiss; no-hint message; Rust step refactor |
+| 4 | Solver step-through | Hint mode (dim + green borders + description); Apply; manual apply; dimmed-cell dismisses+acts; Rust step refactor |
 | 5 | Change history | Undo/redo for player moves, hint applications, and editor strokes |
-| 6 | Puzzle import + share | JSON import (regions only); embedded shareable URLs (puzzle and progress variants) |
-| 7 | Custom editor | Edit-from-play; fresh board; scatter queens; shuffle colours; n-colour palette; live analysis Worker; JSON export |
-| 8 | Editor live analysis | 300ms-debounced background analysis; cancellable; four indicator states |
+| 6 | Puzzle import + share | JSON import (partial states preserved); embedded shareable URL (single variant, encodes current state) |
+| 7 | Custom editor | Edit-from-play; fresh board; scatter queens (with confirmation); shuffle colours; n-colour palette; JSON export |
+| 8 | Editor live analysis | 300ms-debounced background analysis; cancellable; four indicator states; Play "!" for non-unique puzzles |
 | 9 | Generator UX | Generate button; size selector; optional seed (u32); Web Worker; difficulty shown |
 
 ---
@@ -360,23 +398,3 @@ Items deferred from this PRD for future consideration:
 - **Default puzzle variety**: the app always opens to the same README example puzzle. A returning
   player will see a puzzle they have already solved. Options to consider: a daily puzzle fetched
   from the archive, a random puzzle on load, or a "next puzzle" button after solving.
-
-
-
-
-# feedback
-1. yes it clears first. we should check if the board has a non-empty state and if so ask for confirmation before clearing.
-2. reset should clear the puzzle state (to all Unknown cells) and clear history (no undo available)
-3. yes it persists till the user does something
-4. sure requrie confirmation
-5. should be allowed, but the play button should show an "!" and require confirmation if the puzzle doesnt have a unique solution
-6. probably should be moved to 8
-7. next_hint should be (&self) not mut self, correct it
-8. add the clasing_queens function to the rust lib
-9. sure, it should be changed to accept reassignment
-10. None should be trested as "unknown" difficulty
-11. I think these two features should be merged, and sharing partial state should be possible. Share button copies any partial state, importing loads any partial state.
-12. clicking any other dimmed cell sohuld dismiss the hint, and change that cell
-13. its not so complicated, a click starting and ending in one cell is functionally the same as a drag across cells.
-14. stay as empty
-15. right, the region color function should be truth, but maybe with duplication to CSS
