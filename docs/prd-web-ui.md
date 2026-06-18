@@ -28,6 +28,10 @@ Build a browser-based UI for the Queens puzzle — replacing the terminal-only e
 Before milestone 2 begins, settle on the canonical JSON representation. The frontend, WASM API, URL
 sharing, and import feature all use this format. **Three options** — pick one:
 
+User feedback: we need to be able to store a cell region as undefined too, please update options below
+
+User feedback: make a recommendation
+
 **Option A — flat grid pair**
 ```json
 {
@@ -66,9 +70,12 @@ partially-solved puzzles.
 The board is an n×n grid rendered to match the visual style of the README example image: each cell
 fills with its region colour and region boundaries are drawn with bold borders. Players click a cell
 to cycle its state: Unknown → Queen → Empty → Unknown. The board enforces no rules on its own.
+feedback: unknwon -> empty -> queen -> unknown. note that "empty" means a small cross (see readme example image)
 
 Region colours must be consistent across the CLI and the web UI — both should match the colours
 visible in the README screenshot.
+
+feedback: add a reset button with a confirmation dialog
 
 **Acceptance criteria**
 - Clicking a cell cycles its state.
@@ -86,12 +93,17 @@ Quality-of-life features layered on top of the basic board, all toggled via UI c
 - **Timer** (toggle, default on): a running clock showing elapsed time since the puzzle was started.
 - **Drag-to-cross**: clicking and dragging across cells marks each cell under the cursor as empty.
 
+feedback: mousing over a cell should darken that cell, but the region should not change.
+
+feedback: any queens that clash with each other should be coloured red.
+
 **Acceptance criteria**
 - Auto-cross toggle updates the board immediately when turned on (applies retroactively to already-
   placed queens) and clears auto-crosses when turned off.
 - Timer shows MM:SS, starts on first interaction, and stops when the puzzle is solved.
 - Drag gesture crosses out all cells the pointer passes over; it does not interfere with single-click
   cycling.
+  - feedback: only do this when the starting cell is empty, not when any queen is already in it. also dont change any queens to crossed out with this 
 - No Rust changes required for this milestone.
 
 ### 3. Solver step-through
@@ -189,6 +201,8 @@ queens-puzzle/
     └── src/
 ```
 
+user feedback: Designate an area for tests as well.
+
 Splitting the existing code into a `core` library crate means the CLI binary, the WASM crate, and
 future targets all share one implementation with no duplication.
 
@@ -251,3 +265,5 @@ No state management library is needed at this scale; React `useState` / `useRedu
 | 6 | Puzzle import + share | JSON import dialog; shareable URLs (remote link and embedded) |
 | 7 | Generator UX | Generate button with size selector; difficulty shown |
 | 8 | Custom editor | Paint-mode editor; JSON export |
+
+feedback: reorder the editor and generator milestones
