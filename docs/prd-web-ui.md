@@ -325,8 +325,10 @@ impl WasmPuzzle {
     // Reassignment is accepted: if the cell already belongs to another region it is silently
     // overwritten. Pass None to unassign.
     pub fn set_cell_region(&mut self, row: usize, col: usize, region: Option<u8>);
-    pub fn cell_state(&self, row: usize, col: usize) -> u8;  // 0=Unknown 1=Queen 2=Empty
-    pub fn set_cell_state(&mut self, row: usize, col: usize, state: u8);
+    // State values: 0 = Unknown, 1 = Queen, 2 = Empty. Consistent with WasmHint.changes.
+    pub fn cell_state(&self, row: usize, col: usize) -> u32;
+    // Panics if state is not 0, 1, or 2.
+    pub fn set_cell_state(&mut self, row: usize, col: usize, state: u32);
     // Does not mutate self; clones puzzle state internally before running the solver step.
     pub fn next_hint(&self) -> Option<WasmHint>;
     pub fn is_solved(&self) -> bool;
@@ -338,10 +340,13 @@ impl WasmPuzzle {
 }
 
 #[wasm_bindgen]
-pub struct WasmHint {
-    pub description: String,
-    pub changes: Vec<u32>,   // [row, col, state, ...] flattened triples
-    pub involved: Vec<u32>,  // [row, col, ...] flattened pairs
+pub struct WasmHint { ... }
+
+#[wasm_bindgen]
+impl WasmHint {
+    pub fn description(&self) -> String;
+    pub fn changes(&self) -> Vec<u32>;    // [row, col, state, ...] flattened triples; state values 0/1/2
+    pub fn involved(&self) -> Vec<u32>;   // [row, col, ...] flattened pairs
 }
 ```
 
