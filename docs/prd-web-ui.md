@@ -26,40 +26,38 @@ Build a browser-based UI for the Queens puzzle — replacing the terminal-only e
 ## Open decision: puzzle JSON format
 
 Before milestone 2 begins, settle on the canonical JSON representation. The frontend, WASM API, URL
-sharing, and import feature all use this format. **Three options** — pick one:
-
-User feedback: we need to be able to store a cell region as undefined too, please update options below
-
-User feedback: make a recommendation
+sharing, and import all use this format. All options use `null` to represent a cell whose region is
+not yet assigned (needed for the in-progress editor state).
 
 **Option A — flat grid pair**
 ```json
 {
   "n": 7,
-  "regions": [[0,0,0,0,0,1,2], [0,0,0,1,1,1,2], ...],
-  "states":  [[0,0,0,0,0,0,0], [0,0,0,0,0,0,0], ...]
+  "regions": [[0, 0, null, 1, 1, 2, 2], ...],
+  "states":  [[0, 0,    0, 0, 0, 0, 0], ...]
 }
 ```
-`regions[row][col]` is the region index (0-based). `states[row][col]` is `0` (unknown), `1` (queen),
-or `2` (empty). The `states` key is omitted or all-zero for an unsolved puzzle.
+`regions[row][col]` is the region index (0-based) or `null`. `states[row][col]` is `0` (unknown),
+`1` (queen), or `2` (empty). The `states` key is omitted for an unsolved puzzle.
 
-**Option B — puzzle + state split**
+**Option B — puzzle + state split** ✅ recommended
 ```json
 {
-  "puzzle":  { "n": 7, "regions": [[0,0,0,0,0,1,2], ...] },
-  "state":   { "queens": [[0,2],[3,5]], "empty": [[0,0],[0,1]] }
+  "puzzle": { "n": 7, "regions": [[0, 0, null, 1, 1, 2, 2], ...] },
+  "state":  { "queens": [[0,2],[3,5]], "empty": [[0,0],[0,1]] }
 }
 ```
-The `puzzle` object is the shareable definition; `state` is the mutable game progress. Unsolved
-puzzles omit `state`. Aligns naturally with "share this puzzle" vs "share my progress".
+`puzzle` is the immutable definition; `state` records game progress and is omitted for unsolved
+puzzles. The split maps cleanly onto "share this puzzle" vs "share my progress", and the `puzzle`
+object can be shared or stored independently. Recommended because it is the most extensible and the
+cleanest for URL sharing (embed just the `puzzle` object, or the full object when sharing progress).
 
 **Option C — LinkedIn-compatible**
 ```json
-{ "id": 353, "date": "2025/04/18", "regions": [[0,0,0,0,0,0,1], ...] }
+{ "id": 353, "date": "2025/04/18", "regions": [[0, 0, null, 1, 1, 2, 2], ...] }
 ```
-Matches the archived JSON already used by the CLI (`linkedinPuzzles.json`). No game-state field —
-state is carried separately if needed. Easiest to load existing archives; harder to represent
-partially-solved puzzles.
+Matches the existing archived JSON format. No `state` field — game state carried separately if
+needed. Easiest path for loading the LinkedIn archive; harder to represent partially-solved puzzles.
 
 ---
 
@@ -69,41 +67,44 @@ partially-solved puzzles.
 
 The board is an n×n grid rendered to match the visual style of the README example image: each cell
 fills with its region colour and region boundaries are drawn with bold borders. Players click a cell
-to cycle its state: Unknown → Queen → Empty → Unknown. The board enforces no rules on its own.
-feedback: unknwon -> empty -> queen -> unknown. note that "empty" means a small cross (see readme example image)
+to cycle its state: **Unknown → Empty (cross) → Queen → Unknown**. "Empty" is represented by a small
+cross, exactly as shown in the README example image. The board enforces no rules on its own.
+
+A **Reset** button clears all cell states back to Unknown. It shows a confirmation dialog before
+acting.
 
 Region colours must be consistent across the CLI and the web UI — both should match the colours
 visible in the README screenshot.
 
-feedback: add a reset button with a confirmation dialog
-
 **Acceptance criteria**
-- Clicking a cell cycles its state.
+- Clicking a cell cycles Unknown → Empty → Queen → Unknown; "empty" renders as a small cross.
 - Region colours match the README example image; the same palette is used by the CLI.
 - Bold borders are drawn between cells that belong to different regions.
+- Reset button shows a confirmation dialog, then resets all cells to Unknown on confirm.
 - A "solved" banner appears when the player has placed exactly n non-attacking queens (one per row,
   column, and region, none diagonally adjacent).
 
 ### 2. Improved interactive board
 
-Quality-of-life features layered on top of the basic board, all toggled via UI controls.
+Quality-of-life features layered on top of the basic board.
 
+- **Hover highlight**: mousing over a cell darkens it slightly; the region colour does not change.
+- **Clashing queens**: any queen that conflicts with another (same row, column, region, or diagonal)
+  is rendered in red until the conflict is resolved.
 - **Auto-cross** (toggle, default on): when a queen is placed, automatically mark every cell in the
   same row, column, region, or diagonally adjacent as empty.
-- **Timer** (toggle, default on): a running clock showing elapsed time since the puzzle was started.
-- **Drag-to-cross**: clicking and dragging across cells marks each cell under the cursor as empty.
-
-feedback: mousing over a cell should darken that cell, but the region should not change.
-
-feedback: any queens that clash with each other should be coloured red.
+- **Timer** (toggle, default on): a running clock showing elapsed time since the first interaction.
+- **Drag-to-cross**: clicking and dragging marks cells as empty. The drag only initiates when the
+  starting cell is Unknown (not a queen); queens are never overwritten by a drag gesture.
 
 **Acceptance criteria**
+- Hovering a cell applies a darkening effect without altering its region background colour.
+- Queens involved in any conflict are highlighted red; the highlight clears when the conflict is
+  resolved.
 - Auto-cross toggle updates the board immediately when turned on (applies retroactively to already-
   placed queens) and clears auto-crosses when turned off.
 - Timer shows MM:SS, starts on first interaction, and stops when the puzzle is solved.
-- Drag gesture crosses out all cells the pointer passes over; it does not interfere with single-click
-  cycling.
-  - feedback: only do this when the starting cell is empty, not when any queen is already in it. also dont change any queens to crossed out with this 
+- Drag only starts when the pointer-down cell is Unknown; queens are never changed to empty by drag.
 - No Rust changes required for this milestone.
 
 ### 3. Solver step-through
@@ -133,15 +134,15 @@ Undo and redo buttons walk backwards and forwards through it.
 
 ### 5. Puzzle import
 
-A JSON import dialog accepts the puzzle JSON format decided in the open decision above. Submitting it
-loads the puzzle into the board. URL-based loading (see feature 6) also uses this path.
+A JSON import dialog accepts the canonical puzzle JSON format (Option B). Submitting it loads the
+puzzle into the board. URL-based loading (see feature 6) also uses this path.
 
 The text-format import from the original PRD is dropped — the visual editor makes it redundant, and
 JSON is a better interchange format.
 
 **Acceptance criteria**
-- Valid JSON puzzles load correctly.
-- Partially-solved state (if present in the JSON) is restored.
+- Valid JSON puzzles (puzzle-only or puzzle+state) load correctly.
+- Partially-solved state (if present) is restored.
 - An inline error message is shown for malformed or invalid input.
 
 ### 6. Shareable URLs
@@ -149,17 +150,30 @@ JSON is a better interchange format.
 A "Share" button encodes the current puzzle (and optionally the current board state) into a URL.
 Two encoding modes:
 
-- **Remote link**: a URL query parameter holds a URL pointing to a remotely hosted JSON file; on
-  load the app fetches and parses it.
-- **Embedded**: the full puzzle JSON is base64-encoded and embedded directly in the URL fragment,
-  so no external fetch is needed and the link works entirely offline.
+- **Remote link**: a query parameter holds a URL pointing to a remotely hosted JSON file; on load
+  the app fetches and parses it.
+- **Embedded**: the full puzzle JSON is base64-encoded and embedded directly in the URL fragment, so
+  no external fetch is needed and the link works entirely offline.
 
 **Acceptance criteria**
 - Visiting a share URL restores the puzzle (and state if embedded) without any manual import step.
 - The Share dialog shows both forms of URL and lets the user copy either.
 - An invalid or unreachable URL shows a clear error rather than a blank board.
 
-### 7. Puzzle generation
+### 7. Custom puzzle editor
+
+An "Edit" mode lets the user paint region colours onto cells to build a board from scratch. Each
+paint stroke assigns the selected region colour. Cells may remain unassigned (`null` region) while
+editing. Switching back to "Play" mode loads the painted layout as a puzzle.
+
+**Acceptance criteria**
+- The user can assign any of the 12 region colours to any cell.
+- The editor validates that the board is fully assigned and each of the n regions appears at least
+  once before allowing the switch to Play mode.
+- Painted puzzles can be solved and stepped through exactly like generated ones.
+- The finished board can be exported as JSON (using the canonical format).
+
+### 8. Puzzle generation
 
 A "Generate" button with a size selector (4–12, defaulting to 8) calls the WASM generator and
 loads the result into the board as a fresh puzzle.
@@ -167,19 +181,6 @@ loads the result into the board as a fresh puzzle.
 **Acceptance criteria**
 - Generated puzzles have exactly one solution (guaranteed by the generator).
 - The difficulty rating is displayed after generation.
-
-### 8. Custom puzzle editor
-
-An "Edit" mode lets the user paint region colours onto cells to build a board from scratch. Each
-paint stroke assigns the selected region colour. Switching back to "Play" mode loads the painted
-layout as a puzzle.
-
-**Acceptance criteria**
-- The user can assign any of the 12 region colours to any cell.
-- The editor validates that the board is fully assigned and each of the n regions is contiguous
-  before allowing the switch to Play mode.
-- Painted puzzles can be solved and stepped through exactly like generated ones.
-- The finished board can be exported as JSON (using the canonical format).
 
 ---
 
@@ -189,22 +190,25 @@ layout as a puzzle.
 
 ```
 queens-puzzle/
-├── src/            (existing CLI binary — depends on core)
-├── core/           (new: library crate with solver, generator, puzzle types)
+├── src/              (existing CLI binary — depends on core)
+├── core/             (new: library crate — solver, generator, puzzle types)
 │   ├── Cargo.toml
-│   └── src/
-├── wasm/           (new: cdylib crate — thin JS-facing wrapper over core)
+│   ├── src/
+│   └── tests/        (Rust integration tests for core logic)
+├── wasm/             (new: cdylib crate — thin JS-facing wrapper over core)
 │   ├── Cargo.toml
 │   └── src/lib.rs
-└── web/            (new: React/Vite app)
+└── web/              (new: React/Vite app)
     ├── package.json
     └── src/
+        ├── components/
+        └── __tests__/  (frontend unit + integration tests)
 ```
 
-user feedback: Designate an area for tests as well.
-
 Splitting the existing code into a `core` library crate means the CLI binary, the WASM crate, and
-future targets all share one implementation with no duplication.
+future targets all share one implementation with no duplication. Rust unit tests stay co-located
+(`#[cfg(test)]` modules); integration tests that span multiple modules go in `core/tests/`.
+Frontend tests (component behaviour, JSON parsing) live in `web/src/__tests__/`.
 
 ### WASM API surface (initial)
 
@@ -220,7 +224,7 @@ impl WasmPuzzle {
     pub fn generate(n: usize, seed: u64) -> WasmPuzzle;
     pub fn to_json(&self) -> String;
     pub fn n(&self) -> usize;
-    pub fn cell_region(&self, row: usize, col: usize) -> u8;
+    pub fn cell_region(&self, row: usize, col: usize) -> Option<u8>;
     pub fn cell_state(&self, row: usize, col: usize) -> u8;  // 0=Unknown 1=Queen 2=Empty
     pub fn set_cell_state(&mut self, row: usize, col: usize, state: u8);
     pub fn next_hint(&mut self) -> Option<WasmHint>;
@@ -236,6 +240,9 @@ pub struct WasmHint {
     pub involved: Vec<u32>,  // [row, col, ...] flattened pairs
 }
 ```
+
+`cell_region` returns `Option<u8>` (mapped to `number | undefined` in JS) to represent unassigned
+cells in editor mode.
 
 ### Frontend stack
 
@@ -258,12 +265,10 @@ No state management library is needed at this scale; React `useState` / `useRedu
 |---|-----------|-------------|
 | 0 | JSON format decision | Canonical puzzle JSON format agreed; documented here |
 | 1 | WASM scaffold | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from browser console |
-| 2 | Playable board | Board renders with correct colours and bold region borders; click-to-cycle works; solved detection works |
-| 3 | Improved board | Auto-cross toggle, timer, drag-to-cross |
+| 2 | Playable board | Board renders with correct colours and bold region borders; click-to-cycle works; reset; solved detection |
+| 3 | Improved board | Hover highlight, clashing queen indicator, auto-cross toggle, timer, drag-to-cross |
 | 4 | Solver step-through | Hint and Solve with highlighting; Rust solver refactored to expose individual steps |
 | 5 | Change history | Undo/redo for all actions |
 | 6 | Puzzle import + share | JSON import dialog; shareable URLs (remote link and embedded) |
-| 7 | Generator UX | Generate button with size selector; difficulty shown |
-| 8 | Custom editor | Paint-mode editor; JSON export |
-
-feedback: reorder the editor and generator milestones
+| 7 | Custom editor | Paint-mode editor; null-region support; JSON export |
+| 8 | Generator UX | Generate button with size selector; difficulty shown |
