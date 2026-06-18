@@ -54,6 +54,9 @@ fills with its region colour and region boundaries are drawn with bold borders. 
 to cycle its state: **Unknown → Empty (cross) → Queen → Unknown**. "Empty" renders as a small cross,
 as shown in the README example image. The board enforces no rules on its own.
 
+The app loads with the puzzle from the README example image (the 7×7 puzzle defined in the README
+text format) in its initial unsolved state. This serves as the default starting puzzle.
+
 A **Reset** button clears all cell states back to Unknown. It shows a confirmation dialog first.
 
 Region colours must be consistent across the CLI and the web UI — both should match the colours
@@ -62,9 +65,8 @@ visible in the README screenshot.
 Puzzle state (cell states) is persisted to browser `localStorage` on every change so that closing
 and reopening the tab restores the session.
 
-feedback: initialize with the same puzzle (but unsolved) as the example image in the README.
-
 **Acceptance criteria**
+- On first load (no `localStorage` data), the README example puzzle is shown fully unsolved.
 - Clicking a cell cycles Unknown → Empty → Queen → Unknown; empty renders as a small cross.
 - Region colours match the README example image; the same palette is used by the CLI.
 - Bold borders are drawn between cells that belong to different regions.
@@ -97,34 +99,35 @@ Quality-of-life features layered on top of the basic board.
 
 ### 3. Solver step-through
 
-A "Hint" button identifies the next logical deduction, highlights the affected cells, and shows the
-explanation — but does **not** apply the change immediately. An "Apply" button then commits the
-hint to the board. A "Solve" button runs all steps to completion without pausing.
-feedback: when showing a hint, all other cells should be slightly dimmed, the cells to be changed should be highlighted with green borders
+A "Hint" button identifies the next logical deduction and enters **hint mode**:
 
-feedback: or the user can make the corresponding changes manually, when theyre all applied return to normal UI
+- All cells not involved in the hint are dimmed.
+- Cells that would be changed are highlighted with green borders.
+- The hint description is shown in a panel.
+- The user can either press **Apply** to commit all hint changes at once, or manually click each
+  affected cell to apply changes one by one. Once all changes are applied manually, hint mode exits
+  automatically.
 
-The solver loop in Rust needs to be refactored to expose individual steps (one rule application at a
+The Rust solver loop needs to be refactored to expose individual steps (one rule application at a
 time) rather than running to completion internally.
 
 **Acceptance criteria**
-- "Hint" highlights changed cells (green) and involved cells (outlined) and shows the description,
-  without mutating the board.
-- "Apply" commits the pending hint; the highlight clears.
-- "Solve" runs to completion or reports "brute force required" if logical solving gets stuck.
-- Board state after "Solve" matches what the CLI would produce for the same puzzle.
-
-feedback: we dont need the solve button i think?
+- "Hint" enters hint mode: non-involved cells dim, cells-to-change gain green borders, description
+  is shown; the board is not mutated.
+- "Apply" commits all pending changes and exits hint mode.
+- Manually clicking an affected cell to the hinted state counts as applying that change; once all
+  are applied the hint clears automatically.
+- Board state after a fully applied hint matches what the CLI would produce for the same step.
 
 ### 4. Change history (undo/redo)
 
-Record every state-changing action (player move, hint application, solve step, editor paint stroke)
-in a history list. Undo and redo buttons walk backwards and forwards through it. History covers both
+Record every state-changing action (player move, hint application, editor paint stroke) in a
+history list. Undo and redo buttons walk backwards and forwards through it. History covers both
 play mode and edit mode.
 
 **Acceptance criteria**
 - Undo reverts the most recent action; redo re-applies it.
-- Hint Apply and Solve steps are individually undoable.
+- Hint Apply steps are individually undoable.
 - Editor paint strokes are undoable.
 - History is cleared when a new puzzle is loaded.
 
@@ -184,9 +187,25 @@ Board state in edit mode is also persisted to `localStorage`.
 - Painted puzzles can be solved and stepped through exactly like generated ones.
 - The finished board can be exported as JSON.
 
-feedback: add a follow up milestone that shows (calculates in the background) if the partially edited puzzle has a solution (or multiple) and how difficult it is
+### 8. Editor live analysis
 
-### 8. Puzzle generation
+While in Edit mode, a background Web Worker continuously analyses the current (possibly partial)
+board and shows a live indicator with the result:
+
+- **No regions missing** — board not yet fully assigned; analysis deferred.
+- **No solution** — the current region layout has no valid queen placement.
+- **Multiple solutions** — the layout is ambiguous (count shown if small, e.g. "3 solutions").
+- **Unique solution** — exactly one solution exists; the difficulty rating is shown.
+
+The analysis re-runs whenever the board changes. A brief debounce prevents thrashing during rapid
+painting.
+
+**Acceptance criteria**
+- The indicator updates within a short delay after each paint stroke.
+- Analysis runs in a Web Worker and does not block the UI.
+- All four states (incomplete, no solution, multiple solutions, unique + difficulty) are displayed.
+
+### 9. Puzzle generation
 
 A "Generate" button with a size selector (4–12, defaulting to 8) and an optional seed field calls
 the WASM generator. Generation runs in a **Web Worker** so the UI remains responsive for large
@@ -244,7 +263,6 @@ impl WasmPuzzle {
     pub fn cell_state(&self, row: usize, col: usize) -> u8;  // 0=Unknown 1=Queen 2=Empty
     pub fn set_cell_state(&mut self, row: usize, col: usize, state: u8);
     pub fn next_hint(&mut self) -> Option<WasmHint>;
-    pub fn solve(&mut self) -> bool;  // returns true if solved logically
     pub fn is_solved(&self) -> bool;
     pub fn difficulty(&self) -> Option<String>;
 }
@@ -258,7 +276,7 @@ pub struct WasmHint {
 ```
 
 `cell_region` returns `Option<u8>` (mapped to `number | undefined` in JS) to represent unassigned
-cells in editor mode.
+cells in editor mode. `solve` is removed from the API in line with dropping the Solve button.
 
 ### Frontend stack
 
@@ -280,10 +298,11 @@ No state management library is needed at this scale; React `useState` / `useRedu
 | # | Milestone | Deliverable |
 |---|-----------|-------------|
 | 1 | WASM scaffold | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from a browser console |
-| 2 | Playable board | Board renders with correct colours and bold region borders; click-to-cycle; reset; localStorage |
-| 3 | Improved board | Hover highlight, clashing queen indicator, auto-cross toggle, timer, drag-to-cross |
-| 4 | Solver step-through | Hint (preview) + Apply + Solve; Rust solver refactored to expose individual steps |
+| 2 | Playable board | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset; localStorage |
+| 3 | Improved board | Hover highlight, clashing queens, auto-cross toggle, timer, drag-to-cross |
+| 4 | Solver step-through | Hint mode (dim + green borders + description); Apply; manual apply; Rust step refactor |
 | 5 | Change history | Undo/redo for player moves, hint applications, and editor strokes |
 | 6 | Puzzle import + share | JSON import dialog; shareable URLs (puzzle-only and with-progress variants) |
-| 7 | Custom editor | Paint-mode editor; checkerboard unassigned cells; shuffle colours; n-colour palette; JSON export |
-| 8 | Generator UX | Generate button; size selector; optional seed; Web Worker; difficulty shown |
+| 7 | Custom editor | Paint-mode; checkerboard unassigned cells; n-colour palette; shuffle colours; JSON export |
+| 8 | Editor live analysis | Background solution analysis with live indicator (none/multiple/unique+difficulty) |
+| 9 | Generator UX | Generate button; size selector; optional seed; Web Worker; difficulty shown |
