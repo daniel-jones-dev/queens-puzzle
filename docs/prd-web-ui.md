@@ -137,51 +137,65 @@ Quality-of-life features layered on top of the basic board.
 - Mouse and touch input both work via the Pointer Events API; no raw touch event handlers needed.
 - No Rust changes required for this milestone.
 
-### 3. Solver step-through
+### 3. Solver step-through ✓
 
-A "Hint" button identifies the next logical deduction and enters **hint mode**:
+A "Hint" button (left side of the controls row) identifies the next logical deduction and enters
+**hint mode**:
 
-- All cells not involved in the hint are dimmed.
-- Cells that would be changed are highlighted with green borders.
-- The hint description is shown in a panel.
+- All cells not involved in the hint are dimmed (opacity 0.35).
+- Cells that would be changed are highlighted with a green border overlay.
+- The hint panel (description + Apply/Dismiss buttons) appears below the controls row.
+- The Hint button remains visible but is disabled while a hint is active.
 - The user can press **Apply** to commit all hint changes at once, or manually click each affected
   cell. Clicks on affected cells still cycle normally (Empty → Queen → Unknown for non-unknown
   cells, or mark-as-empty for Unknown cells); when a cell reaches the hinted target state it is
   counted as applied. Once all changes are applied, hint mode exits automatically.
-- Clicking any dimmed (non-involved) cell dismisses hint mode and processes the click normally
-  (cycling that cell's state or marking it empty if Unknown).
-- A dismiss control also exits hint mode without applying any changes.
+- Clicking a dimmed (non-involved) cell dismisses hint mode and processes the click normally,
+  **except** for queen-placement hints (where the hint's change set includes a Queen state): in
+  that case, clicking a dimmed cell does not dismiss the hint, so the player can freely cross out
+  cells while being guided to place a queen.
+- A Dismiss button exits hint mode without applying any changes.
 
-If no logical step is available (the puzzle requires brute force), pressing Hint shows a message:
-"No logical step found — try a different approach."
+If no logical step is available (the puzzle requires brute force), pressing Hint shows a message
+below the controls row: "No logical step found — try a different approach." (auto-clears after 4 s).
 
-The Rust solver loop needs to be refactored to expose individual steps (one rule application at a
-time) rather than running to completion internally. `next_hint` does not mutate the puzzle; the
-implementation clones puzzle state internally before running the solver step.
+The Rust solver loop was refactored to expose individual steps (one rule application at a time)
+rather than running to completion internally. `next_hint` does not mutate the puzzle; it clones
+puzzle state internally before running the solver step.
 
 **Acceptance criteria**
 - "Hint" enters hint mode: non-involved cells dim, cells-to-change gain green borders, description
-  is shown; the board is not mutated.
+  is shown in a panel below the controls row; the board is not mutated.
+- The Hint button stays visible (disabled) while a hint is active.
 - "Apply" commits all pending changes and exits hint mode.
 - Clicking an affected cell processes the click normally; reaching the hinted state counts as
   applying that cell's change; hint mode exits once all changes are applied.
-- Clicking any dimmed (non-involved) cell dismisses hint mode and also applies the click to that
-  cell (cycling it or marking it empty).
-- A dismiss control is available to exit hint mode without applying any changes.
+- Clicking a dimmed cell on a cross-marking hint dismisses hint mode and also applies the click
+  to that cell (cycling it or marking it empty).
+- Clicking a dimmed cell on a queen-placement hint does NOT dismiss hint mode.
+- A Dismiss button exits hint mode without applying any changes.
 - When no logical step exists, Hint shows "No logical step found — try a different approach."
 - Board state after a fully applied hint matches what the CLI would produce for the same step.
 
-### 4. Change history (undo/redo)
+### 4. Change history ✓
 
-Record every state-changing action (player move, hint application, editor paint stroke) in a
-history list. Undo and redo buttons walk backwards and forwards through it. History covers both
-play mode and edit mode.
+Record every state-changing action (player move, hint application, editor paint stroke) as a
+full-board snapshot and push it onto an undo stack. An undo button (↩, right side of controls row)
+reverts to the previous snapshot. No redo button is provided.
+
+The timer is updated correctly across undo: undoing past a solved state restarts the timer; undoing
+into a solved state (via a redo-like sequence) stops the timer.
+
+History is snapshot-based: each entry is a full `number[][]` of cell states. This is simple and
+avoids the complexity of tracking delta operations.
 
 **Acceptance criteria**
-- Undo reverts the most recent action; redo re-applies it.
+- Undo (↩) reverts the most recent action.
 - Hint Apply steps are individually undoable.
 - Editor paint strokes are undoable.
-- History is cleared when a new puzzle is loaded or when Reset is used.
+- History is cleared when Reset is used.
+- The ↩ button is disabled (greyed out) when there is no history to undo.
+- Undoing past a solved state restarts the timer; undoing into a solved state stops the timer.
 
 ### 5. Puzzle import and share
 
@@ -405,8 +419,8 @@ No state management library is needed at this scale; React `useState` / `useRedu
 | 1 | WASM scaffold ✓ | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from a browser console; Web Worker WASM init proved out |
 | 2 | Playable board ✓ | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset (clears history); localStorage |
 | 3 | Improved board ✓ | Hover highlight, clashing queens, auto-cross toggle, timer (with localStorage), drag-to-cross (mouse + touch) |
-| 4 | Solver step-through | Hint mode (dim + green borders + description); Apply; manual apply; dimmed-cell dismisses+acts; Rust step refactor |
-| 5 | Change history | Undo/redo for player moves, hint applications, and editor strokes |
+| 4 | Solver step-through ✓ | Hint mode (dim + green borders + description); Apply; manual apply; dimmed-cell dismiss behaviour; Rust step refactor |
+| 5 | Change history ✓ | Undo (↩) for player moves and hint applications; snapshot-based; timer state managed across undo |
 | 6 | Puzzle import + share | JSON import (partial states preserved); embedded shareable URL (single variant, encodes current state) |
 | 7 | Custom editor | Edit-from-play; fresh board; scatter queens (with confirmation); shuffle colours; n-colour palette; JSON export |
 | 8 | Editor live analysis | 300ms-debounced background analysis; cancellable; four indicator states; Play "!" for non-unique puzzles |

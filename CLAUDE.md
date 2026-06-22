@@ -117,10 +117,16 @@ Region borders are drawn as an SVG overlay (`position: absolute` over the board 
 
 Cell size is responsive: computed as `Math.min(56, Math.max(32, Math.floor((window.innerWidth - 32) / n)))` on load and on `resize`. The computed value is passed as a prop to `Board` and used for grid template columns, cell width/height, and icon font sizes.
 
-### Settings and controls
-The ⚙ and trash icon buttons are anchored to the board's bottom-right corner using `position: absolute; bottom: 0; right: 0; transform: translateY(calc(100% + 8px))` inside a `position: relative` wrapper around the board. The button cluster div has **no `z-index`** — this is intentional. Without a `z-index`, `position: absolute` does not form a stacking context, so `position: fixed` children (the settings backdrop and panel) participate in the global stacking context.
+### Controls row
+The controls row is a normal-flow `<div>` below the board wrapper (`marginTop: "0.5rem"`). It uses `position: relative; display: flex; alignItems: center; justifyContent: space-between`:
 
-The settings panel is positioned using `getBoundingClientRect()` on the button cluster at the moment it opens, computing `position: fixed` coordinates. This avoids the transform stacking context problem where `bottom: calc(100% + 8px)` inside a transformed ancestor produces incorrect visual placement.
+- **Left**: Hint button (hidden when the puzzle is solved).
+- **Centre**: Timer — `position: absolute; inset: 0` with flex centering; `pointerEvents: none` so it doesn't intercept clicks.
+- **Right**: ↩ (undo), ⚙ (settings), 🗑 (reset) — grouped in a flex row with `gap: 0.5rem`.
+
+The entire row is referenced via `clusterRef`. The settings panel computes its `position: fixed` coordinates using `getBoundingClientRect()` on this ref at open time (`bottom: window.innerHeight - rect.top + 8`, `right: window.innerWidth - rect.right`). This avoids stacking-context issues that arise when using CSS `bottom/top` offsets inside transformed ancestors.
+
+The row must stay in normal document flow (not `position: absolute` over the board). If it overlaps other elements, pointer events on those elements are lost.
 
 ### Timer
 The `setInterval` ID is stored in `timerIntervalRef`. When resetting a solved puzzle, `doReset` calls `clearInterval(timerIntervalRef.current)` **before** `localStorage.removeItem(TIMER_KEY)`. This prevents a race where the interval fires between the `removeItem` call and React's next render (which is when the effect cleanup would otherwise run `clearInterval`).
@@ -132,7 +138,14 @@ Hint state lives in `App.tsx` as `HintState | null` containing `description`, `c
 
 `handleHint` calls `puzzle.next_hint()`, unpacks the flattened arrays, and sets this state. `handleApply` iterates `hint.changes`, calls `set_cell_state` for each, and then clears hint state. Auto-hint-exit is checked via `hintComplete()` after every cell interaction.
 
-Non-involved cells are dimmed with `opacity: 0.35` via the `hintInvolved` prop on `Board`. Hint-change cells show a `position: absolute` green-border overlay via the `hintChanges` prop (a `Set<string>` of keys). Clicking a dimmed cell calls `setHint(null)` and falls through to process the click normally. Clicking an involved cell processes normally and calls `hintComplete()` after.
+Non-involved cells are dimmed with `opacity: 0.35` via the `hintInvolved` prop on `Board`. Hint-change cells (present in `hintChanges`) show a `position: absolute` green-border overlay and are **never dimmed** even if absent from `hintInvolved`.
+
+**Dimmed-cell click behaviour**: clicking a dimmed cell dismisses the hint and processes the click normally, **except** when the hint is a queen-placement hint (any entry in `changes` has state `1`). In that case, clicking a dimmed cell processes the click without dismissing. This lets the player freely cross out cells while being guided to place a queen. Detection: `[...activeHint.changes.values()].some(s => s === 1)`.
+
+### Change history
+`past: number[][][]` and `future: number[][][]` are undo/redo stacks of full board state snapshots. A snapshot is taken (via `readStates(puzzle)`) immediately before every mutation. On undo, the top of `past` is restored, the current state is pushed to `future`. Redo is not exposed in the UI.
+
+`handleUndo` also manages timer state: if the puzzle was solved and undo moves to an unsolved state, `setTimerRunning(true)` is called. History is cleared (`setPast([]); setFuture([])`) on reset and when a new puzzle loads.
 
 ## Milestone status (as of 2026-06-22)
 
