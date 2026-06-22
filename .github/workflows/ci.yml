@@ -53,11 +53,13 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Build WASM
+        run: wasm-pack build wasm --target web --out-dir ../web/wasm-pkg
       - name: Install web dependencies
         run: npm ci
         working-directory: web
-      - name: Build
-        run: npm run build
+      - name: Build web
+        run: npx tsc && npx vite build
         working-directory: web
       - uses: actions/upload-pages-artifact@v3
         with:
