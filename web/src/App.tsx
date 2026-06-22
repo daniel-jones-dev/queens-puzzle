@@ -312,58 +312,18 @@ export function App() {
               transform: "translateY(calc(100% + 8px))",
               display: "flex",
               gap: "0.5rem",
-              zIndex: 10,
             }}
           >
-            {/* Settings panel — pops up above the icon cluster */}
-            {settingsOpen && (
-              <>
-                <div
-                  style={{ position: "fixed", inset: 0, zIndex: 90 }}
-                  onClick={() => setSettingsOpen(false)}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "calc(100% + 8px)",
-                    right: 0,
-                    zIndex: 95,
-                    background: "white",
-                    border: "1px solid #ddd",
-                    borderRadius: "8px",
-                    padding: "0.75rem 1rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.6rem",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={autoCrossEnabled}
-                      onChange={(e) => setAutoCrossEnabled(e.target.checked)}
-                    />
-                    Auto-cross
-                  </label>
-                  <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={timerEnabled}
-                      onChange={(e) => setTimerEnabled(e.target.checked)}
-                    />
-                    Timer
-                  </label>
-                </div>
-              </>
-            )}
-
             <button style={iconBtn} onClick={() => setSettingsOpen((v) => !v)} aria-label="Settings">
               ⚙
             </button>
             <button style={iconBtn} onClick={() => setResetPending(true)} aria-label="Reset">
-              ↺
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 4h12" />
+                <path d="M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4" />
+                <path d="M3 4l1 9.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5L13 4" />
+                <path d="M6.5 7v5M9.5 7v5" />
+              </svg>
             </button>
           </div>
         </div>
@@ -382,6 +342,50 @@ export function App() {
           </span>
         </div>
       </div>
+
+      {/* Settings dropup — rendered at root so its z-index is in the global stacking context */}
+      {settingsOpen && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 150 }}
+            onClick={() => setSettingsOpen(false)}
+          />
+          <div
+            style={{
+              position: "fixed",
+              bottom: "4rem",
+              right: "1rem",
+              zIndex: 160,
+              background: "white",
+              border: "1px solid #ddd",
+              borderRadius: "8px",
+              padding: "0.75rem 1rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.6rem",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={autoCrossEnabled}
+                onChange={(e) => setAutoCrossEnabled(e.target.checked)}
+              />
+              Auto-cross
+            </label>
+            <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={timerEnabled}
+                onChange={(e) => setTimerEnabled(e.target.checked)}
+              />
+              Timer
+            </label>
+          </div>
+        </>
+      )}
 
       {/* Reset modal */}
       {resetPending && (
