@@ -1,0 +1,149 @@
+use queens_puzzle_core::generator::generate_puzzle;
+use queens_puzzle_core::grid::Cell;
+use queens_puzzle_core::io::json;
+use queens_puzzle_core::puzzle::{region_color, QueensPuzzle, State};
+use queens_puzzle_core::solver;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+pub struct WasmPuzzle {
+    inner: QueensPuzzle,
+}
+
+#[wasm_bindgen]
+impl WasmPuzzle {
+    /// Parse a puzzle from the canonical JSON format.
+    pub fn from_json(input: &str) -> Result<WasmPuzzle, JsValue> {
+        json::parse(input)
+            .map(|inner| WasmPuzzle { inner })
+            .map_err(|e| JsValue::from_str(&e))
+    }
+
+    /// Create an empty n×n puzzle (all cells unassigned, for editor mode).
+    pub fn new_empty(n: usize) -> WasmPuzzle {
+        WasmPuzzle {
+            inner: QueensPuzzle::new_empty(n),
+        }
+    }
+
+    /// Generate a puzzle of size n with the given seed.
+    /// The seed is u32 to stay within JS's safe integer range; widened to u64 internally.
+    pub fn generate(n: usize, seed: u32) -> WasmPuzzle {
+        WasmPuzzle {
+            inner: generate_puzzle(n, seed as u64),
+        }
+    }
+
+    /// Serialize the puzzle to the canonical JSON format.
+    pub fn to_json(&self) -> String {
+        json::serialize(&self.inner)
+    }
+
+    pub fn n(&self) -> usize {
+        self.inner.n()
+    }
+
+    /// Returns the region index for a cell, or `undefined` if unassigned.
+    pub fn cell_region(&self, row: usize, col: usize) -> Option<u8> {
+        self.inner.cell_region(Cell { row, col })
+    }
+
+    /// Assign or unassign a cell's region (pass `undefined` to unassign).
+    /// Silently overwrites any existing assignment.
+    pub fn set_cell_region(&mut self, row: usize, col: usize, region: Option<u8>) {
+        self.inner.set_cell_region(Cell { row, col }, region);
+    }
+
+    /// Returns the cell state: 0 = Unknown, 1 = Queen, 2 = Empty.
+    pub fn cell_state(&self, row: usize, col: usize) -> u32 {
+        match self.inner.cell_state(Cell { row, col }) {
+            State::Unknown => 0,
+            State::Queen => 1,
+            State::Empty => 2,
+        }
+    }
+
+    /// Set a cell state: 0 = Unknown, 1 = Queen, 2 = Empty. Panics if state is not 0, 1, or 2.
+    pub fn set_cell_state(&mut self, row: usize, col: usize, state: u32) {
+        let s = match state {
+            0 => State::Unknown,
+            1 => State::Queen,
+            2 => State::Empty,
+            _ => panic!("invalid state value: {state}"),
+        };
+        self.inner.set_cell_state(Cell { row, col }, s);
+    }
+
+    /// Returns the next logical hint without mutating the puzzle.
+    pub fn next_hint(&self) -> Option<WasmHint> {
+        solver::next_hint(&self.inner).map(|result| WasmHint {
+            description: result.description,
+            changes: result
+                .changes
+                .iter()
+                .flat_map(|(cell, state)| {
+                    let s: u32 = match state {
+                        State::Unknown => 0,
+                        State::Queen => 1,
+                        State::Empty => 2,
+                    };
+                    [cell.row as u32, cell.col as u32, s]
+                })
+                .collect(),
+            involved: result
+                .involved
+                .iter()
+                .flat_map(|cell| [cell.row as u32, cell.col as u32])
+                .collect(),
+        })
+    }
+
+    pub fn is_solved(&self) -> bool {
+        self.inner.is_solved()
+    }
+
+    /// Returns the difficulty string, or `undefined` if it cannot be determined.
+    pub fn difficulty(&self) -> Option<String> {
+        let mut clone = self.inner.clone();
+        solver::solve_and_rate_puzzle(&mut clone).map(|d| format!("{:?}", d))
+    }
+
+    /// Returns flattened [row, col, ...] pairs for all queens currently in conflict.
+    pub fn clashing_queens(&self) -> Vec<u32> {
+        self.inner
+            .clashing_queens()
+            .iter()
+            .flat_map(|cell| [cell.row as u32, cell.col as u32])
+            .collect()
+    }
+
+    /// Returns the region colour as a CSS hex string (e.g. "#bba3e2") for a given region index.
+    pub fn region_color_hex(region_index: usize) -> String {
+        let c = region_color(region_index);
+        format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)
+    }
+}
+
+#[wasm_bindgen]
+pub struct WasmHint {
+    description: String,
+    /// Flattened [row, col, state, ...] triples; state values 0/1/2
+    changes: Vec<u32>,
+    /// Flattened [row, col, ...] pairs
+    involved: Vec<u32>,
+}
+
+#[wasm_bindgen]
+impl WasmHint {
+    pub fn description(&self) -> String {
+        self.description.clone()
+    }
+
+    pub fn changes(&self) -> Vec<u32> {
+        self.changes.clone()
+    }
+
+    pub fn involved(&self) -> Vec<u32> {
+        self.involved.clone()
+    }
+}
