@@ -78,24 +78,27 @@ function affectedByQueen(
   return [...seen].map((s) => s.split(",").map(Number) as [number, number]);
 }
 
-function computeDisplayStates(
-  player: number[][],
+// Apply auto-crosses from all current queens directly into the WASM puzzle.
+// Returns true if any cells were changed.
+function applyAutoCrosses(
+  puzzle: WasmPuzzle,
   regions: (number | null)[][],
-  autoCross: boolean
-): number[][] {
-  const n = player.length;
-  const display = player.map((row) => [...row]);
-  if (!autoCross) return display;
+  n: number
+): boolean {
+  let changed = false;
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
-      if (player[r][c] === 1) {
+      if (puzzle.cell_state(r, c) === 1) {
         for (const [ar, ac] of affectedByQueen(r, c, regions, n)) {
-          if (display[ar][ac] === 0) display[ar][ac] = 2;
+          if (puzzle.cell_state(ar, ac) === 0) {
+            puzzle.set_cell_state(ar, ac, 2);
+            changed = true;
+          }
         }
       }
     }
   }
-  return display;
+  return changed;
 }
 
 function formatTime(s: number): string {
@@ -110,6 +113,7 @@ export function App() {
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [regions, setRegions] = useState<(number | null)[][]>([]);
+  // playerStates mirrors the WASM puzzle state exactly (auto-crosses are written here too).
   const [playerStates, setPlayerStates] = useState<number[][]>([]);
   const [autoCrossEnabled, setAutoCrossEnabled] = useState(true);
   const [timerEnabled, setTimerEnabled] = useState(true);
@@ -117,11 +121,6 @@ export function App() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [solved, setSolved] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
-
-  const displayStates = useMemo(
-    () => computeDisplayStates(playerStates, regions, autoCrossEnabled),
-    [playerStates, regions, autoCrossEnabled]
-  );
 
   const clashingSet = useMemo(() => {
     const puzzle = puzzleRef.current;
@@ -158,7 +157,6 @@ export function App() {
     };
   }, []);
 
-  // Timer tick
   useEffect(() => {
     if (!timerRunning || !timerEnabled) return;
     const id = setInterval(() => {
@@ -177,23 +175,18 @@ export function App() {
     if (solved) setShowBanner(true);
   }, [solved]);
 
-  // Called by Board for Unknown → Empty (drag or tap on Unknown cell)
+  // Drag/tap on an Unknown cell → mark Empty.
   const handleCellCross = useCallback(
     (r: number, c: number) => {
       if (solved) return;
       const puzzle = puzzleRef.current;
       if (!puzzle) return;
-      // Guard against stale display state calling cross on a non-Unknown cell
       if (puzzle.cell_state(r, c) !== 0) return;
       try {
         setResetPending(false);
         setTimerRunning(true);
         puzzle.set_cell_state(r, c, 2);
-        setPlayerStates((prev) => {
-          const updated = prev.map((row) => [...row]);
-          updated[r][c] = 2;
-          return updated;
-        });
+        setPlayerStates(readStates(puzzle));
         try {
           localStorage.setItem(STORAGE_KEY, puzzle.to_json());
         } catch {}
@@ -205,8 +198,8 @@ export function App() {
     [solved]
   );
 
-  // Called by Board for Empty → Queen or Queen → Unknown clicks.
-  // visualState is the display state the user saw (includes auto-crosses).
+  // Click on Empty/Queen cell → cycle (Empty→Queen, Queen→Unknown).
+  // visualState is what the Board displayed (playerStates, no overlay).
   const handleCellClick = useCallback(
     (r: number, c: number, visualState: number) => {
       if (solved) return;
@@ -215,13 +208,19 @@ export function App() {
       try {
         setResetPending(false);
         setTimerRunning(true);
+        const n = puzzle.n();
         const next = visualState === 2 ? 1 : 0;
         puzzle.set_cell_state(r, c, next);
-        setPlayerStates((prev) => {
-          const updated = prev.map((row) => [...row]);
-          updated[r][c] = next;
-          return updated;
-        });
+        // When placing a queen with auto-cross on, immediately write crosses
+        // into board state (they persist regardless of the toggle).
+        if (next === 1 && autoCrossEnabled) {
+          for (const [ar, ac] of affectedByQueen(r, c, regions, n)) {
+            if (puzzle.cell_state(ar, ac) === 0) {
+              puzzle.set_cell_state(ar, ac, 2);
+            }
+          }
+        }
+        setPlayerStates(readStates(puzzle));
         const nowSolved = puzzle.is_solved();
         setSolved(nowSolved);
         if (nowSolved) setTimerRunning(false);
@@ -233,7 +232,27 @@ export function App() {
         setError(String(err));
       }
     },
-    [solved]
+    [solved, autoCrossEnabled, regions]
+  );
+
+  const handleToggleAutoCross = useCallback(
+    (enabled: boolean) => {
+      setAutoCrossEnabled(enabled);
+      if (enabled) {
+        // Retroactively apply crosses from all existing queens.
+        const puzzle = puzzleRef.current;
+        if (!puzzle) return;
+        const changed = applyAutoCrosses(puzzle, regions, puzzle.n());
+        if (changed) {
+          setPlayerStates(readStates(puzzle));
+          try {
+            localStorage.setItem(STORAGE_KEY, puzzle.to_json());
+          } catch {}
+        }
+      }
+      // Toggling off: no board state change.
+    },
+    [regions]
   );
 
   const doReset = useCallback(() => {
@@ -282,7 +301,7 @@ export function App() {
 
       <Board
         regions={regions}
-        cellStates={displayStates}
+        cellStates={playerStates}
         clashingSet={clashingSet}
         onCellCross={handleCellCross}
         onCellClick={handleCellClick}
@@ -310,17 +329,27 @@ export function App() {
           </span>
         )}
         <label
-          style={{ display: "flex", gap: "0.4rem", alignItems: "center", cursor: "pointer" }}
+          style={{
+            display: "flex",
+            gap: "0.4rem",
+            alignItems: "center",
+            cursor: "pointer",
+          }}
         >
           <input
             type="checkbox"
             checked={autoCrossEnabled}
-            onChange={(e) => setAutoCrossEnabled(e.target.checked)}
+            onChange={(e) => handleToggleAutoCross(e.target.checked)}
           />
           Auto-cross
         </label>
         <label
-          style={{ display: "flex", gap: "0.4rem", alignItems: "center", cursor: "pointer" }}
+          style={{
+            display: "flex",
+            gap: "0.4rem",
+            alignItems: "center",
+            cursor: "pointer",
+          }}
         >
           <input
             type="checkbox"
