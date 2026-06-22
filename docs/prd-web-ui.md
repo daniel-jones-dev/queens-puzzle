@@ -94,8 +94,8 @@ Quality-of-life features layered on top of the basic board.
   is rendered in red until the conflict is resolved.
 - **Auto-cross** (toggle, default on): when a queen is placed, automatically mark every Unknown cell
   in the same row, column, region, or diagonally adjacent as empty. The crosses are written to board
-  state and persist when the toggle is turned off. Toggling on retroactively applies crosses from
-  all currently placed queens; toggling off only stops future auto-crossing.
+  state and persist when the toggle is turned off. Toggling has no immediate effect on the board;
+  it only governs whether the next queen placement triggers auto-crossing.
 - **Timer** (toggle, default on): a running clock showing elapsed time since the first interaction,
   persisted to `localStorage` and resumed on page load. The timer is written to `localStorage` on
   every tick (once per second); no separate debounce is needed since the value is a single integer.
@@ -108,8 +108,7 @@ Quality-of-life features layered on top of the basic board.
 **Acceptance criteria**
 - Hovering a cell applies a darkening effect without altering its region background colour.
 - Queens involved in any conflict are highlighted red; the highlight clears when resolved.
-- Auto-cross updates the board immediately when toggled on (applies retroactively to placed queens);
-  toggling off stops future auto-crossing but does not remove existing crosses.
+- Auto-cross toggle has no immediate effect on the board; it only governs future queen placements.
 - Timer shows MM:SS, starts on first interaction, stops when the puzzle is solved, and resumes from
   the saved value on page reload.
 - Drag only initiates when the pointer-down cell is Unknown. Dragging over a queen has no effect.

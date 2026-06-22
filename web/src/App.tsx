@@ -78,28 +78,6 @@ function affectedByQueen(
   return [...seen].map((s) => s.split(",").map(Number) as [number, number]);
 }
 
-// Apply auto-crosses from all current queens directly into the WASM puzzle.
-// Returns true if any cells were changed.
-function applyAutoCrosses(
-  puzzle: WasmPuzzle,
-  regions: (number | null)[][],
-  n: number
-): boolean {
-  let changed = false;
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      if (puzzle.cell_state(r, c) === 1) {
-        for (const [ar, ac] of affectedByQueen(r, c, regions, n)) {
-          if (puzzle.cell_state(ar, ac) === 0) {
-            puzzle.set_cell_state(ar, ac, 2);
-            changed = true;
-          }
-        }
-      }
-    }
-  }
-  return changed;
-}
 
 function formatTime(s: number): string {
   const m = Math.floor(s / 60);
@@ -235,25 +213,9 @@ export function App() {
     [solved, autoCrossEnabled, regions]
   );
 
-  const handleToggleAutoCross = useCallback(
-    (enabled: boolean) => {
-      setAutoCrossEnabled(enabled);
-      if (enabled) {
-        // Retroactively apply crosses from all existing queens.
-        const puzzle = puzzleRef.current;
-        if (!puzzle) return;
-        const changed = applyAutoCrosses(puzzle, regions, puzzle.n());
-        if (changed) {
-          setPlayerStates(readStates(puzzle));
-          try {
-            localStorage.setItem(STORAGE_KEY, puzzle.to_json());
-          } catch {}
-        }
-      }
-      // Toggling off: no board state change.
-    },
-    [regions]
-  );
+  const handleToggleAutoCross = useCallback((enabled: boolean) => {
+    setAutoCrossEnabled(enabled);
+  }, []);
 
   const doReset = useCallback(() => {
     const puzzle = puzzleRef.current;
