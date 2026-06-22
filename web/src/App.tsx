@@ -405,12 +405,31 @@ export function App() {
             style={{
               position: "absolute",
               bottom: 0,
+              left: 0,
               right: 0,
               transform: "translateY(calc(100% + 8px))",
               display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
               gap: "0.5rem",
             }}
           >
+            {/* Timer — absolutely centered within the cluster row */}
+            <span
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontVariantNumeric: "tabular-nums",
+                fontSize: "1.05rem",
+                pointerEvents: "none",
+                visibility: timerEnabled ? "visible" : "hidden",
+              }}
+            >
+              {formatTime(timerElapsed)}
+            </span>
             <button
               style={controlBtn}
               aria-label="Settings"
@@ -506,19 +525,6 @@ export function App() {
           </div>
         )}
 
-        {/* Timer below board — always occupies space to prevent layout shift */}
-        <div style={{ marginTop: "0.75rem" }}>
-          <span
-            style={{
-              fontVariantNumeric: "tabular-nums",
-              fontSize: "1.05rem",
-              minWidth: "5ch",
-              visibility: timerEnabled ? "visible" : "hidden",
-            }}
-          >
-            {formatTime(timerElapsed)}
-          </span>
-        </div>
       </div>
 
       {/* Settings panel — position: fixed anchored to the cluster's measured screen rect */}
