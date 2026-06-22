@@ -1,4 +1,4 @@
-import { CSSProperties, useRef } from "react";
+import { useRef } from "react";
 import { WasmPuzzle } from "queens-puzzle-wasm";
 import styles from "./Board.module.css";
 
@@ -12,30 +12,27 @@ interface Props {
   cellSize?: number;
 }
 
-const BORDER_THICK = "3px solid #333";
 const BORDER_THIN = "1px solid rgba(0,0,0,0.15)";
 
-function cellBorders(
-  regions: (number | null)[][],
-  r: number,
-  c: number
-): CSSProperties {
+interface Segment { x1: number; y1: number; x2: number; y2: number }
+
+function regionBorderSegments(regions: (number | null)[][], cellSize: number): Segment[] {
   const n = regions.length;
-  const reg = regions[r][c];
-  return {
-    borderRight:
-      c === n - 1
-        ? "none"
-        : regions[r][c + 1] !== reg
-          ? BORDER_THICK
-          : BORDER_THIN,
-    borderBottom:
-      r === n - 1
-        ? "none"
-        : regions[r + 1][c] !== reg
-          ? BORDER_THICK
-          : BORDER_THIN,
-  };
+  const segs: Segment[] = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const reg = regions[r][c];
+      if (c < n - 1 && regions[r][c + 1] !== reg) {
+        const x = (c + 1) * cellSize;
+        segs.push({ x1: x, y1: r * cellSize, x2: x, y2: (r + 1) * cellSize });
+      }
+      if (r < n - 1 && regions[r + 1][c] !== reg) {
+        const y = (r + 1) * cellSize;
+        segs.push({ x1: c * cellSize, y1: y, x2: (c + 1) * cellSize, y2: y });
+      }
+    }
+  }
+  return segs;
 }
 
 export function Board({
@@ -50,16 +47,12 @@ export function Board({
   const n = regions.length;
   const boardRef = useRef<HTMLDivElement>(null);
 
-  // Refs for drag state — avoids stale closure between pointerdown and pointerup.
   const draggingRef = useRef(false);
   const clickDownCellRef = useRef<[number, number] | null>(null);
 
   if (n === 0) return null;
 
-  function getCellFromPoint(
-    clientX: number,
-    clientY: number
-  ): [number, number] | null {
+  function getCellFromPoint(clientX: number, clientY: number): [number, number] | null {
     const board = boardRef.current;
     if (!board) return null;
     const rect = board.getBoundingClientRect();
@@ -69,6 +62,9 @@ export function Board({
     return [r, c];
   }
 
+  const segments = regionBorderSegments(regions, cellSize);
+  const boardPx = n * cellSize;
+
   return (
     <div
       ref={boardRef}
@@ -77,6 +73,7 @@ export function Board({
         gridTemplateColumns: `repeat(${n}, ${cellSize}px)`,
         cursor: locked ? "default" : undefined,
         touchAction: "none",
+        position: "relative",
       }}
       onPointerDown={(e) => {
         if (locked) return;
@@ -85,13 +82,11 @@ export function Board({
         const [r, c] = cell;
         const visualState = cellStates[r]?.[c] ?? 0;
         if (visualState === 0) {
-          // Unknown: start drag-to-cross
           e.currentTarget.setPointerCapture(e.pointerId);
           draggingRef.current = true;
           clickDownCellRef.current = null;
           onCellCross(r, c);
         } else {
-          // Empty or Queen: record for potential click on pointer-up
           draggingRef.current = false;
           clickDownCellRef.current = [r, c];
         }
@@ -122,8 +117,7 @@ export function Board({
       {regions.map((row, r) =>
         row.map((region, c) => {
           const state = cellStates[r]?.[c] ?? 0;
-          const bg =
-            region != null ? WasmPuzzle.region_color_hex(region) : "#ccc";
+          const bg = region != null ? WasmPuzzle.region_color_hex(region) : "#ccc";
           const clashing = state === 1 && clashingSet.has(`${r},${c}`);
           return (
             <div
@@ -134,7 +128,8 @@ export function Board({
                 height: cellSize,
                 background: bg,
                 cursor: locked ? "default" : "pointer",
-                ...cellBorders(regions, r, c),
+                borderRight: c === n - 1 ? "none" : BORDER_THIN,
+                borderBottom: r === n - 1 ? "none" : BORDER_THIN,
               }}
             >
               {state === 1 && (
@@ -157,6 +152,31 @@ export function Board({
           );
         })
       )}
+
+      {/* SVG region borders — square linecap fills corner pixels correctly */}
+      <svg
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: boardPx,
+          height: boardPx,
+          pointerEvents: "none",
+        }}
+      >
+        {segments.map((s, i) => (
+          <line
+            key={i}
+            x1={s.x1}
+            y1={s.y1}
+            x2={s.x2}
+            y2={s.y2}
+            stroke="#333"
+            strokeWidth={3}
+            strokeLinecap="square"
+          />
+        ))}
+      </svg>
     </div>
   );
 }

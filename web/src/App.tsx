@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import init, { WasmPuzzle } from "queens-puzzle-wasm";
 import { Board } from "./components/Board";
 
@@ -94,6 +94,7 @@ export function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetPending, setResetPending] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [regions, setRegions] = useState<(number | null)[][]>([]);
@@ -179,7 +180,6 @@ export function App() {
       if (!puzzle) return;
       if (puzzle.cell_state(r, c) !== 0) return;
       try {
-        setResetPending(false);
         setTimerRunning(true);
         puzzle.set_cell_state(r, c, 2);
         setPlayerStates(readStates(puzzle));
@@ -200,7 +200,6 @@ export function App() {
       const puzzle = puzzleRef.current;
       if (!puzzle) return;
       try {
-        setResetPending(false);
         setTimerRunning(true);
         const n = puzzle.n();
         const next = visualState === 2 ? 1 : 0;
@@ -234,13 +233,18 @@ export function App() {
     for (let r = 0; r < n; r++)
       for (let c = 0; c < n; c++) puzzle.set_cell_state(r, c, 0);
     setPlayerStates(readStates(puzzle));
+    if (solved) {
+      setTimerElapsed(0);
+      setTimerRunning(false);
+      try { localStorage.removeItem(TIMER_KEY); } catch {}
+    }
     setSolved(false);
     setShowBanner(false);
     setResetPending(false);
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {}
-  }, []);
+  }, [solved]);
 
   if (error)
     return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
@@ -248,123 +252,188 @@ export function App() {
 
   const boardPx = cellSize * regions.length;
 
+  const iconBtn: React.CSSProperties = {
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    border: "1px solid #ccc",
+    background: "white",
+    fontSize: "1.1rem",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+    padding: 0,
+  };
+
   return (
     <div style={{ padding: "1rem", fontFamily: "system-ui, sans-serif", boxSizing: "border-box", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <div style={{ width: boardPx, maxWidth: "100%" }}>
-      <h1 style={{ marginTop: 0, marginBottom: "0.75rem", fontSize: "clamp(1.2rem, 5vw, 1.8rem)" }}>
-        Queens Puzzle
-      </h1>
+        <h1 style={{ marginTop: 0, marginBottom: "0.75rem", fontSize: "clamp(1.2rem, 5vw, 1.8rem)" }}>
+          Queens Puzzle
+        </h1>
 
-      {/* Fixed-height banner area — always occupies space to prevent layout shift */}
-      <div style={{ minHeight: "2.75rem", marginBottom: "0.75rem" }}>
-        <div
-          style={{
-            background: "#4caf50",
-            color: "white",
-            padding: "0.6rem 1rem",
-            borderRadius: "6px",
-            fontWeight: "bold",
-            fontSize: "1rem",
-            visibility: showBanner ? "visible" : "hidden",
-          }}
-        >
-          Congratulations — puzzle solved!
-        </div>
-      </div>
-
-      <Board
-        regions={regions}
-        cellStates={playerStates}
-        clashingSet={clashingSet}
-        onCellCross={handleCellCross}
-        onCellClick={handleCellClick}
-        locked={solved}
-        cellSize={cellSize}
-      />
-
-      <div
-        style={{
-          marginTop: "0.75rem",
-          display: "flex",
-          gap: "0.75rem",
-          alignItems: "center",
-        }}
-      >
-        {/* Timer — always occupies space to prevent layout shift */}
-        <span
-          style={{
-            fontVariantNumeric: "tabular-nums",
-            fontSize: "1.05rem",
-            minWidth: "5ch",
-            visibility: timerEnabled ? "visible" : "hidden",
-          }}
-        >
-          {formatTime(timerElapsed)}
-        </span>
-
-        {/* Settings dropdown */}
-        <details style={{ position: "relative" }}>
-          <summary
+        {/* Fixed-height banner area — always occupies space to prevent layout shift */}
+        <div style={{ minHeight: "2.75rem", marginBottom: "0.75rem" }}>
+          <div
             style={{
-              cursor: "pointer",
-              userSelect: "none",
-              listStyle: "none",
-              padding: "0.3rem 0.6rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              fontSize: "0.9rem",
+              background: "#4caf50",
+              color: "white",
+              padding: "0.6rem 1rem",
+              borderRadius: "6px",
+              fontWeight: "bold",
+              fontSize: "1rem",
+              visibility: showBanner ? "visible" : "hidden",
             }}
           >
-            ⚙ Settings
-          </summary>
+            Congratulations — puzzle solved!
+          </div>
+        </div>
+
+        {/* Board + icon cluster anchored at its bottom-right corner */}
+        <div style={{ position: "relative" }}>
+          <Board
+            regions={regions}
+            cellStates={playerStates}
+            clashingSet={clashingSet}
+            onCellCross={handleCellCross}
+            onCellClick={handleCellClick}
+            locked={solved}
+            cellSize={cellSize}
+          />
+
+          {/* Icon cluster sits at the board's bottom-right, flush with its edge */}
           <div
             style={{
               position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
-              background: "white",
-              border: "1px solid #ddd",
-              borderRadius: "6px",
-              padding: "0.6rem 0.8rem",
-              zIndex: 10,
+              bottom: 0,
+              right: 0,
+              transform: "translateY(calc(100% + 8px))",
               display: "flex",
-              flexDirection: "column",
               gap: "0.5rem",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-              whiteSpace: "nowrap",
+              zIndex: 10,
             }}
           >
-            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={autoCrossEnabled}
-                onChange={(e) => setAutoCrossEnabled(e.target.checked)}
-              />
-              Auto-cross
-            </label>
-            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={timerEnabled}
-                onChange={(e) => setTimerEnabled(e.target.checked)}
-              />
-              Timer
-            </label>
-          </div>
-        </details>
+            {/* Settings panel — pops up above the icon cluster */}
+            {settingsOpen && (
+              <>
+                <div
+                  style={{ position: "fixed", inset: 0, zIndex: 90 }}
+                  onClick={() => setSettingsOpen(false)}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "calc(100% + 8px)",
+                    right: 0,
+                    zIndex: 95,
+                    background: "white",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                    padding: "0.75rem 1rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.6rem",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={autoCrossEnabled}
+                      onChange={(e) => setAutoCrossEnabled(e.target.checked)}
+                    />
+                    Auto-cross
+                  </label>
+                  <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={timerEnabled}
+                      onChange={(e) => setTimerEnabled(e.target.checked)}
+                    />
+                    Timer
+                  </label>
+                </div>
+              </>
+            )}
 
-        {/* Reset */}
-        {resetPending ? (
-          <>
-            <span style={{ fontSize: "0.85rem" }}>Clear progress?</span>
-            <button onClick={doReset}>Yes</button>
-            <button onClick={() => setResetPending(false)}>No</button>
-          </>
-        ) : (
-          <button onClick={() => setResetPending(true)}>Reset</button>
-        )}
+            <button style={iconBtn} onClick={() => setSettingsOpen((v) => !v)} aria-label="Settings">
+              ⚙
+            </button>
+            <button style={iconBtn} onClick={() => setResetPending(true)} aria-label="Reset">
+              ↺
+            </button>
+          </div>
+        </div>
+
+        {/* Timer below board — always occupies space to prevent layout shift */}
+        <div style={{ marginTop: "0.75rem" }}>
+          <span
+            style={{
+              fontVariantNumeric: "tabular-nums",
+              fontSize: "1.05rem",
+              minWidth: "5ch",
+              visibility: timerEnabled ? "visible" : "hidden",
+            }}
+          >
+            {formatTime(timerElapsed)}
+          </span>
+        </div>
       </div>
-      </div>
+
+      {/* Reset modal */}
+      {resetPending && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+          }}
+          onClick={() => setResetPending(false)}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: "1.5rem 2rem",
+              borderRadius: "10px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+              maxWidth: 320,
+              width: "calc(100vw - 4rem)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p style={{ margin: "0 0 0.5rem", fontWeight: "bold", fontSize: "1.05rem" }}>
+              Reset puzzle?
+            </p>
+            <p style={{ margin: "0 0 1.5rem", color: "#555", fontSize: "0.9rem" }}>
+              All progress will be cleared.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button onClick={() => setResetPending(false)}>Cancel</button>
+              <button
+                onClick={doReset}
+                style={{
+                  background: "#c0392b",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  padding: "0.35rem 0.9rem",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
