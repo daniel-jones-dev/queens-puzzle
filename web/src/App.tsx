@@ -5,6 +5,15 @@ import { Board } from "./components/Board";
 const STORAGE_KEY = "queens-puzzle-v1";
 const TIMER_KEY = "queens-puzzle-timer";
 
+function toBase64Url(str: string): string {
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function fromBase64Url(b64: string): string {
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+  return atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
+}
+
 type HintState = {
   description: string;
   changes: Map<string, number>;  // "r,c" -> target state
@@ -128,6 +137,11 @@ export function App() {
   const [cellSize, setCellSize] = useState(() => computeCellSize(7));
   const [past, setPast] = useState<number[][][]>([]);
   const [future, setFuture] = useState<number[][][]>([]);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   const clashingSet = useMemo(() => {
     const puzzle = puzzleRef.current;
@@ -143,12 +157,34 @@ export function App() {
     initWasm()
       .then(() => {
         if (cancelled) return;
-        const puzzle = loadPuzzle();
+
+        // 1. Try URL hash (share link)
+        let puzzle: WasmPuzzle | null = null;
+        let fromShare = false;
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+          try {
+            puzzle = WasmPuzzle.from_json(fromBase64Url(hash));
+            fromShare = true;
+            history.replaceState(null, "", window.location.pathname);
+          } catch {
+            setUrlError("Share link could not be decoded — loading your last saved puzzle.");
+          }
+        }
+        // 2. localStorage / default
+        if (!puzzle) puzzle = loadPuzzle();
+
         const states = readStates(puzzle);
         const hasProgress = states.some((row) => row.some((s) => s !== 0));
         const isSolved = puzzle.is_solved();
-        const savedTimer =
-          parseInt(localStorage.getItem(TIMER_KEY) ?? "0", 10) || 0;
+        // Share links start the timer fresh (no saved elapsed time)
+        const savedTimer = fromShare
+          ? 0
+          : parseInt(localStorage.getItem(TIMER_KEY) ?? "0", 10) || 0;
+        if (fromShare) {
+          try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+          try { localStorage.removeItem(TIMER_KEY); } catch {}
+        }
         puzzleRef.current = puzzle;
         setCellSize(computeCellSize(puzzle.n()));
         setRegions(readRegions(puzzle));
@@ -396,6 +432,48 @@ export function App() {
     try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
   }, [future]);
 
+  const handleShare = useCallback(() => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    const encoded = toBase64Url(puzzle.to_json());
+    const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 2000);
+  }, []);
+
+  const handleImport = useCallback(() => {
+    try {
+      const puzzle = WasmPuzzle.from_json(importText.trim());
+      const states = readStates(puzzle);
+      const hasProgress = states.some((row) => row.some((s) => s !== 0));
+      const isSolved = puzzle.is_solved();
+      puzzleRef.current = puzzle;
+      if (timerIntervalRef.current !== null) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setCellSize(computeCellSize(puzzle.n()));
+      setRegions(readRegions(puzzle));
+      setPlayerStates(states);
+      setPast([]);
+      setFuture([]);
+      setHint(null);
+      setNoHintMsg(false);
+      setSolved(isSolved);
+      setShowBanner(isSolved);
+      setTimerElapsed(0);
+      setTimerRunning(hasProgress && !isSolved);
+      try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+      try { localStorage.removeItem(TIMER_KEY); } catch {}
+      setImportOpen(false);
+      setImportText("");
+      setImportError(null);
+    } catch (e) {
+      setImportError(String(e).replace(/^.*?Error:\s*/, ""));
+    }
+  }, [importText]);
+
   if (error)
     return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
   if (!ready) return <p style={{ padding: "1rem" }}>Loading…</p>;
@@ -422,6 +500,17 @@ export function App() {
         <h1 style={{ marginTop: 0, marginBottom: "0.75rem", fontSize: "clamp(1.2rem, 5vw, 1.8rem)" }}>
           Queens Puzzle
         </h1>
+
+        {urlError && (
+          <div style={{
+            background: "#fff3cd", border: "1px solid #ffc107", color: "#856404",
+            padding: "0.4rem 0.75rem", borderRadius: "6px", fontSize: "0.85rem",
+            marginBottom: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <span>{urlError}</span>
+            <button onClick={() => setUrlError(null)} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold", padding: "0 0 0 0.5rem", color: "#856404" }}>×</button>
+          </div>
+        )}
 
         {/* Fixed-height banner area — always occupies space to prevent layout shift */}
         <div style={{ minHeight: "2.75rem", marginBottom: "0.75rem" }}>
@@ -636,6 +725,19 @@ export function App() {
               />
               Timer
             </label>
+            <hr style={{ margin: "0.1rem 0", border: "none", borderTop: "1px solid #eee" }} />
+            <button
+              onClick={handleShare}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "0.1rem 0", textAlign: "left", fontSize: "0.9rem", color: shareToast ? "#27ae60" : "inherit" }}
+            >
+              {shareToast ? "✓ Copied!" : "Share puzzle"}
+            </button>
+            <button
+              onClick={() => { setImportOpen(true); setSettingsOpen(false); }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "0.1rem 0", textAlign: "left", fontSize: "0.9rem" }}
+            >
+              Import puzzle…
+            </button>
           </div>
         </>
       )}
@@ -686,6 +788,44 @@ export function App() {
                 }}
               >
                 Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import modal */}
+      {importOpen && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
+          onClick={() => { setImportOpen(false); setImportError(null); }}
+        >
+          <div
+            style={{ background: "white", padding: "1.5rem 2rem", borderRadius: "10px", boxShadow: "0 8px 32px rgba(0,0,0,0.2)", maxWidth: 420, width: "calc(100vw - 4rem)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p style={{ margin: "0 0 0.75rem", fontWeight: "bold", fontSize: "1.05rem" }}>Import puzzle</p>
+            <textarea
+              value={importText}
+              onChange={(e) => { setImportText(e.target.value); setImportError(null); }}
+              placeholder='{"regions": [[0, 0, ...], ...], "states": [[0, 0, ...], ...]}'
+              rows={6}
+              style={{
+                width: "100%", boxSizing: "border-box", fontFamily: "monospace", fontSize: "0.78rem",
+                resize: "vertical", padding: "0.5rem",
+                border: importError ? "1px solid #c0392b" : "1px solid #ccc", borderRadius: "4px",
+              }}
+            />
+            {importError && (
+              <p style={{ margin: "0.35rem 0 0", color: "#c0392b", fontSize: "0.82rem" }}>{importError}</p>
+            )}
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "1rem" }}>
+              <button onClick={() => { setImportOpen(false); setImportError(null); setImportText(""); }}>Cancel</button>
+              <button
+                onClick={handleImport}
+                style={{ background: "#2980b9", color: "white", border: "none", borderRadius: "4px", padding: "0.35rem 0.9rem", cursor: "pointer", fontWeight: "bold" }}
+              >
+                Import
               </button>
             </div>
           </div>
