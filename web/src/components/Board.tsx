@@ -127,8 +127,8 @@ export function Board({
           const bg = region != null ? WasmPuzzle.region_color_hex(region) : "#ccc";
           const clashing = state === 1 && clashingSet.has(cellKey);
           const inHintMode = !!hintInvolved;
-          const isDimmed = inHintMode && !hintInvolved!.has(cellKey);
           const hasHintChange = !!hintChanges?.has(cellKey);
+          const isDimmed = inHintMode && !hintInvolved!.has(cellKey) && !hasHintChange;
           return (
             <div
               key={`${r}-${c}`}

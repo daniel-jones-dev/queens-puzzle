@@ -209,8 +209,9 @@ export function App() {
 
       const key = `${r},${c}`;
       const activeHint = hint;
-      const isInvolved = !activeHint || activeHint.involved.has(key);
-      if (activeHint && !isInvolved) setHint(null);
+      const isInvolved = !activeHint || activeHint.involved.has(key) || activeHint.changes.has(key);
+      const markQueenHint = activeHint ? [...activeHint.changes.values()].some((s) => s === 1) : false;
+      if (activeHint && !isInvolved && !markQueenHint) setHint(null);
 
       try {
         setTimerRunning(true);
@@ -238,8 +239,9 @@ export function App() {
 
       const key = `${r},${c}`;
       const activeHint = hint;
-      const isInvolved = !activeHint || activeHint.involved.has(key);
-      if (activeHint && !isInvolved) setHint(null);
+      const isInvolved = !activeHint || activeHint.involved.has(key) || activeHint.changes.has(key);
+      const markQueenHint = activeHint ? [...activeHint.changes.values()].some((s) => s === 1) : false;
+      if (activeHint && !isInvolved && !markQueenHint) setHint(null);
 
       try {
         setTimerRunning(true);
@@ -347,19 +349,16 @@ export function App() {
   const hintInvolvedSet = hint?.involved;
   const hintChangesSet = hint ? new Set(hint.changes.keys()) : undefined;
 
-  const iconBtn: React.CSSProperties = {
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    border: "1px solid #ccc",
+  const controlBtn: React.CSSProperties = {
     background: "white",
-    fontSize: "1.1rem",
+    border: "1px solid #bbb",
+    borderRadius: "6px",
+    padding: "0.3rem 0.6rem",
     cursor: "pointer",
+    fontSize: "0.9rem",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-    padding: 0,
+    gap: "0.3rem",
   };
 
   return (
@@ -413,7 +412,7 @@ export function App() {
             }}
           >
             <button
-              style={iconBtn}
+              style={controlBtn}
               aria-label="Settings"
               onClick={() => {
                 if (settingsOpen) {
@@ -432,8 +431,8 @@ export function App() {
             >
               ⚙
             </button>
-            <button style={iconBtn} onClick={() => setResetPending(true)} aria-label="Reset">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <button style={controlBtn} onClick={() => setResetPending(true)} aria-label="Reset">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 4h12" />
                 <path d="M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4" />
                 <path d="M3 4l1 9.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5L13 4" />
@@ -443,10 +442,25 @@ export function App() {
           </div>
         </div>
 
-        {/* Hint area — shown when not solved */}
+        {/* Hint area — Hint button always visible when not solved */}
         {!solved && (
-          <div style={{ marginTop: "0.75rem" }}>
-            {hint ? (
+          <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div>
+              <button
+                onClick={handleHint}
+                disabled={!!hint || noHintMsg}
+                style={{
+                  ...controlBtn,
+                  padding: "0.3rem 0.85rem",
+                  opacity: hint || noHintMsg ? 0.5 : 1,
+                  cursor: hint || noHintMsg ? "default" : "pointer",
+                }}
+              >
+                Hint
+              </button>
+            </div>
+
+            {hint && (
               <div
                 style={{
                   background: "#f0faf2",
@@ -476,37 +490,18 @@ export function App() {
                   </button>
                   <button
                     onClick={() => setHint(null)}
-                    style={{
-                      background: "white",
-                      border: "1px solid #bbb",
-                      borderRadius: "4px",
-                      padding: "0.3rem 0.8rem",
-                      cursor: "pointer",
-                      fontSize: "0.85rem",
-                    }}
+                    style={{ ...controlBtn, fontSize: "0.85rem" }}
                   >
                     Dismiss
                   </button>
                 </div>
               </div>
-            ) : noHintMsg ? (
+            )}
+
+            {noHintMsg && (
               <p style={{ margin: 0, fontSize: "0.9rem", color: "#777", fontStyle: "italic" }}>
                 No logical step found — try a different approach.
               </p>
-            ) : (
-              <button
-                onClick={handleHint}
-                style={{
-                  background: "white",
-                  border: "1px solid #bbb",
-                  borderRadius: "6px",
-                  padding: "0.3rem 0.85rem",
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                }}
-              >
-                Hint
-              </button>
             )}
           </div>
         )}
