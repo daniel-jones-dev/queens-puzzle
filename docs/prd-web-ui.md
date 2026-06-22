@@ -366,7 +366,7 @@ out during milestone 1 (the WASM scaffold) before the architecture is locked in.
 | Language | TypeScript |
 | Styling | CSS Modules |
 | WASM loading | `wasm-pack` output, loaded via `import()` |
-| Build | `wasm-pack build --target bundler` + `vite` |
+| Build | `wasm-pack build --target web` + `vite` |
 | Hosting | GitHub Pages (static) |
 
 CSS Modules is chosen over Tailwind because the board's region colours are computed at runtime from
@@ -382,7 +382,7 @@ No state management library is needed at this scale; React `useState` / `useRedu
 
 | # | Milestone | Deliverable |
 |---|-----------|-------------|
-| 1 | WASM scaffold | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from a browser console; Web Worker WASM init proved out |
+| 1 | WASM scaffold ✓ | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from a browser console; Web Worker WASM init proved out |
 | 2 | Playable board | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset (clears history); localStorage |
 | 3 | Improved board | Hover highlight, clashing queens, auto-cross toggle, timer (with localStorage), drag-to-cross (mouse + touch) |
 | 4 | Solver step-through | Hint mode (dim + green borders + description); Apply; manual apply; dimmed-cell dismisses+acts; Rust step refactor |
