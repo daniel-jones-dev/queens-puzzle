@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import init, { WasmPuzzle } from "queens-puzzle-wasm";
+import { Board } from "./components/Board";
 
-/** The README example 7×7 puzzle in canonical JSON format. */
-const README_PUZZLE_JSON = JSON.stringify({
+const STORAGE_KEY = "queens-puzzle-v1";
+
+const DEFAULT_JSON = JSON.stringify({
   regions: [
     [0, 0, 0, 0, 0, 0, 0],
     [1, 1, 1, 0, 0, 0, 2],
@@ -14,121 +16,156 @@ const README_PUZZLE_JSON = JSON.stringify({
   ],
 });
 
-declare global {
-  interface Window {
-    WasmPuzzle: typeof WasmPuzzle;
-    puzzle: WasmPuzzle;
-    puzzleJson: string;
-  }
+// Singleton so double-invocation from React StrictMode doesn't re-run init().
+let wasmInitPromise: ReturnType<typeof init> | null = null;
+function initWasm(): ReturnType<typeof init> {
+  if (!wasmInitPromise) wasmInitPromise = init();
+  return wasmInitPromise!;
 }
 
-type Status =
-  | { kind: "ready"; puzzle: WasmPuzzle }
-  | { kind: "error"; message: string };
+function loadPuzzle(): WasmPuzzle {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return WasmPuzzle.from_json(saved);
+  } catch {}
+  return WasmPuzzle.from_json(DEFAULT_JSON);
+}
+
+function readRegions(puzzle: WasmPuzzle): (number | null)[][] {
+  const n = puzzle.n();
+  return Array.from({ length: n }, (_, r) =>
+    Array.from({ length: n }, (_, c) => puzzle.cell_region(r, c) ?? null)
+  );
+}
+
+function readStates(puzzle: WasmPuzzle): number[][] {
+  const n = puzzle.n();
+  return Array.from({ length: n }, (_, r) =>
+    Array.from({ length: n }, (_, c) => puzzle.cell_state(r, c))
+  );
+}
 
 export function App() {
-  const [status, setStatus] = useState<Status | null>(null);
-  const [workerStatus, setWorkerStatus] = useState<string>("idle");
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resetPending, setResetPending] = useState(false);
+
+  const puzzleRef = useRef<WasmPuzzle | null>(null);
+  const [regions, setRegions] = useState<(number | null)[][]>([]);
+  const [cellStates, setCellStates] = useState<number[][]>([]);
+  const [solved, setSolved] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
-    (async () => {
-      try {
-        await init();
+    initWasm()
+      .then(() => {
         if (cancelled) return;
-
-        const puzzle = WasmPuzzle.from_json(README_PUZZLE_JSON);
-
-        // Expose on window so from_json and cell_region are callable from the browser console.
-        window.WasmPuzzle = WasmPuzzle;
-        window.puzzle = puzzle;
-        window.puzzleJson = README_PUZZLE_JSON;
-
-        setStatus({ kind: "ready", puzzle });
-      } catch (err) {
-        if (!cancelled) {
-          setStatus({ kind: "error", message: String(err) });
-        }
-      }
-    })();
-
+        const puzzle = loadPuzzle();
+        puzzleRef.current = puzzle;
+        setRegions(readRegions(puzzle));
+        setCellStates(readStates(puzzle));
+        setSolved(puzzle.is_solved());
+        setReady(true);
+      })
+      .catch((err) => setError(String(err)));
     return () => {
       cancelled = true;
     };
   }, []);
 
-  function launchWorker() {
-    setWorkerStatus("starting…");
-    const worker = new Worker(new URL("./wasmWorker.ts", import.meta.url), {
-      type: "module",
-    });
-    worker.onmessage = (e) => {
-      const { type, payload } = e.data as { type: string; payload?: string };
-      if (type === "ready") {
-        setWorkerStatus("worker ready — sending generate request");
-        worker.postMessage({ type: "generate", payload: { n: 6, seed: 42 } });
-      } else if (type === "generated") {
-        setWorkerStatus(`worker generated puzzle: ${payload}`);
-        worker.terminate();
+  useEffect(() => {
+    if (solved) setShowBanner(true);
+  }, [solved]);
+
+  const handleCellClick = useCallback((r: number, c: number) => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    try {
+      setShowBanner(false);
+      setResetPending(false);
+
+      // Unknown(0) → Empty(2) → Queen(1) → Unknown(0)
+      const current = puzzle.cell_state(r, c);
+      const next = current === 0 ? 2 : current === 2 ? 1 : 0;
+      puzzle.set_cell_state(r, c, next);
+
+      setCellStates((prev) => {
+        const updated = prev.map((row) => [...row]);
+        updated[r][c] = next;
+        return updated;
+      });
+
+      setSolved(puzzle.is_solved());
+
+      try {
+        localStorage.setItem(STORAGE_KEY, puzzle.to_json());
+      } catch {}
+    } catch (err) {
+      console.error("cell click error:", err);
+      setError(String(err));
+    }
+  }, []);
+
+  const doReset = useCallback(() => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    const n = puzzle.n();
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        puzzle.set_cell_state(r, c, 0);
       }
-    };
-    worker.onerror = (err) => {
-      setWorkerStatus(`worker error: ${err.message}`);
-    };
-    worker.postMessage({ type: "init" });
-  }
+    }
+    setCellStates(readStates(puzzle));
+    setSolved(false);
+    setShowBanner(false);
+    setResetPending(false);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+  }, []);
 
-  if (!status) {
-    return <p>Loading WASM…</p>;
-  }
-
-  if (status.kind === "error") {
-    return <p style={{ color: "red" }}>WASM error: {status.message}</p>;
-  }
-
-  const { puzzle } = status;
-  const n = puzzle.n();
+  if (error)
+    return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
+  if (!ready) return <p style={{ padding: "1rem" }}>Loading…</p>;
 
   return (
-    <div style={{ fontFamily: "monospace", padding: "1rem" }}>
-      <h1>Queens Puzzle — WASM scaffold (milestone 1)</h1>
+    <div style={{ padding: "1.5rem", fontFamily: "system-ui, sans-serif" }}>
+      <h1 style={{ marginTop: 0, marginBottom: "1rem" }}>Queens Puzzle</h1>
 
-      <section>
-        <h2>WASM loaded ✓</h2>
-        <p>
-          Puzzle size: <strong>{n}×{n}</strong>
-        </p>
-        <p>
-          Open the browser console and run:{" "}
-          <code>puzzle.cell_region(0, 0)</code>
-        </p>
-        <pre style={{ background: "#f4f4f4", padding: "0.5rem" }}>
-          {regionGrid(puzzle)}
-        </pre>
-      </section>
+      {showBanner && (
+        <div
+          style={{
+            background: "#4caf50",
+            color: "white",
+            padding: "0.75rem 1.25rem",
+            borderRadius: "6px",
+            marginBottom: "1rem",
+            fontWeight: "bold",
+            fontSize: "1.1rem",
+          }}
+        >
+          Congratulations — puzzle solved!
+        </div>
+      )}
 
-      <section>
-        <h2>Web Worker WASM init</h2>
-        <p>Status: {workerStatus}</p>
-        <button onClick={launchWorker} disabled={workerStatus !== "idle"}>
-          Launch worker
-        </button>
-      </section>
+      <Board
+        regions={regions}
+        cellStates={cellStates}
+        onCellClick={handleCellClick}
+      />
+
+      <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        {resetPending ? (
+          <>
+            <span style={{ fontSize: "0.9rem" }}>Clear all progress?</span>
+            <button onClick={doReset}>Yes, reset</button>
+            <button onClick={() => setResetPending(false)}>Cancel</button>
+          </>
+        ) : (
+          <button onClick={() => setResetPending(true)}>Reset</button>
+        )}
+      </div>
     </div>
   );
-}
-
-function regionGrid(puzzle: WasmPuzzle): string {
-  const n = puzzle.n();
-  const rows: string[] = [];
-  for (let r = 0; r < n; r++) {
-    const cells: string[] = [];
-    for (let c = 0; c < n; c++) {
-      const region = puzzle.cell_region(r, c);
-      cells.push(region == null ? "?" : String(region));
-    }
-    rows.push(cells.join(" "));
-  }
-  return rows.join("\n");
 }
