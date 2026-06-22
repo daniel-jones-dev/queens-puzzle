@@ -383,7 +383,7 @@ No state management library is needed at this scale; React `useState` / `useRedu
 | # | Milestone | Deliverable |
 |---|-----------|-------------|
 | 1 | WASM scaffold ✓ | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from a browser console; Web Worker WASM init proved out |
-| 2 | Playable board | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset (clears history); localStorage |
+| 2 | Playable board ✓ | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset (clears history); localStorage |
 | 3 | Improved board | Hover highlight, clashing queens, auto-cross toggle, timer (with localStorage), drag-to-cross (mouse + touch) |
 | 4 | Solver step-through | Hint mode (dim + green borders + description); Apply; manual apply; dimmed-cell dismisses+acts; Rust step refactor |
 | 5 | Change history | Undo/redo for player moves, hint applications, and editor strokes |
