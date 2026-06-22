@@ -23,6 +23,13 @@
   pointer-events: none;
 }
 
+.queenClash {
+  font-size: 30px;
+  line-height: 1;
+  color: #c0392b;
+  pointer-events: none;
+}
+
 .cross {
   font-size: 20px;
   line-height: 1;

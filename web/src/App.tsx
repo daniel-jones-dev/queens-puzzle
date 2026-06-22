@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import init, { WasmPuzzle } from "queens-puzzle-wasm";
 import { Board } from "./components/Board";
 
 const STORAGE_KEY = "queens-puzzle-v1";
+const TIMER_KEY = "queens-puzzle-timer";
 
 const DEFAULT_JSON = JSON.stringify({
   regions: [
@@ -16,7 +17,6 @@ const DEFAULT_JSON = JSON.stringify({
   ],
 });
 
-// Singleton so double-invocation from React StrictMode doesn't re-run init().
 let wasmInitPromise: ReturnType<typeof init> | null = null;
 function initWasm(): ReturnType<typeof init> {
   if (!wasmInitPromise) wasmInitPromise = init();
@@ -45,6 +45,64 @@ function readStates(puzzle: WasmPuzzle): number[][] {
   );
 }
 
+function affectedByQueen(
+  qr: number,
+  qc: number,
+  regions: (number | null)[][],
+  n: number
+): [number, number][] {
+  const region = regions[qr][qc];
+  const seen = new Set<string>();
+  const add = (r: number, c: number) => {
+    if (r !== qr || c !== qc) seen.add(`${r},${c}`);
+  };
+  for (let i = 0; i < n; i++) {
+    add(qr, i);
+    add(i, qc);
+  }
+  if (region !== null) {
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++)
+        if (regions[r][c] === region) add(r, c);
+  }
+  for (const [dr, dc] of [
+    [-1, -1],
+    [-1, 1],
+    [1, -1],
+    [1, 1],
+  ] as const) {
+    const nr = qr + dr,
+      nc = qc + dc;
+    if (nr >= 0 && nr < n && nc >= 0 && nc < n) add(nr, nc);
+  }
+  return [...seen].map((s) => s.split(",").map(Number) as [number, number]);
+}
+
+function computeDisplayStates(
+  player: number[][],
+  regions: (number | null)[][],
+  autoCross: boolean
+): number[][] {
+  const n = player.length;
+  const display = player.map((row) => [...row]);
+  if (!autoCross) return display;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (player[r][c] === 1) {
+        for (const [ar, ac] of affectedByQueen(r, c, regions, n)) {
+          if (display[ar][ac] === 0) display[ar][ac] = 2;
+        }
+      }
+    }
+  }
+  return display;
+}
+
+function formatTime(s: number): string {
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
 export function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,9 +110,27 @@ export function App() {
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [regions, setRegions] = useState<(number | null)[][]>([]);
-  const [cellStates, setCellStates] = useState<number[][]>([]);
+  const [playerStates, setPlayerStates] = useState<number[][]>([]);
+  const [autoCrossEnabled, setAutoCrossEnabled] = useState(true);
+  const [timerEnabled, setTimerEnabled] = useState(true);
+  const [timerElapsed, setTimerElapsed] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
   const [solved, setSolved] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+
+  const displayStates = useMemo(
+    () => computeDisplayStates(playerStates, regions, autoCrossEnabled),
+    [playerStates, regions, autoCrossEnabled]
+  );
+
+  const clashingSet = useMemo(() => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return new Set<string>();
+    const raw = puzzle.clashing_queens();
+    const s = new Set<string>();
+    for (let i = 0; i < raw.length; i += 2) s.add(`${raw[i]},${raw[i + 1]}`);
+    return s;
+  }, [playerStates]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,10 +138,18 @@ export function App() {
       .then(() => {
         if (cancelled) return;
         const puzzle = loadPuzzle();
+        const states = readStates(puzzle);
+        const hasProgress = states.some((row) => row.some((s) => s !== 0));
+        const isSolved = puzzle.is_solved();
+        const savedTimer =
+          parseInt(localStorage.getItem(TIMER_KEY) ?? "0", 10) || 0;
         puzzleRef.current = puzzle;
         setRegions(readRegions(puzzle));
-        setCellStates(readStates(puzzle));
-        setSolved(puzzle.is_solved());
+        setPlayerStates(states);
+        setTimerElapsed(savedTimer);
+        setTimerRunning(hasProgress && !isSolved);
+        setSolved(isSolved);
+        setShowBanner(isSolved);
         setReady(true);
       })
       .catch((err) => setError(String(err)));
@@ -74,32 +158,73 @@ export function App() {
     };
   }, []);
 
+  // Timer tick
+  useEffect(() => {
+    if (!timerRunning || !timerEnabled) return;
+    const id = setInterval(() => {
+      setTimerElapsed((prev) => {
+        const next = prev + 1;
+        try {
+          localStorage.setItem(TIMER_KEY, String(next));
+        } catch {}
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [timerRunning, timerEnabled]);
+
   useEffect(() => {
     if (solved) setShowBanner(true);
   }, [solved]);
 
-  const handleCellClick = useCallback(
+  // Called by Board for Unknown → Empty (drag or tap on Unknown cell)
+  const handleCellCross = useCallback(
     (r: number, c: number) => {
+      if (solved) return;
+      const puzzle = puzzleRef.current;
+      if (!puzzle) return;
+      // Guard against stale display state calling cross on a non-Unknown cell
+      if (puzzle.cell_state(r, c) !== 0) return;
+      try {
+        setResetPending(false);
+        setTimerRunning(true);
+        puzzle.set_cell_state(r, c, 2);
+        setPlayerStates((prev) => {
+          const updated = prev.map((row) => [...row]);
+          updated[r][c] = 2;
+          return updated;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY, puzzle.to_json());
+        } catch {}
+      } catch (err) {
+        console.error("cell cross error:", err);
+        setError(String(err));
+      }
+    },
+    [solved]
+  );
+
+  // Called by Board for Empty → Queen or Queen → Unknown clicks.
+  // visualState is the display state the user saw (includes auto-crosses).
+  const handleCellClick = useCallback(
+    (r: number, c: number, visualState: number) => {
       if (solved) return;
       const puzzle = puzzleRef.current;
       if (!puzzle) return;
       try {
         setResetPending(false);
-
-        // Unknown(0) → Empty(2) → Queen(1) → Unknown(0)
-        const current = puzzle.cell_state(r, c);
-        const next = current === 0 ? 2 : current === 2 ? 1 : 0;
+        setTimerRunning(true);
+        const next = visualState === 2 ? 1 : 0;
         puzzle.set_cell_state(r, c, next);
-
-        setCellStates((prev) => {
+        setPlayerStates((prev) => {
           const updated = prev.map((row) => [...row]);
           updated[r][c] = next;
           return updated;
         });
-
         const nowSolved = puzzle.is_solved();
         setSolved(nowSolved);
-
+        if (nowSolved) setTimerRunning(false);
         try {
           localStorage.setItem(STORAGE_KEY, puzzle.to_json());
         } catch {}
@@ -115,17 +240,19 @@ export function App() {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
     const n = puzzle.n();
-    for (let r = 0; r < n; r++) {
-      for (let c = 0; c < n; c++) {
-        puzzle.set_cell_state(r, c, 0);
-      }
-    }
-    setCellStates(readStates(puzzle));
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) puzzle.set_cell_state(r, c, 0);
+    setPlayerStates(readStates(puzzle));
     setSolved(false);
     setShowBanner(false);
     setResetPending(false);
+    setTimerElapsed(0);
+    setTimerRunning(false);
     try {
       localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    try {
+      localStorage.removeItem(TIMER_KEY);
     } catch {}
   }, []);
 
@@ -155,21 +282,64 @@ export function App() {
 
       <Board
         regions={regions}
-        cellStates={cellStates}
+        cellStates={displayStates}
+        clashingSet={clashingSet}
+        onCellCross={handleCellCross}
         onCellClick={handleCellClick}
         locked={solved}
       />
 
-      <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-        {resetPending ? (
-          <>
-            <span style={{ fontSize: "0.9rem" }}>Clear all progress?</span>
-            <button onClick={doReset}>Yes, reset</button>
-            <button onClick={() => setResetPending(false)}>Cancel</button>
-          </>
-        ) : (
-          <button onClick={() => setResetPending(true)}>Reset</button>
+      <div
+        style={{
+          marginTop: "0.75rem",
+          display: "flex",
+          gap: "1rem",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {timerEnabled && (
+          <span
+            style={{
+              fontVariantNumeric: "tabular-nums",
+              fontSize: "1.1rem",
+              minWidth: "5ch",
+            }}
+          >
+            {formatTime(timerElapsed)}
+          </span>
         )}
+        <label
+          style={{ display: "flex", gap: "0.4rem", alignItems: "center", cursor: "pointer" }}
+        >
+          <input
+            type="checkbox"
+            checked={autoCrossEnabled}
+            onChange={(e) => setAutoCrossEnabled(e.target.checked)}
+          />
+          Auto-cross
+        </label>
+        <label
+          style={{ display: "flex", gap: "0.4rem", alignItems: "center", cursor: "pointer" }}
+        >
+          <input
+            type="checkbox"
+            checked={timerEnabled}
+            onChange={(e) => setTimerEnabled(e.target.checked)}
+          />
+          Timer
+        </label>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {resetPending ? (
+            <>
+              <span style={{ fontSize: "0.9rem" }}>Clear all progress?</span>
+              <button onClick={doReset}>Yes, reset</button>
+              <button onClick={() => setResetPending(false)}>Cancel</button>
+            </>
+          ) : (
+            <button onClick={() => setResetPending(true)}>Reset</button>
+          )}
+        </div>
       </div>
     </div>
   );
