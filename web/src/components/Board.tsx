@@ -10,6 +10,10 @@ interface Props {
   onCellClick: (row: number, col: number, visualState: number) => void;
   locked?: boolean;
   cellSize?: number;
+  /** When set, cells NOT in this set are dimmed (hint mode). */
+  hintInvolved?: Set<string>;
+  /** Cells that would be changed by the hint — shown with a green border. */
+  hintChanges?: Set<string>;
 }
 
 const BORDER_THIN = "1px solid rgba(0,0,0,0.15)";
@@ -43,6 +47,8 @@ export function Board({
   onCellClick,
   locked,
   cellSize = 56,
+  hintInvolved,
+  hintChanges,
 }: Props) {
   const n = regions.length;
   const boardRef = useRef<HTMLDivElement>(null);
@@ -116,9 +122,13 @@ export function Board({
     >
       {regions.map((row, r) =>
         row.map((region, c) => {
+          const cellKey = `${r},${c}`;
           const state = cellStates[r]?.[c] ?? 0;
           const bg = region != null ? WasmPuzzle.region_color_hex(region) : "#ccc";
-          const clashing = state === 1 && clashingSet.has(`${r},${c}`);
+          const clashing = state === 1 && clashingSet.has(cellKey);
+          const inHintMode = !!hintInvolved;
+          const isDimmed = inHintMode && !hintInvolved!.has(cellKey);
+          const hasHintChange = !!hintChanges?.has(cellKey);
           return (
             <div
               key={`${r}-${c}`}
@@ -130,6 +140,8 @@ export function Board({
                 cursor: locked ? "default" : "pointer",
                 borderRight: c === n - 1 ? "none" : BORDER_THIN,
                 borderBottom: r === n - 1 ? "none" : BORDER_THIN,
+                opacity: isDimmed ? 0.35 : 1,
+                position: "relative",
               }}
             >
               {state === 1 && (
@@ -147,6 +159,17 @@ export function Board({
                 >
                   ✕
                 </span>
+              )}
+              {hasHintChange && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    border: "3px solid #27ae60",
+                    boxSizing: "border-box",
+                    pointerEvents: "none",
+                  }}
+                />
               )}
             </div>
           );

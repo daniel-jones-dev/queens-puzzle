@@ -4,6 +4,12 @@ import { Board } from "./components/Board";
 
 const STORAGE_KEY = "queens-puzzle-v1";
 const TIMER_KEY = "queens-puzzle-timer";
+
+type HintState = {
+  description: string;
+  changes: Map<string, number>;  // "r,c" -> target state
+  involved: Set<string>;         // "r,c" of non-dimmed cells
+};
 const MAX_CELL_PX = 56;
 const MIN_CELL_PX = 32;
 
@@ -90,10 +96,20 @@ function computeCellSize(n: number): number {
   return Math.min(MAX_CELL_PX, Math.max(MIN_CELL_PX, Math.floor(available / n)));
 }
 
+function hintComplete(puzzle: WasmPuzzle, changes: Map<string, number>): boolean {
+  for (const [key, targetState] of changes) {
+    const [r, c] = key.split(",").map(Number);
+    if (puzzle.cell_state(r, c) !== targetState) return false;
+  }
+  return true;
+}
+
 export function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetPending, setResetPending] = useState(false);
+  const [hint, setHint] = useState<HintState | null>(null);
+  const [noHintMsg, setNoHintMsg] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<{ bottom: number; right: number } | null>(null);
   const clusterRef = useRef<HTMLDivElement>(null);
@@ -177,7 +193,11 @@ export function App() {
   }, [timerRunning, timerEnabled, solved]);
 
   useEffect(() => {
-    if (solved) setShowBanner(true);
+    if (solved) {
+      setShowBanner(true);
+      setHint(null);
+      setNoHintMsg(false);
+    }
   }, [solved]);
 
   const handleCellCross = useCallback(
@@ -186,19 +206,28 @@ export function App() {
       const puzzle = puzzleRef.current;
       if (!puzzle) return;
       if (puzzle.cell_state(r, c) !== 0) return;
+
+      const key = `${r},${c}`;
+      const activeHint = hint;
+      const isInvolved = !activeHint || activeHint.involved.has(key);
+      if (activeHint && !isInvolved) setHint(null);
+
       try {
         setTimerRunning(true);
         puzzle.set_cell_state(r, c, 2);
         setPlayerStates(readStates(puzzle));
-        try {
-          localStorage.setItem(STORAGE_KEY, puzzle.to_json());
-        } catch {}
+        try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
       } catch (err) {
         console.error("cell cross error:", err);
         setError(String(err));
+        return;
+      }
+
+      if (activeHint && isInvolved && hintComplete(puzzle, activeHint.changes)) {
+        setHint(null);
       }
     },
-    [solved]
+    [solved, hint]
   );
 
   const handleCellClick = useCallback(
@@ -206,6 +235,12 @@ export function App() {
       if (solved) return;
       const puzzle = puzzleRef.current;
       if (!puzzle) return;
+
+      const key = `${r},${c}`;
+      const activeHint = hint;
+      const isInvolved = !activeHint || activeHint.involved.has(key);
+      if (activeHint && !isInvolved) setHint(null);
+
       try {
         setTimerRunning(true);
         const n = puzzle.n();
@@ -222,15 +257,18 @@ export function App() {
         const nowSolved = puzzle.is_solved();
         setSolved(nowSolved);
         if (nowSolved) setTimerRunning(false);
-        try {
-          localStorage.setItem(STORAGE_KEY, puzzle.to_json());
-        } catch {}
+        try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
       } catch (err) {
         console.error("cell click error:", err);
         setError(String(err));
+        return;
+      }
+
+      if (activeHint && isInvolved && hintComplete(puzzle, activeHint.changes)) {
+        setHint(null);
       }
     },
-    [solved, autoCrossEnabled, regions]
+    [solved, autoCrossEnabled, regions, hint]
   );
 
   const doReset = useCallback(() => {
@@ -254,17 +292,60 @@ export function App() {
     }
     setSolved(false);
     setShowBanner(false);
+    setHint(null);
+    setNoHintMsg(false);
     setResetPending(false);
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {}
   }, [solved]);
 
+  const handleHint = useCallback(() => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    const wasmHint = puzzle.next_hint();
+    if (!wasmHint) {
+      setNoHintMsg(true);
+      setTimeout(() => setNoHintMsg(false), 4000);
+      return;
+    }
+    const changes = new Map<string, number>();
+    const rawChanges = wasmHint.changes();
+    for (let i = 0; i < rawChanges.length; i += 3) {
+      changes.set(`${rawChanges[i]},${rawChanges[i + 1]}`, rawChanges[i + 2]);
+    }
+    const involved = new Set<string>();
+    const rawInvolved = wasmHint.involved();
+    for (let i = 0; i < rawInvolved.length; i += 2) {
+      involved.add(`${rawInvolved[i]},${rawInvolved[i + 1]}`);
+    }
+    setHint({ description: wasmHint.description(), changes, involved });
+    setNoHintMsg(false);
+  }, []);
+
+  const handleApply = useCallback(() => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle || !hint) return;
+    setTimerRunning(true);
+    for (const [key, state] of hint.changes) {
+      const [r, c] = key.split(",").map(Number);
+      puzzle.set_cell_state(r, c, state);
+    }
+    setPlayerStates(readStates(puzzle));
+    const nowSolved = puzzle.is_solved();
+    setSolved(nowSolved);
+    if (nowSolved) setTimerRunning(false);
+    try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+    setHint(null);
+  }, [hint]);
+
   if (error)
     return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
   if (!ready) return <p style={{ padding: "1rem" }}>Loading…</p>;
 
   const boardPx = cellSize * regions.length;
+  const hintInvolvedSet = hint?.involved;
+  const hintChangesSet = hint ? new Set(hint.changes.keys()) : undefined;
 
   const iconBtn: React.CSSProperties = {
     width: 40,
@@ -315,6 +396,8 @@ export function App() {
             onCellClick={handleCellClick}
             locked={solved}
             cellSize={cellSize}
+            hintInvolved={hintInvolvedSet}
+            hintChanges={hintChangesSet}
           />
 
           {/* Icon cluster — no z-index so it doesn't form a stacking context */}
@@ -359,6 +442,74 @@ export function App() {
             </button>
           </div>
         </div>
+
+        {/* Hint area — shown when not solved */}
+        {!solved && (
+          <div style={{ marginTop: "0.75rem" }}>
+            {hint ? (
+              <div
+                style={{
+                  background: "#f0faf2",
+                  border: "1px solid #a8dbb4",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.9rem",
+                }}
+              >
+                <p style={{ margin: "0 0 0.6rem", fontSize: "0.9rem", color: "#1a5e2a", lineHeight: 1.4 }}>
+                  💡 {hint.description}
+                </p>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    onClick={handleApply}
+                    style={{
+                      background: "#27ae60",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      padding: "0.3rem 0.8rem",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Apply
+                  </button>
+                  <button
+                    onClick={() => setHint(null)}
+                    style={{
+                      background: "white",
+                      border: "1px solid #bbb",
+                      borderRadius: "4px",
+                      padding: "0.3rem 0.8rem",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ) : noHintMsg ? (
+              <p style={{ margin: 0, fontSize: "0.9rem", color: "#777", fontStyle: "italic" }}>
+                No logical step found — try a different approach.
+              </p>
+            ) : (
+              <button
+                onClick={handleHint}
+                style={{
+                  background: "white",
+                  border: "1px solid #bbb",
+                  borderRadius: "6px",
+                  padding: "0.3rem 0.85rem",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Hint
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Timer below board — always occupies space to prevent layout shift */}
         <div style={{ marginTop: "0.75rem" }}>
