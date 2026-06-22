@@ -142,7 +142,7 @@ Non-involved cells are dimmed with `opacity: 0.35` via the `hintInvolved` prop o
 | 2 | Playable board | ✓ Complete |
 | 3 | Improved board | ✓ Complete |
 | 4 | Solver step-through | ✓ Complete |
-| 5 | Change history | — |
+| 5 | Change history | ✓ Complete |
 | 6 | Puzzle import + share | — |
 | 7 | Custom editor | — |
 | 8 | Editor live analysis | — |
