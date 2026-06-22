@@ -219,7 +219,7 @@ impl QueensPuzzle {
     }
 
     pub fn is_solved(&self) -> bool {
-        self.queens().len() == self.n()
+        self.queens().len() == self.n() && self.clashing_queens().is_empty()
     }
 
     /// Returns the region index for a given cell, if any

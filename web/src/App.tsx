@@ -97,8 +97,7 @@ export function App() {
           return updated;
         });
 
-        const nowSolved =
-          puzzle.is_solved() && puzzle.clashing_queens().length === 0;
+        const nowSolved = puzzle.is_solved();
         setSolved(nowSolved);
 
         try {
