@@ -265,13 +265,8 @@ export function App() {
     setSolved(false);
     setShowBanner(false);
     setResetPending(false);
-    setTimerElapsed(0);
-    setTimerRunning(false);
     try {
       localStorage.removeItem(STORAGE_KEY);
-    } catch {}
-    try {
-      localStorage.removeItem(TIMER_KEY);
     } catch {}
   }, []);
 

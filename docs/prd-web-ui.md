@@ -92,8 +92,10 @@ Quality-of-life features layered on top of the basic board.
 - **Hover highlight**: mousing over a cell darkens it slightly; the region colour does not change.
 - **Clashing queens**: any queen that conflicts with another (same row, column, region, or diagonal)
   is rendered in red until the conflict is resolved.
-- **Auto-cross** (toggle, default on): when a queen is placed, automatically mark every cell in the
-  same row, column, region, or diagonally adjacent as empty.
+- **Auto-cross** (toggle, default on): when a queen is placed, automatically mark every Unknown cell
+  in the same row, column, region, or diagonally adjacent as empty. The crosses are written to board
+  state and persist when the toggle is turned off. Toggling on retroactively applies crosses from
+  all currently placed queens; toggling off only stops future auto-crossing.
 - **Timer** (toggle, default on): a running clock showing elapsed time since the first interaction,
   persisted to `localStorage` and resumed on page load. The timer is written to `localStorage` on
   every tick (once per second); no separate debounce is needed since the value is a single integer.
@@ -106,8 +108,8 @@ Quality-of-life features layered on top of the basic board.
 **Acceptance criteria**
 - Hovering a cell applies a darkening effect without altering its region background colour.
 - Queens involved in any conflict are highlighted red; the highlight clears when resolved.
-- Auto-cross updates the board immediately when toggled on (applies retroactively to placed queens)
-  and clears auto-crosses when toggled off.
+- Auto-cross updates the board immediately when toggled on (applies retroactively to placed queens);
+  toggling off stops future auto-crossing but does not remove existing crosses.
 - Timer shows MM:SS, starts on first interaction, stops when the puzzle is solved, and resumes from
   the saved value on page reload.
 - Drag only initiates when the pointer-down cell is Unknown. Dragging over a queen has no effect.
@@ -384,7 +386,7 @@ No state management library is needed at this scale; React `useState` / `useRedu
 |---|-----------|-------------|
 | 1 | WASM scaffold ✓ | `wasm-pack build` succeeds; `from_json` and `cell_region` callable from a browser console; Web Worker WASM init proved out |
 | 2 | Playable board ✓ | Board with README default puzzle; correct colours; bold borders; click-to-cycle; reset (clears history); localStorage |
-| 3 | Improved board | Hover highlight, clashing queens, auto-cross toggle, timer (with localStorage), drag-to-cross (mouse + touch) |
+| 3 | Improved board ✓ | Hover highlight, clashing queens, auto-cross toggle, timer (with localStorage), drag-to-cross (mouse + touch) |
 | 4 | Solver step-through | Hint mode (dim + green borders + description); Apply; manual apply; dimmed-cell dismisses+acts; Rust step refactor |
 | 5 | Change history | Undo/redo for player moves, hint applications, and editor strokes |
 | 6 | Puzzle import + share | JSON import (partial states preserved); embedded shareable URL (single variant, encodes current state) |
