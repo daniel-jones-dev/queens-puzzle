@@ -126,6 +126,8 @@ export function App() {
   const [showBanner, setShowBanner] = useState(false);
   // Initialise to a close default so board doesn't flash at 56px on mobile
   const [cellSize, setCellSize] = useState(() => computeCellSize(7));
+  const [past, setPast] = useState<number[][][]>([]);
+  const [future, setFuture] = useState<number[][][]>([]);
 
   const clashingSet = useMemo(() => {
     const puzzle = puzzleRef.current;
@@ -213,10 +215,13 @@ export function App() {
       const markQueenHint = activeHint ? [...activeHint.changes.values()].some((s) => s === 1) : false;
       if (activeHint && !isInvolved && !markQueenHint) setHint(null);
 
+      const snapshot = readStates(puzzle);
       try {
         setTimerRunning(true);
         puzzle.set_cell_state(r, c, 2);
         setPlayerStates(readStates(puzzle));
+        setPast((p) => [...p, snapshot]);
+        setFuture([]);
         try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
       } catch (err) {
         console.error("cell cross error:", err);
@@ -243,6 +248,7 @@ export function App() {
       const markQueenHint = activeHint ? [...activeHint.changes.values()].some((s) => s === 1) : false;
       if (activeHint && !isInvolved && !markQueenHint) setHint(null);
 
+      const snapshot = readStates(puzzle);
       try {
         setTimerRunning(true);
         const n = puzzle.n();
@@ -256,6 +262,8 @@ export function App() {
           }
         }
         setPlayerStates(readStates(puzzle));
+        setPast((p) => [...p, snapshot]);
+        setFuture([]);
         const nowSolved = puzzle.is_solved();
         setSolved(nowSolved);
         if (nowSolved) setTimerRunning(false);
@@ -296,6 +304,8 @@ export function App() {
     setShowBanner(false);
     setHint(null);
     setNoHintMsg(false);
+    setPast([]);
+    setFuture([]);
     setResetPending(false);
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -328,18 +338,63 @@ export function App() {
   const handleApply = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle || !hint) return;
+    const snapshot = readStates(puzzle);
     setTimerRunning(true);
     for (const [key, state] of hint.changes) {
       const [r, c] = key.split(",").map(Number);
       puzzle.set_cell_state(r, c, state);
     }
     setPlayerStates(readStates(puzzle));
+    setPast((p) => [...p, snapshot]);
+    setFuture([]);
     const nowSolved = puzzle.is_solved();
     setSolved(nowSolved);
     if (nowSolved) setTimerRunning(false);
     try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
     setHint(null);
   }, [hint]);
+
+  const handleUndo = useCallback(() => {
+    if (past.length === 0) return;
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    const snapshot = past[past.length - 1];
+    const current = readStates(puzzle);
+    const n = puzzle.n();
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) puzzle.set_cell_state(r, c, snapshot[r][c]);
+    setPlayerStates(readStates(puzzle));
+    setPast((p) => p.slice(0, -1));
+    setFuture((f) => [current, ...f]);
+    const nowSolved = puzzle.is_solved();
+    const wasSolved = solved;
+    setSolved(nowSolved);
+    if (wasSolved && !nowSolved) setTimerRunning(true);
+    if (!wasSolved && nowSolved) setTimerRunning(false);
+    setHint(null);
+    setNoHintMsg(false);
+    try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+  }, [past, solved]);
+
+  const handleRedo = useCallback(() => {
+    if (future.length === 0) return;
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    const snapshot = future[0];
+    const current = readStates(puzzle);
+    const n = puzzle.n();
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) puzzle.set_cell_state(r, c, snapshot[r][c]);
+    setPlayerStates(readStates(puzzle));
+    setFuture((f) => f.slice(1));
+    setPast((p) => [...p, current]);
+    const nowSolved = puzzle.is_solved();
+    setSolved(nowSolved);
+    if (nowSolved) setTimerRunning(false);
+    setHint(null);
+    setNoHintMsg(false);
+    try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+  }, [future]);
 
   if (error)
     return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
@@ -398,41 +453,60 @@ export function App() {
             hintInvolved={hintInvolvedSet}
             hintChanges={hintChangesSet}
           />
+        </div>
 
-          {/* Icon cluster — no z-index so it doesn't form a stacking context */}
-          <div
-            ref={clusterRef}
+        {/* Controls row: ↩ ↪ | timer (centered) | ⚙ 🗑 */}
+        <div
+          ref={clusterRef}
+          style={{
+            marginTop: "0.5rem",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          {/* Left: undo / redo */}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              style={{ ...controlBtn, opacity: past.length === 0 ? 0.4 : 1 }}
+              onClick={handleUndo}
+              disabled={past.length === 0}
+              aria-label="Undo"
+            >
+              ↩
+            </button>
+            <button
+              style={{ ...controlBtn, opacity: future.length === 0 ? 0.4 : 1 }}
+              onClick={handleRedo}
+              disabled={future.length === 0}
+              aria-label="Redo"
+            >
+              ↪
+            </button>
+          </div>
+
+          {/* Center: timer — absolutely centered within the row */}
+          <span
             style={{
               position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              transform: "translateY(calc(100% + 8px))",
+              inset: 0,
               display: "flex",
               alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "0.5rem",
+              justifyContent: "center",
+              fontVariantNumeric: "tabular-nums",
+              fontSize: "1.05rem",
               pointerEvents: "none",
+              visibility: timerEnabled ? "visible" : "hidden",
             }}
           >
-            {/* Timer — absolutely centered within the cluster row */}
-            <span
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontVariantNumeric: "tabular-nums",
-                fontSize: "1.05rem",
-                pointerEvents: "none",
-                visibility: timerEnabled ? "visible" : "hidden",
-              }}
-            >
-              {formatTime(timerElapsed)}
-            </span>
+            {formatTime(timerElapsed)}
+          </span>
+
+          {/* Right: settings / reset */}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
-              style={{ ...controlBtn, pointerEvents: "auto" }}
+              style={controlBtn}
               aria-label="Settings"
               onClick={() => {
                 if (settingsOpen) {
@@ -451,7 +525,7 @@ export function App() {
             >
               ⚙
             </button>
-            <button style={{ ...controlBtn, pointerEvents: "auto" }} onClick={() => setResetPending(true)} aria-label="Reset">
+            <button style={controlBtn} onClick={() => setResetPending(true)} aria-label="Reset">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 4h12" />
                 <path d="M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4" />
