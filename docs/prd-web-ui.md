@@ -59,31 +59,35 @@ example image. The board enforces no rules on its own.
 The app loads with the puzzle from the README example image (the 7×7 puzzle defined in the README
 text format) in its initial unsolved state. This serves as the default starting puzzle.
 
-A **Reset** button clears all cell states back to Unknown and clears the undo/redo history. It shows
-a confirmation dialog first.
+A **Reset** button (trash icon, bottom-right of the board) clears all cell states back to Unknown.
+It opens a modal dialog for confirmation first.
 
 Region colours are defined by `region_color()` in `puzzle.rs`, which is the single source of truth
-for the colour palette. The CLI uses this function directly; the web UI duplicates the same values
-as CSS constants so both targets stay in sync.
+for the colour palette. The CLI uses this function directly; the web UI derives the same values via
+`region_color_hex` in `wasm/src/lib.rs`.
 
 Puzzle state (cell states) is persisted to browser `localStorage` on every change so that closing
 and reopening the tab restores the session.
 
-When the puzzle is solved, a congratulations banner is shown at the top of the page and persists
-until the player interacts with the board.
+When the puzzle is solved, a congratulations banner is shown. The banner area always reserves its
+height (using `visibility: hidden` when not shown) so the board does not shift when it appears or
+disappears.
+
+The board layout is centered and responsive: cell size scales with viewport width (min 32 px, max
+56 px). Region borders are drawn as an SVG overlay with `strokeLinecap="square"` so corners are
+crisp at every L-junction.
 
 **Acceptance criteria**
 - On first load (no `localStorage` data), the README example puzzle is shown fully unsolved.
 - Clicking an Empty cell cycles to Queen; clicking a Queen cycles to Unknown.
 - Clicking or dragging over an Unknown cell marks it as empty (see feature 2 for drag details).
-- Region colours match the values defined in `region_color()` in `puzzle.rs`; the web UI duplicates
-  those values as CSS constants, and the CLI uses the same function.
-- Bold borders are drawn between cells that belong to different regions.
-- Reset shows a confirmation dialog, then resets all cells to Unknown and clears history on confirm.
+- Region colours match the values in `region_color_hex` (wasm) / `region_color` (core).
+- Bold borders are drawn between cells in different regions; corners are pixel-perfect.
+- Reset opens a modal confirmation, then clears all cells to Unknown.
 - Board state is saved to `localStorage` on every change and restored on page load.
-- A congratulations banner is shown when the player places exactly n non-attacking queens (one per
-  row, column, and region, none diagonally adjacent); it persists until the player interacts with
-  the board.
+- A congratulations banner is shown when the player places exactly n non-attacking queens; the page
+  layout does not shift when the banner appears or disappears.
+- The board fits on mobile viewports without horizontal scroll.
 
 ### 2. Improved interactive board
 
@@ -92,6 +96,10 @@ Quality-of-life features layered on top of the basic board.
 - **Hover highlight**: mousing over a cell darkens it slightly; the region colour does not change.
 - **Clashing queens**: any queen that conflicts with another (same row, column, region, or diagonal)
   is rendered in red until the conflict is resolved.
+- **Settings panel**: a ⚙ gear icon at the board's bottom-right corner (alongside the reset button)
+  opens a dropup panel with the auto-cross and timer toggles. The panel closes when the user clicks
+  anywhere outside it. The panel is positioned with `getBoundingClientRect()` at open time and
+  rendered at the App root level (not inside the board's stacking context) to avoid clipping.
 - **Auto-cross** (toggle, default on): when a queen is placed, automatically mark every Unknown cell
   in the same row, column, region, or diagonally adjacent as empty. The crosses are written to board
   state and persist when the toggle is turned off. Toggling has no immediate effect on the board;
@@ -99,23 +107,34 @@ Quality-of-life features layered on top of the basic board.
 - **Timer** (toggle, default on): a running clock showing elapsed time since the first interaction,
   persisted to `localStorage` and resumed on page load. The timer is written to `localStorage` on
   every tick (once per second); no separate debounce is needed since the value is a single integer.
+  The timer stops when the puzzle is solved and never resumes or ticks on page reload of a solved
+  puzzle. Resetting a solved puzzle resets the timer to zero (the `setInterval` is cancelled
+  synchronously before the `localStorage` key is removed to avoid a race where the interval fires
+  between the two operations and writes the old value back).
 - **Drag-to-cross**: clicking and dragging (or touch-and-drag on mobile) marks Unknown cells as
-  empty. The gesture initiates when the pointer-down cell is Unknown; queens are never overwritten;
-  cells that are already empty remain empty during drag. No distance threshold is needed — a
-  pointer-down and pointer-up on the same Unknown cell is treated as a single-cell drag and marks
-  that cell as empty. Dragging over already-empty cells has no effect.
+  empty. The gesture uses the Pointer Events API (`onPointerDown`, `onPointerMove`, `onPointerUp`,
+  `onPointerCancel`) with `touchAction: "none"` on the board, which handles both mouse and touch
+  input uniformly without separate touch event handlers. The gesture initiates when the pointer-down
+  cell is Unknown; queens are never overwritten; cells that are already empty remain empty during
+  drag. No distance threshold is needed — a pointer-down and pointer-up on the same Unknown cell is
+  treated as a single-cell drag and marks that cell as empty. Dragging over already-empty cells has
+  no effect.
 
 **Acceptance criteria**
 - Hovering a cell applies a darkening effect without altering its region background colour.
 - Queens involved in any conflict are highlighted red; the highlight clears when resolved.
+- Gear icon opens a dropup panel with auto-cross and timer toggles; the panel closes on outside
+  click; the panel is anchored to the button position, not fixed to the viewport.
 - Auto-cross toggle has no immediate effect on the board; it only governs future queen placements.
 - Timer shows MM:SS, starts on first interaction, stops when the puzzle is solved, and resumes from
-  the saved value on page reload.
+  the saved value on page reload of an in-progress puzzle.
+- Timer does not tick on page reload of a solved (completed) puzzle.
+- Resetting a solved puzzle resets the timer to zero and clears the `localStorage` timer key.
 - Drag only initiates when the pointer-down cell is Unknown. Dragging over a queen has no effect.
   Dragging over an already-empty cell has no effect (it stays empty).
 - A single click (pointer-down and pointer-up on the same Unknown cell) is treated as a one-cell
   drag: the cell is marked empty. No minimum travel distance is required.
-- Touch events (`touchstart`, `touchmove`, `touchend`) are supported alongside mouse events.
+- Mouse and touch input both work via the Pointer Events API; no raw touch event handlers needed.
 - No Rust changes required for this milestone.
 
 ### 3. Solver step-through
