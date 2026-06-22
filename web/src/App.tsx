@@ -495,15 +495,6 @@ export function App() {
               ↩
             </button>
             <button
-              style={{ ...controlBtn, opacity: future.length === 0 ? 0.4 : 1 }}
-              onClick={handleRedo}
-              disabled={future.length === 0}
-              aria-label="Redo"
-              title="Redo"
-            >
-              ↪
-            </button>
-            <button
               style={controlBtn}
               aria-label="Settings"
               title="Settings"
