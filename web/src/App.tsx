@@ -412,6 +412,7 @@ export function App() {
               alignItems: "center",
               justifyContent: "flex-end",
               gap: "0.5rem",
+              pointerEvents: "none",
             }}
           >
             {/* Timer — absolutely centered within the cluster row */}
@@ -431,7 +432,7 @@ export function App() {
               {formatTime(timerElapsed)}
             </span>
             <button
-              style={controlBtn}
+              style={{ ...controlBtn, pointerEvents: "auto" }}
               aria-label="Settings"
               onClick={() => {
                 if (settingsOpen) {
@@ -450,7 +451,7 @@ export function App() {
             >
               ⚙
             </button>
-            <button style={controlBtn} onClick={() => setResetPending(true)} aria-label="Reset">
+            <button style={{ ...controlBtn, pointerEvents: "auto" }} onClick={() => setResetPending(true)} aria-label="Reset">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 4h12" />
                 <path d="M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4" />
