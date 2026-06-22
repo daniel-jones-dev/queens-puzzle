@@ -301,9 +301,7 @@ impl QueensPuzzle {
     }
 
     /// Returns an iterator over all blocks (rows, columns, regions), returning the cell-set, block-index, and block type
-    pub fn all_blocks_iter(
-        &self,
-    ) -> impl Iterator<Item = (HashSet<Cell>, usize, BlockType)> + '_ {
+    pub fn all_blocks_iter(&self) -> impl Iterator<Item = (HashSet<Cell>, usize, BlockType)> + '_ {
         self.all_rows_iter()
             .map(|(cells, index)| (cells, index, BlockType::Row))
             .chain(

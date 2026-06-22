@@ -16,12 +16,15 @@ impl PuzzleJson {
     pub fn from_puzzle(puzzle: &QueensPuzzle) -> Self {
         let n = puzzle.n();
         let regions: Vec<Vec<Option<u8>>> = (0..n)
-            .map(|row| (0..n).map(|col| puzzle.cell_region(Cell { row, col })).collect())
+            .map(|row| {
+                (0..n)
+                    .map(|col| puzzle.cell_region(Cell { row, col }))
+                    .collect()
+            })
             .collect();
 
-        let all_unknown = (0..n).all(|row| {
-            (0..n).all(|col| puzzle.cell_state(Cell { row, col }) == State::Unknown)
-        });
+        let all_unknown = (0..n)
+            .all(|row| (0..n).all(|col| puzzle.cell_state(Cell { row, col }) == State::Unknown));
 
         let states = if all_unknown {
             None
@@ -117,11 +120,7 @@ pub fn parse(input: &str) -> Result<QueensPuzzle, String> {
     // Apply states if present
     if let Some(states) = &pj.states {
         if states.len() != n {
-            return Err(format!(
-                "states has {} rows, expected {}",
-                states.len(),
-                n
-            ));
+            return Err(format!("states has {} rows, expected {}", states.len(), n));
         }
         for (row, state_row) in states.iter().enumerate() {
             if state_row.len() != n {

@@ -1,11 +1,11 @@
+use clap::{Parser, Subcommand};
+use colored::*;
+use log::{info, LevelFilter};
 use queens_puzzle_core::generator::generate_puzzles;
 use queens_puzzle_core::grid::Cell;
 use queens_puzzle_core::puzzle::{region_color, QueensPuzzle, State};
 use queens_puzzle_core::solver::rule::RuleResult;
 use queens_puzzle_core::{io, solver};
-use clap::{Parser, Subcommand};
-use colored::*;
-use log::{info, LevelFilter};
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
