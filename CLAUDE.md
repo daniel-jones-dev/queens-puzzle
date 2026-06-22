@@ -127,6 +127,13 @@ The `setInterval` ID is stored in `timerIntervalRef`. When resetting a solved pu
 
 The timer effect guards on `solved`: it never starts the interval if the puzzle loads already completed, preventing the timer from ticking after a page refresh on a finished puzzle.
 
+### Hint mode
+Hint state lives in `App.tsx` as `HintState | null` containing `description`, `changes: Map<string, number>` ("r,c" → target state), and `involved: Set<string>`.
+
+`handleHint` calls `puzzle.next_hint()`, unpacks the flattened arrays, and sets this state. `handleApply` iterates `hint.changes`, calls `set_cell_state` for each, and then clears hint state. Auto-hint-exit is checked via `hintComplete()` after every cell interaction.
+
+Non-involved cells are dimmed with `opacity: 0.35` via the `hintInvolved` prop on `Board`. Hint-change cells show a `position: absolute` green-border overlay via the `hintChanges` prop (a `Set<string>` of keys). Clicking a dimmed cell calls `setHint(null)` and falls through to process the click normally. Clicking an involved cell processes normally and calls `hintComplete()` after.
+
 ## Milestone status (as of 2026-06-22)
 
 | # | Milestone | Status |
@@ -134,7 +141,7 @@ The timer effect guards on `solved`: it never starts the interval if the puzzle 
 | 1 | WASM scaffold | ✓ Complete |
 | 2 | Playable board | ✓ Complete |
 | 3 | Improved board | ✓ Complete |
-| 4 | Solver step-through | — |
+| 4 | Solver step-through | ✓ Complete |
 | 5 | Change history | — |
 | 6 | Puzzle import + share | — |
 | 7 | Custom editor | — |
