@@ -17,21 +17,18 @@
 }
 
 .queen {
-  font-size: 30px;
   line-height: 1;
   color: #111;
   pointer-events: none;
 }
 
 .queenClash {
-  font-size: 30px;
   line-height: 1;
   color: #c0392b;
   pointer-events: none;
 }
 
 .cross {
-  font-size: 20px;
   line-height: 1;
   color: rgba(0, 0, 0, 0.5);
   font-weight: bold;

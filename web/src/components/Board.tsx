@@ -9,9 +9,9 @@ interface Props {
   onCellCross: (row: number, col: number) => void;
   onCellClick: (row: number, col: number, visualState: number) => void;
   locked?: boolean;
+  cellSize?: number;
 }
 
-const CELL_SIZE = 56;
 const BORDER_THICK = "3px solid #333";
 const BORDER_THIN = "1px solid rgba(0,0,0,0.15)";
 
@@ -45,6 +45,7 @@ export function Board({
   onCellCross,
   onCellClick,
   locked,
+  cellSize = 56,
 }: Props) {
   const n = regions.length;
   const boardRef = useRef<HTMLDivElement>(null);
@@ -62,8 +63,8 @@ export function Board({
     const board = boardRef.current;
     if (!board) return null;
     const rect = board.getBoundingClientRect();
-    const c = Math.floor((clientX - rect.left) / CELL_SIZE);
-    const r = Math.floor((clientY - rect.top) / CELL_SIZE);
+    const c = Math.floor((clientX - rect.left) / cellSize);
+    const r = Math.floor((clientY - rect.top) / cellSize);
     if (r < 0 || r >= n || c < 0 || c >= n) return null;
     return [r, c];
   }
@@ -73,7 +74,7 @@ export function Board({
       ref={boardRef}
       className={styles.board}
       style={{
-        gridTemplateColumns: `repeat(${n}, ${CELL_SIZE}px)`,
+        gridTemplateColumns: `repeat(${n}, ${cellSize}px)`,
         cursor: locked ? "default" : undefined,
         touchAction: "none",
       }}
@@ -129,19 +130,29 @@ export function Board({
               key={`${r}-${c}`}
               className={styles.cell}
               style={{
-                width: CELL_SIZE,
-                height: CELL_SIZE,
+                width: cellSize,
+                height: cellSize,
                 background: bg,
                 cursor: locked ? "default" : "pointer",
                 ...cellBorders(regions, r, c),
               }}
             >
               {state === 1 && (
-                <span className={clashing ? styles.queenClash : styles.queen}>
+                <span
+                  className={clashing ? styles.queenClash : styles.queen}
+                  style={{ fontSize: Math.round(cellSize * 0.54) }}
+                >
                   ♛
                 </span>
               )}
-              {state === 2 && <span className={styles.cross}>✕</span>}
+              {state === 2 && (
+                <span
+                  className={styles.cross}
+                  style={{ fontSize: Math.round(cellSize * 0.36) }}
+                >
+                  ✕
+                </span>
+              )}
             </div>
           );
         })

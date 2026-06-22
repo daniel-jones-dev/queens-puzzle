@@ -4,6 +4,8 @@ import { Board } from "./components/Board";
 
 const STORAGE_KEY = "queens-puzzle-v1";
 const TIMER_KEY = "queens-puzzle-timer";
+const MAX_CELL_PX = 56;
+const MIN_CELL_PX = 32;
 
 const DEFAULT_JSON = JSON.stringify({
   regions: [
@@ -45,7 +47,7 @@ function readStates(puzzle: WasmPuzzle): number[][] {
   );
 }
 
-function affectedByQueen(
+export function affectedByQueen(
   qr: number,
   qc: number,
   regions: (number | null)[][],
@@ -78,10 +80,14 @@ function affectedByQueen(
   return [...seen].map((s) => s.split(",").map(Number) as [number, number]);
 }
 
-
-function formatTime(s: number): string {
+export function formatTime(s: number): string {
   const m = Math.floor(s / 60);
   return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function computeCellSize(n: number): number {
+  const available = window.innerWidth - 32; // 16px padding each side
+  return Math.min(MAX_CELL_PX, Math.max(MIN_CELL_PX, Math.floor(available / n)));
 }
 
 export function App() {
@@ -91,7 +97,6 @@ export function App() {
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [regions, setRegions] = useState<(number | null)[][]>([]);
-  // playerStates mirrors the WASM puzzle state exactly (auto-crosses are written here too).
   const [playerStates, setPlayerStates] = useState<number[][]>([]);
   const [autoCrossEnabled, setAutoCrossEnabled] = useState(true);
   const [timerEnabled, setTimerEnabled] = useState(true);
@@ -99,6 +104,8 @@ export function App() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [solved, setSolved] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  // Initialise to a close default so board doesn't flash at 56px on mobile
+  const [cellSize, setCellSize] = useState(() => computeCellSize(7));
 
   const clashingSet = useMemo(() => {
     const puzzle = puzzleRef.current;
@@ -121,6 +128,7 @@ export function App() {
         const savedTimer =
           parseInt(localStorage.getItem(TIMER_KEY) ?? "0", 10) || 0;
         puzzleRef.current = puzzle;
+        setCellSize(computeCellSize(puzzle.n()));
         setRegions(readRegions(puzzle));
         setPlayerStates(states);
         setTimerElapsed(savedTimer);
@@ -135,6 +143,17 @@ export function App() {
     };
   }, []);
 
+  // Responsive cell size
+  useEffect(() => {
+    if (!ready) return;
+    const n = puzzleRef.current?.n() ?? 7;
+    const update = () => setCellSize(computeCellSize(n));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [ready]);
+
+  // Timer tick
   useEffect(() => {
     if (!timerRunning || !timerEnabled) return;
     const id = setInterval(() => {
@@ -153,7 +172,6 @@ export function App() {
     if (solved) setShowBanner(true);
   }, [solved]);
 
-  // Drag/tap on an Unknown cell → mark Empty.
   const handleCellCross = useCallback(
     (r: number, c: number) => {
       if (solved) return;
@@ -176,8 +194,6 @@ export function App() {
     [solved]
   );
 
-  // Click on Empty/Queen cell → cycle (Empty→Queen, Queen→Unknown).
-  // visualState is what the Board displayed (playerStates, no overlay).
   const handleCellClick = useCallback(
     (r: number, c: number, visualState: number) => {
       if (solved) return;
@@ -189,8 +205,6 @@ export function App() {
         const n = puzzle.n();
         const next = visualState === 2 ? 1 : 0;
         puzzle.set_cell_state(r, c, next);
-        // When placing a queen with auto-cross on, immediately write crosses
-        // into board state (they persist regardless of the toggle).
         if (next === 1 && autoCrossEnabled) {
           for (const [ar, ac] of affectedByQueen(r, c, regions, n)) {
             if (puzzle.cell_state(ar, ac) === 0) {
@@ -213,10 +227,6 @@ export function App() {
     [solved, autoCrossEnabled, regions]
   );
 
-  const handleToggleAutoCross = useCallback((enabled: boolean) => {
-    setAutoCrossEnabled(enabled);
-  }, []);
-
   const doReset = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
@@ -236,25 +246,31 @@ export function App() {
     return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
   if (!ready) return <p style={{ padding: "1rem" }}>Loading…</p>;
 
-  return (
-    <div style={{ padding: "1.5rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1 style={{ marginTop: 0, marginBottom: "1rem" }}>Queens Puzzle</h1>
+  const boardPx = cellSize * regions.length;
 
-      {showBanner && (
+  return (
+    <div style={{ padding: "1rem", fontFamily: "system-ui, sans-serif", boxSizing: "border-box", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{ width: boardPx, maxWidth: "100%" }}>
+      <h1 style={{ marginTop: 0, marginBottom: "0.75rem", fontSize: "clamp(1.2rem, 5vw, 1.8rem)" }}>
+        Queens Puzzle
+      </h1>
+
+      {/* Fixed-height banner area — always occupies space to prevent layout shift */}
+      <div style={{ minHeight: "2.75rem", marginBottom: "0.75rem" }}>
         <div
           style={{
             background: "#4caf50",
             color: "white",
-            padding: "0.75rem 1.25rem",
+            padding: "0.6rem 1rem",
             borderRadius: "6px",
-            marginBottom: "1rem",
             fontWeight: "bold",
-            fontSize: "1.1rem",
+            fontSize: "1rem",
+            visibility: showBanner ? "visible" : "hidden",
           }}
         >
           Congratulations — puzzle solved!
         </div>
-      )}
+      </div>
 
       <Board
         regions={regions}
@@ -263,69 +279,91 @@ export function App() {
         onCellCross={handleCellCross}
         onCellClick={handleCellClick}
         locked={solved}
+        cellSize={cellSize}
       />
 
       <div
         style={{
           marginTop: "0.75rem",
           display: "flex",
-          gap: "1rem",
+          gap: "0.75rem",
           alignItems: "center",
-          flexWrap: "wrap",
         }}
       >
-        {timerEnabled && (
-          <span
+        {/* Timer — always occupies space to prevent layout shift */}
+        <span
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            fontSize: "1.05rem",
+            minWidth: "5ch",
+            visibility: timerEnabled ? "visible" : "hidden",
+          }}
+        >
+          {formatTime(timerElapsed)}
+        </span>
+
+        {/* Settings dropdown */}
+        <details style={{ position: "relative" }}>
+          <summary
             style={{
-              fontVariantNumeric: "tabular-nums",
-              fontSize: "1.1rem",
-              minWidth: "5ch",
+              cursor: "pointer",
+              userSelect: "none",
+              listStyle: "none",
+              padding: "0.3rem 0.6rem",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              fontSize: "0.9rem",
             }}
           >
-            {formatTime(timerElapsed)}
-          </span>
+            ⚙ Settings
+          </summary>
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: 0,
+              background: "white",
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              padding: "0.6rem 0.8rem",
+              zIndex: 10,
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={autoCrossEnabled}
+                onChange={(e) => setAutoCrossEnabled(e.target.checked)}
+              />
+              Auto-cross
+            </label>
+            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={timerEnabled}
+                onChange={(e) => setTimerEnabled(e.target.checked)}
+              />
+              Timer
+            </label>
+          </div>
+        </details>
+
+        {/* Reset */}
+        {resetPending ? (
+          <>
+            <span style={{ fontSize: "0.85rem" }}>Clear progress?</span>
+            <button onClick={doReset}>Yes</button>
+            <button onClick={() => setResetPending(false)}>No</button>
+          </>
+        ) : (
+          <button onClick={() => setResetPending(true)}>Reset</button>
         )}
-        <label
-          style={{
-            display: "flex",
-            gap: "0.4rem",
-            alignItems: "center",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={autoCrossEnabled}
-            onChange={(e) => handleToggleAutoCross(e.target.checked)}
-          />
-          Auto-cross
-        </label>
-        <label
-          style={{
-            display: "flex",
-            gap: "0.4rem",
-            alignItems: "center",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={timerEnabled}
-            onChange={(e) => setTimerEnabled(e.target.checked)}
-          />
-          Timer
-        </label>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          {resetPending ? (
-            <>
-              <span style={{ fontSize: "0.9rem" }}>Clear all progress?</span>
-              <button onClick={doReset}>Yes, reset</button>
-              <button onClick={() => setResetPending(false)}>Cancel</button>
-            </>
-          ) : (
-            <button onClick={() => setResetPending(true)}>Reset</button>
-          )}
-        </div>
+      </div>
       </div>
     </div>
   );
