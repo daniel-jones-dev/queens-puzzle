@@ -6,6 +6,7 @@ interface Props {
   regions: (number | null)[][];
   cellStates: number[][];
   onCellClick: (row: number, col: number) => void;
+  locked?: boolean;
 }
 
 const CELL_SIZE = 56;
@@ -27,14 +28,17 @@ function cellBorders(
   };
 }
 
-export function Board({ regions, cellStates, onCellClick }: Props) {
+export function Board({ regions, cellStates, onCellClick, locked }: Props) {
   const n = regions.length;
   if (n === 0) return null;
 
   return (
     <div
       className={styles.board}
-      style={{ gridTemplateColumns: `repeat(${n}, ${CELL_SIZE}px)` }}
+      style={{
+        gridTemplateColumns: `repeat(${n}, ${CELL_SIZE}px)`,
+        cursor: locked ? "default" : undefined,
+      }}
     >
       {regions.map((row, r) =>
         row.map((region, c) => {
@@ -49,6 +53,7 @@ export function Board({ regions, cellStates, onCellClick }: Props) {
                 width: CELL_SIZE,
                 height: CELL_SIZE,
                 background: bg,
+                cursor: locked ? "default" : "pointer",
                 ...cellBorders(regions, r, c),
               }}
               onClick={() => onCellClick(r, c)}

@@ -78,34 +78,39 @@ export function App() {
     if (solved) setShowBanner(true);
   }, [solved]);
 
-  const handleCellClick = useCallback((r: number, c: number) => {
-    const puzzle = puzzleRef.current;
-    if (!puzzle) return;
-    try {
-      setShowBanner(false);
-      setResetPending(false);
-
-      // Unknown(0) → Empty(2) → Queen(1) → Unknown(0)
-      const current = puzzle.cell_state(r, c);
-      const next = current === 0 ? 2 : current === 2 ? 1 : 0;
-      puzzle.set_cell_state(r, c, next);
-
-      setCellStates((prev) => {
-        const updated = prev.map((row) => [...row]);
-        updated[r][c] = next;
-        return updated;
-      });
-
-      setSolved(puzzle.is_solved());
-
+  const handleCellClick = useCallback(
+    (r: number, c: number) => {
+      if (solved) return;
+      const puzzle = puzzleRef.current;
+      if (!puzzle) return;
       try {
-        localStorage.setItem(STORAGE_KEY, puzzle.to_json());
-      } catch {}
-    } catch (err) {
-      console.error("cell click error:", err);
-      setError(String(err));
-    }
-  }, []);
+        setResetPending(false);
+
+        // Unknown(0) → Empty(2) → Queen(1) → Unknown(0)
+        const current = puzzle.cell_state(r, c);
+        const next = current === 0 ? 2 : current === 2 ? 1 : 0;
+        puzzle.set_cell_state(r, c, next);
+
+        setCellStates((prev) => {
+          const updated = prev.map((row) => [...row]);
+          updated[r][c] = next;
+          return updated;
+        });
+
+        const nowSolved =
+          puzzle.is_solved() && puzzle.clashing_queens().length === 0;
+        setSolved(nowSolved);
+
+        try {
+          localStorage.setItem(STORAGE_KEY, puzzle.to_json());
+        } catch {}
+      } catch (err) {
+        console.error("cell click error:", err);
+        setError(String(err));
+      }
+    },
+    [solved]
+  );
 
   const doReset = useCallback(() => {
     const puzzle = puzzleRef.current;
@@ -153,6 +158,7 @@ export function App() {
         regions={regions}
         cellStates={cellStates}
         onCellClick={handleCellClick}
+        locked={solved}
       />
 
       <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
