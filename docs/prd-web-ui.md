@@ -197,33 +197,32 @@ avoids the complexity of tracking delta operations.
 - The ↩ button is disabled (greyed out) when there is no history to undo.
 - Undoing past a solved state restarts the timer; undoing into a solved state stops the timer.
 
-### 5. Puzzle import and share
+### 5. Puzzle import and share ✓
 
-A JSON import dialog accepts the canonical puzzle JSON format and loads the puzzle, restoring any
-`states` present in the JSON. Visiting a share URL (feature 6 below) uses the same parser and
-applies the same behaviour.
+**Import**: "Import puzzle…" in the settings panel (⚙) opens a modal with a JSON textarea.
+Pasting the canonical puzzle JSON format and clicking Import loads the puzzle. Any `states` in the
+JSON are restored. The textarea border turns red and an inline error message appears for malformed
+or invalid input. Undo history, hint state, and the timer are all reset on a successful import.
 
-**Acceptance criteria**
-- Valid JSON puzzles load correctly; any `states` in the JSON are restored.
-- Importing a puzzle clears undo/redo history.
-- An inline error message is shown for malformed or invalid input.
+**Share**: "Share puzzle" in the settings panel encodes the current puzzle JSON as base64url in the
+URL fragment (`#<base64url>`) and copies the full URL to the clipboard. The button text changes to
+"✓ Copied!" for 2 s as confirmation.
 
-### 6. Shareable URLs
-
-A "Share" button copies a URL encoding the current puzzle to the clipboard. The URL uses
-base64-encoded JSON embedded in the URL fragment (no external fetch required) and always encodes
-the current state: `regions` are always included; `states` is included if any progress has been
-made (i.e. at least one cell is not Unknown). If no progress has been made, `states` is omitted and
-the recipient starts with an unsolved board.
-
-Visiting a share URL uses the same JSON parser as import: `regions` and `states` (if present) are
-restored.
+**URL loading**: On page load, the URL fragment is decoded before checking localStorage. A
+successful share-URL load persists the puzzle to localStorage and removes the hash via
+`history.replaceState`, so refreshing loads from localStorage rather than re-applying the share
+link. A malformed hash shows a dismissable amber warning banner and falls through to the last saved
+puzzle.
 
 **Acceptance criteria**
-- Visiting a share URL restores the puzzle and any partial state; if no states were encoded the
-  board starts unsolved.
-- The Share button copies a single URL to the clipboard.
-- A malformed or tampered share URL shows a clear error rather than a blank board.
+- "Import puzzle…" opens a modal; valid JSON loads the puzzle (regions and states); inline error
+  shown for invalid input.
+- Importing clears undo history, hint state, and resets the timer.
+- "Share puzzle" copies `<origin><path>#<base64url-json>` to the clipboard and shows "✓ Copied!".
+- Visiting a share URL fresh loads the puzzle; if states were encoded they are restored; if not
+  the board starts unsolved.
+- Hash is removed from the URL after loading (history.replaceState) so refresh uses localStorage.
+- A malformed or tampered share URL shows a dismissable warning and falls back to saved/default.
 
 ### 7. Custom puzzle editor
 
@@ -421,7 +420,7 @@ No state management library is needed at this scale; React `useState` / `useRedu
 | 3 | Improved board ✓ | Hover highlight, clashing queens, auto-cross toggle, timer (with localStorage), drag-to-cross (mouse + touch) |
 | 4 | Solver step-through ✓ | Hint mode (dim + green borders + description); Apply; manual apply; dimmed-cell dismiss behaviour; Rust step refactor |
 | 5 | Change history ✓ | Undo (↩) for player moves and hint applications; snapshot-based; timer state managed across undo |
-| 6 | Puzzle import + share | JSON import (partial states preserved); embedded shareable URL (single variant, encodes current state) |
+| 6 | Puzzle import + share ✓ | JSON import modal (inline errors, states preserved); base64url share URL; hash-on-load with fallback |
 | 7 | Custom editor | Edit-from-play; fresh board; scatter queens (with confirmation); shuffle colours; n-colour palette; JSON export |
 | 8 | Editor live analysis | 300ms-debounced background analysis; cancellable; four indicator states; Play "!" for non-unique puzzles |
 | 9 | Generator UX | Generate button; size selector; optional seed (u32); Web Worker; difficulty shown |

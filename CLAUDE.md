@@ -147,6 +147,13 @@ Non-involved cells are dimmed with `opacity: 0.35` via the `hintInvolved` prop o
 
 `handleUndo` also manages timer state: if the puzzle was solved and undo moves to an unsolved state, `setTimerRunning(true)` is called. History is cleared (`setPast([]); setFuture([])`) on reset and when a new puzzle loads.
 
+### Import and share
+"Import puzzle…" and "Share puzzle" live in the settings panel (⚙). Share encodes `puzzle.to_json()` as base64url in the URL fragment and copies to clipboard via `navigator.clipboard.writeText`. The button shows "✓ Copied!" for 2 s via `shareToast` state.
+
+On startup the init `useEffect` checks `window.location.hash` before falling back to `loadPuzzle()` (localStorage → default). A successful hash decode calls `history.replaceState(null, "", window.location.pathname)` to strip the fragment, then persists the puzzle to localStorage. A failed decode sets `urlError` state which renders as a dismissable amber banner.
+
+Import calls `WasmPuzzle.from_json(text)` and on success replaces all puzzle state (regions, playerStates, timer, history, hint). Errors set `importError` which renders as inline red text below the textarea.
+
 ## Milestone status (as of 2026-06-22)
 
 | # | Milestone | Status |
@@ -156,7 +163,7 @@ Non-involved cells are dimmed with `opacity: 0.35` via the `hintInvolved` prop o
 | 3 | Improved board | ✓ Complete |
 | 4 | Solver step-through | ✓ Complete |
 | 5 | Change history | ✓ Complete |
-| 6 | Puzzle import + share | — |
+| 6 | Puzzle import + share | ✓ Complete |
 | 7 | Custom editor | — |
 | 8 | Editor live analysis | — |
 | 9 | Generator UX | — |
