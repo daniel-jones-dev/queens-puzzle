@@ -455,7 +455,7 @@ export function App() {
           />
         </div>
 
-        {/* Controls row: ↩ ↪ | timer (centered) | ⚙ 🗑 */}
+        {/* Controls row: timer (centered) | ↩ ↪ ⚙ 🗑 */}
         <div
           ref={clusterRef}
           style={{
@@ -463,29 +463,9 @@ export function App() {
             position: "relative",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
           }}
         >
-          {/* Left: undo / redo */}
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button
-              style={{ ...controlBtn, opacity: past.length === 0 ? 0.4 : 1 }}
-              onClick={handleUndo}
-              disabled={past.length === 0}
-              aria-label="Undo"
-            >
-              ↩
-            </button>
-            <button
-              style={{ ...controlBtn, opacity: future.length === 0 ? 0.4 : 1 }}
-              onClick={handleRedo}
-              disabled={future.length === 0}
-              aria-label="Redo"
-            >
-              ↪
-            </button>
-          </div>
-
           {/* Center: timer — absolutely centered within the row */}
           <span
             style={{
@@ -503,11 +483,30 @@ export function App() {
             {formatTime(timerElapsed)}
           </span>
 
-          {/* Right: settings / reset */}
+          {/* Right: undo / redo / settings / reset */}
           <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              style={{ ...controlBtn, opacity: past.length === 0 ? 0.4 : 1 }}
+              onClick={handleUndo}
+              disabled={past.length === 0}
+              aria-label="Undo"
+              title="Undo"
+            >
+              ↩
+            </button>
+            <button
+              style={{ ...controlBtn, opacity: future.length === 0 ? 0.4 : 1 }}
+              onClick={handleRedo}
+              disabled={future.length === 0}
+              aria-label="Redo"
+              title="Redo"
+            >
+              ↪
+            </button>
             <button
               style={controlBtn}
               aria-label="Settings"
+              title="Settings"
               onClick={() => {
                 if (settingsOpen) {
                   setSettingsOpen(false);
@@ -525,7 +524,7 @@ export function App() {
             >
               ⚙
             </button>
-            <button style={controlBtn} onClick={() => setResetPending(true)} aria-label="Reset">
+            <button style={controlBtn} onClick={() => setResetPending(true)} aria-label="Reset" title="Reset puzzle">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 4h12" />
                 <path d="M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4" />
