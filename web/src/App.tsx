@@ -95,6 +95,8 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [resetPending, setResetPending] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsAnchor, setSettingsAnchor] = useState<{ bottom: number; right: number } | null>(null);
+  const clusterRef = useRef<HTMLDivElement>(null);
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [regions, setRegions] = useState<(number | null)[][]>([]);
@@ -303,8 +305,9 @@ export function App() {
             cellSize={cellSize}
           />
 
-          {/* Icon cluster sits at the board's bottom-right, flush with its edge */}
+          {/* Icon cluster — no z-index so it doesn't form a stacking context */}
           <div
+            ref={clusterRef}
             style={{
               position: "absolute",
               bottom: 0,
@@ -314,7 +317,24 @@ export function App() {
               gap: "0.5rem",
             }}
           >
-            <button style={iconBtn} onClick={() => setSettingsOpen((v) => !v)} aria-label="Settings">
+            <button
+              style={iconBtn}
+              aria-label="Settings"
+              onClick={() => {
+                if (settingsOpen) {
+                  setSettingsOpen(false);
+                } else {
+                  const rect = clusterRef.current?.getBoundingClientRect();
+                  if (rect) {
+                    setSettingsAnchor({
+                      bottom: window.innerHeight - rect.top + 8,
+                      right: window.innerWidth - rect.right,
+                    });
+                  }
+                  setSettingsOpen(true);
+                }
+              }}
+            >
               ⚙
             </button>
             <button style={iconBtn} onClick={() => setResetPending(true)} aria-label="Reset">
@@ -343,8 +363,8 @@ export function App() {
         </div>
       </div>
 
-      {/* Settings dropup — rendered at root so its z-index is in the global stacking context */}
-      {settingsOpen && (
+      {/* Settings panel — position: fixed anchored to the cluster's measured screen rect */}
+      {settingsOpen && settingsAnchor && (
         <>
           <div
             style={{ position: "fixed", inset: 0, zIndex: 150 }}
@@ -353,8 +373,8 @@ export function App() {
           <div
             style={{
               position: "fixed",
-              bottom: "4rem",
-              right: "1rem",
+              bottom: settingsAnchor.bottom,
+              right: settingsAnchor.right,
               zIndex: 160,
               background: "white",
               border: "1px solid #ddd",
