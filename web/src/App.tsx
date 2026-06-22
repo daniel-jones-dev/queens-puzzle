@@ -455,7 +455,7 @@ export function App() {
           />
         </div>
 
-        {/* Controls row: timer (centered) | ↩ ↪ ⚙ 🗑 */}
+        {/* Controls row: Hint | timer (centered) | ↩ ⚙ 🗑 */}
         <div
           ref={clusterRef}
           style={{
@@ -463,9 +463,28 @@ export function App() {
             position: "relative",
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
           }}
         >
+          {/* Left: hint button (hidden when solved) */}
+          <div>
+            {!solved && (
+              <button
+                onClick={handleHint}
+                disabled={!!hint || noHintMsg}
+                title="Hint"
+                style={{
+                  ...controlBtn,
+                  padding: "0.3rem 0.85rem",
+                  opacity: hint || noHintMsg ? 0.5 : 1,
+                  cursor: hint || noHintMsg ? "default" : "pointer",
+                }}
+              >
+                Hint
+              </button>
+            )}
+          </div>
+
           {/* Center: timer — absolutely centered within the row */}
           <span
             style={{
@@ -483,7 +502,7 @@ export function App() {
             {formatTime(timerElapsed)}
           </span>
 
-          {/* Right: undo / redo / settings / reset */}
+          {/* Right: undo / settings / reset */}
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
               style={{ ...controlBtn, opacity: past.length === 0 ? 0.4 : 1 }}
@@ -526,24 +545,9 @@ export function App() {
           </div>
         </div>
 
-        {/* Hint area — Hint button always visible when not solved */}
-        {!solved && (
-          <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <div>
-              <button
-                onClick={handleHint}
-                disabled={!!hint || noHintMsg}
-                style={{
-                  ...controlBtn,
-                  padding: "0.3rem 0.85rem",
-                  opacity: hint || noHintMsg ? 0.5 : 1,
-                  cursor: hint || noHintMsg ? "default" : "pointer",
-                }}
-              >
-                Hint
-              </button>
-            </div>
-
+        {/* Hint panel + no-hint message — shown below controls row when active */}
+        {!solved && (hint || noHintMsg) && (
+          <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {hint && (
               <div
                 style={{
