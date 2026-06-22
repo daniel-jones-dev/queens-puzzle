@@ -97,6 +97,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<{ bottom: number; right: number } | null>(null);
   const clusterRef = useRef<HTMLDivElement>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [regions, setRegions] = useState<(number | null)[][]>([]);
@@ -158,7 +159,7 @@ export function App() {
 
   // Timer tick
   useEffect(() => {
-    if (!timerRunning || !timerEnabled) return;
+    if (!timerRunning || !timerEnabled || solved) return;
     const id = setInterval(() => {
       setTimerElapsed((prev) => {
         const next = prev + 1;
@@ -168,8 +169,12 @@ export function App() {
         return next;
       });
     }, 1000);
-    return () => clearInterval(id);
-  }, [timerRunning, timerEnabled]);
+    timerIntervalRef.current = id;
+    return () => {
+      clearInterval(id);
+      timerIntervalRef.current = null;
+    };
+  }, [timerRunning, timerEnabled, solved]);
 
   useEffect(() => {
     if (solved) setShowBanner(true);
@@ -236,6 +241,13 @@ export function App() {
       for (let c = 0; c < n; c++) puzzle.set_cell_state(r, c, 0);
     setPlayerStates(readStates(puzzle));
     if (solved) {
+      // Clear the interval immediately — the setInterval callback can fire
+      // between this synchronous code and React's next render, which would
+      // write the old value back to localStorage after we remove it.
+      if (timerIntervalRef.current !== null) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
       setTimerElapsed(0);
       setTimerRunning(false);
       try { localStorage.removeItem(TIMER_KEY); } catch {}
