@@ -14,9 +14,24 @@ interface Props {
   hintInvolved?: Set<string>;
   /** Cells that would be changed by the hint — shown with a green border. */
   hintChanges?: Set<string>;
+  /** Edit mode: paints region colours instead of placing queens/crosses. */
+  editMode?: boolean;
+  onCellPaint?: (row: number, col: number) => void;
+  onPaintStart?: () => void;
+  onPaintEnd?: () => void;
 }
 
 const BORDER_THIN = "1px solid rgba(0,0,0,0.15)";
+
+// CSS checkerboard background for unassigned cells in edit mode
+const CHECKERBOARD_STYLE = {
+  backgroundImage:
+    "linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%)," +
+    "linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%)",
+  backgroundSize: "12px 12px",
+  backgroundPosition: "0 0,6px 6px",
+  backgroundColor: "#e4e4e4",
+};
 
 interface Segment { x1: number; y1: number; x2: number; y2: number }
 
@@ -49,10 +64,13 @@ export function Board({
   cellSize = 56,
   hintInvolved,
   hintChanges,
+  editMode,
+  onCellPaint,
+  onPaintStart,
+  onPaintEnd,
 }: Props) {
   const n = regions.length;
   const boardRef = useRef<HTMLDivElement>(null);
-
   const draggingRef = useRef(false);
   const clickDownCellRef = useRef<[number, number] | null>(null);
 
@@ -77,7 +95,7 @@ export function Board({
       className={styles.board}
       style={{
         gridTemplateColumns: `repeat(${n}, ${cellSize}px)`,
-        cursor: locked ? "default" : undefined,
+        cursor: locked ? "default" : editMode ? "crosshair" : undefined,
         touchAction: "none",
         position: "relative",
       }}
@@ -86,6 +104,13 @@ export function Board({
         const cell = getCellFromPoint(e.clientX, e.clientY);
         if (!cell) return;
         const [r, c] = cell;
+        if (editMode && onCellPaint) {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          draggingRef.current = true;
+          onPaintStart?.();
+          onCellPaint(r, c);
+          return;
+        }
         const visualState = cellStates[r]?.[c] ?? 0;
         if (visualState === 0) {
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -102,9 +127,18 @@ export function Board({
         const cell = getCellFromPoint(e.clientX, e.clientY);
         if (!cell) return;
         const [r, c] = cell;
+        if (editMode && onCellPaint) {
+          onCellPaint(r, c);
+          return;
+        }
         if ((cellStates[r]?.[c] ?? 0) === 0) onCellCross(r, c);
       }}
       onPointerUp={(e) => {
+        if (editMode) {
+          if (draggingRef.current) onPaintEnd?.();
+          draggingRef.current = false;
+          return;
+        }
         if (!draggingRef.current && clickDownCellRef.current) {
           const upCell = getCellFromPoint(e.clientX, e.clientY);
           const [dr, dc] = clickDownCellRef.current;
@@ -116,6 +150,7 @@ export function Board({
         clickDownCellRef.current = null;
       }}
       onPointerCancel={() => {
+        if (editMode && draggingRef.current) onPaintEnd?.();
         draggingRef.current = false;
         clickDownCellRef.current = null;
       }}
@@ -124,11 +159,16 @@ export function Board({
         row.map((region, c) => {
           const cellKey = `${r},${c}`;
           const state = cellStates[r]?.[c] ?? 0;
-          const bg = region != null ? WasmPuzzle.region_color_hex(region) : "#ccc";
           const clashing = state === 1 && clashingSet.has(cellKey);
           const inHintMode = !!hintInvolved;
           const hasHintChange = !!hintChanges?.has(cellKey);
           const isDimmed = inHintMode && !hintInvolved!.has(cellKey) && !hasHintChange;
+
+          const isNull = region === null;
+          const baseStyle = isNull && editMode
+            ? CHECKERBOARD_STYLE
+            : { background: region != null ? WasmPuzzle.region_color_hex(region) : "#ccc" };
+
           return (
             <div
               key={`${r}-${c}`}
@@ -136,15 +176,15 @@ export function Board({
               style={{
                 width: cellSize,
                 height: cellSize,
-                background: bg,
-                cursor: locked ? "default" : "pointer",
+                ...baseStyle,
+                cursor: locked ? "default" : editMode ? "crosshair" : "pointer",
                 borderRight: c === n - 1 ? "none" : BORDER_THIN,
                 borderBottom: r === n - 1 ? "none" : BORDER_THIN,
                 opacity: isDimmed ? 0.35 : 1,
                 position: "relative",
               }}
             >
-              {state === 1 && (
+              {!editMode && state === 1 && (
                 <span
                   className={clashing ? styles.queenClash : styles.queen}
                   style={{ fontSize: Math.round(cellSize * 0.54) }}
@@ -152,7 +192,7 @@ export function Board({
                   ♛
                 </span>
               )}
-              {state === 2 && (
+              {!editMode && state === 2 && (
                 <span
                   className={styles.cross}
                   style={{ fontSize: Math.round(cellSize * 0.36) }}

@@ -154,7 +154,7 @@ On startup the init `useEffect` checks `window.location.hash` before falling bac
 
 Import calls `WasmPuzzle.from_json(text)` and on success replaces all puzzle state (regions, playerStates, timer, history, hint). Errors set `importError` which renders as inline red text below the textarea.
 
-## Milestone status (as of 2026-06-22)
+## Milestone status (as of 2026-06-23)
 
 | # | Milestone | Status |
 |---|-----------|--------|
@@ -164,7 +164,7 @@ Import calls `WasmPuzzle.from_json(text)` and on success replaces all puzzle sta
 | 4 | Solver step-through | ✓ Complete |
 | 5 | Change history | ✓ Complete |
 | 6 | Puzzle import + share | ✓ Complete |
-| 7 | Custom editor | — |
+| 7 | Custom editor | ✓ Complete |
 | 8 | Editor live analysis | — |
 | 9 | Generator UX | — |
 
