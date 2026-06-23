@@ -41,7 +41,9 @@ cargo build --release
 cargo test
 ```
 
-`npm run wasm` runs: `wasm-pack build ../wasm --target web --out-dir ./wasm-pkg`
+`npm run wasm` runs: `wasm-pack build ../wasm --target web --out-dir ../web/wasm-pkg`
+
+Note: `--out-dir` is resolved relative to the crate directory (`../wasm`), so `../web/wasm-pkg` is the correct path to put the package where the web app's `package.json` can find it at `file:./wasm-pkg`.
 
 ## Critical: WASM build target
 
@@ -165,7 +167,7 @@ Import calls `WasmPuzzle.from_json(text)` and on success replaces all puzzle sta
 | 5 | Change history | ✓ Complete |
 | 6 | Puzzle import + share | ✓ Complete |
 | 7 | Custom editor | ✓ Complete |
-| 8 | Editor live analysis | — |
+| 8 | Editor live analysis | ✓ Complete |
 | 9 | Generator UX | — |
 
 See `docs/prd-web-ui.md` for full feature specs and acceptance criteria.

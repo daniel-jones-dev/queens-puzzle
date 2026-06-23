@@ -8,15 +8,13 @@ import { EditControls } from "./components/EditControls";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { ImportModal } from "./components/ImportModal";
-import type { HintState } from "./types";
+import type { HintState, AnalysisResult } from "./types";
 import {
   toBase64Url,
   fromBase64Url,
   computeCellSize,
   readRegions,
   readStates,
-  affectedByQueen,
-  randomNQueens,
   editorHasWork,
   validateEditorBoard,
   hintComplete,
@@ -87,10 +85,16 @@ export function App() {
   const [selectedColor, setSelectedColor] = useState<number | null>(0);
   const [editorPast, setEditorPast] = useState<(number | null)[][][]>([]);
   const paintSnapshotRef = useRef<(number | null)[][] | null>(null);
+  const hasChangedSinceScatter = useRef(false);
   const [playConfirmPending, setPlayConfirmPending] = useState(false);
   const [scatterConfirmPending, setScatterConfirmPending] = useState(false);
+  const [sizeChangePending, setSizeChangePending] = useState<number | null>(null);
   const [playValidationError, setPlayValidationError] = useState<string | null>(null);
   const [exportToast, setExportToast] = useState(false);
+
+  // Live analysis (edit mode)
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const analysisWorkerRef = useRef<Worker | null>(null);
 
   const clashingSet = useMemo(() => {
     const puzzle = puzzleRef.current;
@@ -185,6 +189,47 @@ export function App() {
     if (solved) { setShowBanner(true); setHint(null); setNoHintMsg(false); }
   }, [solved]);
 
+  useEffect(() => {
+    if (mode !== "edit") {
+      setAnalysisResult(null);
+      return;
+    }
+
+    const n = regions.length;
+    if (n === 0) {
+      setAnalysisResult(null);
+      return;
+    }
+
+    const timerId = setTimeout(() => {
+      const puzzle = puzzleRef.current;
+      if (!puzzle) return;
+      const worker = new Worker(new URL("./analysisWorker.ts", import.meta.url), { type: "module" });
+      analysisWorkerRef.current = worker;
+      worker.onmessage = (e: MessageEvent<{ count: number; difficulty: string | null }>) => {
+        const { count, difficulty } = e.data;
+        if (count === 0) setAnalysisResult({ status: "no-solution" });
+        else if (count === 1) setAnalysisResult({ status: "unique", difficulty });
+        else setAnalysisResult({ status: "multiple", count });
+        worker.terminate();
+        if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
+      };
+      worker.onerror = () => {
+        worker.terminate();
+        if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
+      };
+      worker.postMessage({ json: puzzle.to_json() });
+    }, 300);
+
+    return () => {
+      clearTimeout(timerId);
+      if (analysisWorkerRef.current) {
+        analysisWorkerRef.current.terminate();
+        analysisWorkerRef.current = null;
+      }
+    };
+  }, [mode, regions]);
+
   // ── Play mode handlers ────────────────────────────────────────────────
 
   const handleCellCross = useCallback(
@@ -234,9 +279,10 @@ export function App() {
         const next = visualState === 2 ? 1 : 0;
         puzzle.set_cell_state(r, c, next);
         if (next === 1 && autoCrossEnabled) {
-          for (const [ar, ac] of affectedByQueen(r, c, regions, n)) {
-            if (puzzle.cell_state(ar, ac) === 0) puzzle.set_cell_state(ar, ac, 2);
-          }
+          const affected = puzzle.cells_affected_by_queen(r, c);
+          for (let i = 0; i < affected.length; i += 2)
+            if (puzzle.cell_state(affected[i], affected[i + 1]) === 0)
+              puzzle.set_cell_state(affected[i], affected[i + 1], 2);
         }
         setPlayerStates(readStates(puzzle));
         setPast((p) => [...p, snapshot]);
@@ -406,6 +452,7 @@ export function App() {
     setEditorPast([]);
     setSelectedColor(0);
     setPlayValidationError(null);
+    hasChangedSinceScatter.current = false;
     setSettingsOpen(false);
     setMode("edit");
   }, []);
@@ -420,12 +467,13 @@ export function App() {
     setEditorPast([]);
     setSelectedColor(0);
     setPlayValidationError(null);
+    hasChangedSinceScatter.current = false;
     try { localStorage.setItem(EDITOR_KEY, wp.to_json()); } catch {}
     setSettingsOpen(false);
     setMode("edit");
   }, []);
 
-  const handleEditorSizeChange = useCallback((newN: number) => {
+  const doEditorSizeChange = useCallback((newN: number) => {
     const wp = WasmPuzzle.new_empty(newN);
     puzzleRef.current = wp;
     setRegions(readRegions(wp));
@@ -434,8 +482,18 @@ export function App() {
     setSelectedColor((prev) => (prev !== null && prev >= newN ? 0 : prev));
     setEditorPast([]);
     setPlayValidationError(null);
+    hasChangedSinceScatter.current = false;
+    setSizeChangePending(null);
     try { localStorage.setItem(EDITOR_KEY, wp.to_json()); } catch {}
   }, []);
+
+  const handleEditorSizeChange = useCallback((newN: number) => {
+    if (editorHasWork(regions)) {
+      setSizeChangePending(newN);
+    } else {
+      doEditorSizeChange(newN);
+    }
+  }, [regions, doEditorSizeChange]);
 
   const handlePaintStart = useCallback(() => {
     const puzzle = puzzleRef.current;
@@ -449,6 +507,7 @@ export function App() {
       const current = puzzle.cell_region(r, c) ?? null;
       if (current === selectedColor) return;
       puzzle.set_cell_region(r, c, selectedColor ?? undefined);
+      hasChangedSinceScatter.current = true;
       const newRegions = readRegions(puzzle);
       setRegions(newRegions);
       try { localStorage.setItem(EDITOR_KEY, puzzle.to_json()); } catch {}
@@ -475,6 +534,7 @@ export function App() {
         if (region !== null) wp.set_cell_region(r, c, region);
       }
     puzzleRef.current = wp;
+    hasChangedSinceScatter.current = true;
     setRegions(readRegions(wp));
     setEditorPast((p) => p.slice(0, -1));
     try { localStorage.setItem(EDITOR_KEY, wp.to_json()); } catch {}
@@ -485,10 +545,10 @@ export function App() {
     if (!puzzle) return;
     const n = puzzle.n();
     const snapshot = readRegions(puzzle);
-    const queens = randomNQueens(n);
-    const wp = WasmPuzzle.new_empty(n);
-    queens.forEach(([r, c], i) => wp.set_cell_region(r, c, i));
+    const seed = Math.floor(Math.random() * 0xFFFFFFFF);
+    const wp = WasmPuzzle.scatter_queens(n, seed);
     puzzleRef.current = wp;
+    hasChangedSinceScatter.current = false;
     setEditorPast((p) => [...p, snapshot]);
     setRegions(readRegions(wp));
     setScatterConfirmPending(false);
@@ -496,9 +556,7 @@ export function App() {
   }, []);
 
   const handleScatterQueens = useCallback(() => {
-    const puzzle = puzzleRef.current;
-    if (!puzzle) return;
-    if (editorHasWork(readRegions(puzzle))) {
+    if (hasChangedSinceScatter.current) {
       setScatterConfirmPending(true);
     } else {
       doScatterQueens();
@@ -525,6 +583,7 @@ export function App() {
         if (region !== null) wp.set_cell_region(r, c, region);
       }
     puzzleRef.current = wp;
+    hasChangedSinceScatter.current = true;
     setEditorPast((p) => [...p, currRegions]);
     setRegions(readRegions(wp));
     try { localStorage.setItem(EDITOR_KEY, wp.to_json()); } catch {}
@@ -605,6 +664,7 @@ export function App() {
           canUndo={editorPast.length > 0}
           hasWork={hasWork}
           validationError={playValidationError}
+          analysisResult={analysisResult}
           exportToast={exportToast}
           onSelectColor={setSelectedColor}
           onSizeChange={handleEditorSizeChange}
@@ -753,7 +813,13 @@ export function App() {
       {playConfirmPending && (
         <ConfirmModal
           title="Play this puzzle?"
-          detail="This will replace your current puzzle and clear your progress."
+          detail={
+            analysisResult?.status === "no-solution"
+              ? "⚠ This puzzle has no solution. Are you sure you want to play it?"
+              : analysisResult?.status === "multiple"
+              ? `⚠ This puzzle has ${analysisResult.count >= 10 ? "10+" : analysisResult.count} solutions. Are you sure you want to play it?`
+              : "This will replace your current puzzle and clear your progress."
+          }
           confirmLabel="Play"
           confirmColor="#27ae60"
           onConfirm={doSwitchToPlay}
@@ -769,6 +835,17 @@ export function App() {
           confirmColor="#2980b9"
           onConfirm={doScatterQueens}
           onCancel={() => setScatterConfirmPending(false)}
+        />
+      )}
+
+      {sizeChangePending !== null && (
+        <ConfirmModal
+          title={`Change to ${sizeChangePending}×${sizeChangePending}?`}
+          detail="All painted regions will be cleared."
+          confirmLabel="Change size"
+          confirmColor="#2980b9"
+          onConfirm={() => doEditorSizeChange(sizeChangePending)}
+          onCancel={() => setSizeChangePending(null)}
         />
       )}
     </div>

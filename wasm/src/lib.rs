@@ -1,4 +1,4 @@
-use queens_puzzle_core::generator::generate_puzzle;
+use queens_puzzle_core::generator::{generate_puzzle, scatter_queens as core_scatter_queens};
 use queens_puzzle_core::grid::Cell;
 use queens_puzzle_core::io::json;
 use queens_puzzle_core::puzzle::{region_color, QueensPuzzle, State};
@@ -31,6 +31,13 @@ impl WasmPuzzle {
     pub fn generate(n: usize, seed: u32) -> WasmPuzzle {
         WasmPuzzle {
             inner: generate_puzzle(n, seed as u64),
+        }
+    }
+
+    /// Create an n×n puzzle with n non-attacking queens placed as single-cell starter regions.
+    pub fn scatter_queens(n: usize, seed: u32) -> WasmPuzzle {
+        WasmPuzzle {
+            inner: core_scatter_queens(n, seed as u64),
         }
     }
 
@@ -98,8 +105,35 @@ impl WasmPuzzle {
         })
     }
 
+    /// Returns flattened [row, col, ...] pairs for all cells affected by a queen at (row, col).
+    /// Includes same row, column, region, and diagonally adjacent cells; excludes the queen itself.
+    /// Duplicates are removed.
+    pub fn cells_affected_by_queen(&self, row: usize, col: usize) -> Vec<u32> {
+        let mut seen = std::collections::HashSet::new();
+        let mut result = Vec::new();
+        for cell in self.inner.connected_cells(Cell { row, col }) {
+            if seen.insert((cell.row, cell.col)) {
+                result.push(cell.row as u32);
+                result.push(cell.col as u32);
+            }
+        }
+        result
+    }
+
     pub fn is_solved(&self) -> bool {
         self.inner.is_solved()
+    }
+
+    /// Count solutions for the current region layout (ignoring player state). Capped at 10.
+    pub fn count_solutions(&self) -> u32 {
+        let mut clone = self.inner.clone();
+        for row in 0..clone.n() {
+            for col in 0..clone.n() {
+                clone.set_cell_state(Cell { row, col }, State::Unknown);
+            }
+        }
+        let mut solutions = Vec::new();
+        solver::brute_force::solve(&mut clone, &mut solutions) as u32
     }
 
     /// Returns the difficulty string, or `undefined` if it cannot be determined.

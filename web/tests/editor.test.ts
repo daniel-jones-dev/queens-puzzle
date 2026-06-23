@@ -121,18 +121,24 @@ test.describe("Editor: scatter queens", () => {
     ).toBeEnabled();
   });
 
-  test("scatter on non-empty board shows confirmation", async ({ page }) => {
+  test("scatter after user edit shows confirmation", async ({ page }) => {
     await freshLoad(page);
     await page.click("button[title='Settings']");
     await page.waitForTimeout(300);
     await page.locator("text=New puzzle (Editor)…").click();
     await page.waitForTimeout(400);
 
-    // First scatter (no confirm)
+    // First scatter (no confirm — nothing changed yet)
     await page.locator("button:has-text('Scatter queens')").click();
     await page.waitForTimeout(300);
 
-    // Second scatter → confirm
+    // Paint a cell to mark a change since last scatter
+    const board = page.locator('[class*="board"]').first();
+    await page.locator("button[title='Region 1']").click();
+    await clickCell(page, board, (await board.boundingBox())!.width / 7, 0, 0);
+    await page.waitForTimeout(100);
+
+    // Second scatter → confirm because board changed
     await page.locator("button:has-text('Scatter queens')").click();
     await page.waitForTimeout(300);
     await expect(page.locator("text=Clear and scatter queens?")).toBeVisible();
@@ -140,6 +146,24 @@ test.describe("Editor: scatter queens", () => {
     await page.locator("button:has-text('Cancel')").last().click();
     await page.waitForTimeout(200);
     await expect(page.locator("text=Clear and scatter queens?")).not.toBeVisible();
+  });
+
+  test("scatter immediately after scatter needs no confirmation", async ({ page }) => {
+    await freshLoad(page);
+    await page.click("button[title='Settings']");
+    await page.waitForTimeout(300);
+    await page.locator("text=New puzzle (Editor)…").click();
+    await page.waitForTimeout(400);
+
+    // First scatter
+    await page.locator("button:has-text('Scatter queens')").click();
+    await page.waitForTimeout(300);
+
+    // Second scatter immediately — no changes made, so no confirm
+    await page.locator("button:has-text('Scatter queens')").click();
+    await page.waitForTimeout(300);
+    await expect(page.locator("text=Clear and scatter queens?")).not.toBeVisible();
+    await expect(page.locator("button:has-text('Shuffle colours')")).toBeEnabled();
   });
 
   test("shuffle colours enabled after scatter, undo works", async ({
@@ -151,13 +175,10 @@ test.describe("Editor: scatter queens", () => {
     await page.locator("text=Edit this puzzle").click();
     await page.waitForTimeout(400);
 
+    // First scatter after entering edit: no confirm regardless of existing regions
     await page.locator("button:has-text('Scatter queens')").click();
     await page.waitForTimeout(300);
-    // May show confirm if puzzle was non-empty
-    if (await page.locator("text=Clear and scatter queens?").isVisible()) {
-      await page.getByRole("button", { name: "Scatter", exact: true }).click();
-      await page.waitForTimeout(300);
-    }
+    await expect(page.locator("text=Clear and scatter queens?")).not.toBeVisible();
 
     await page.locator("button:has-text('Shuffle colours')").click();
     await page.waitForTimeout(200);
@@ -266,7 +287,9 @@ test.describe("Editor: validation and play", () => {
 });
 
 test.describe("Editor: size picker and export", () => {
-  test("size picker updates palette and resets board", async ({ page }) => {
+  test("size picker on empty board changes immediately without confirm", async ({
+    page,
+  }) => {
     await freshLoad(page);
     await page.click("button[title='Settings']");
     await page.waitForTimeout(300);
@@ -286,6 +309,39 @@ test.describe("Editor: size picker and export", () => {
     await expect(
       page.locator("button:has-text('Shuffle colours')"),
     ).toBeDisabled();
+  });
+
+  test("size picker on non-empty board shows confirm dialog", async ({
+    page,
+  }) => {
+    await freshLoad(page);
+    await page.click("button[title='Settings']");
+    await page.waitForTimeout(300);
+    await page.locator("text=New puzzle (Editor)…").click();
+    await page.waitForTimeout(400);
+
+    // Paint a cell to make the board non-empty
+    const board = page.locator('[class*="board"]').first();
+    await page.locator("button[title='Region 1']").click();
+    await clickCell(page, board, (await board.boundingBox())!.width / 7, 0, 0);
+    await page.waitForTimeout(100);
+
+    // Size change → confirm
+    await page.selectOption("select", "4");
+    await page.waitForTimeout(300);
+    await expect(page.locator("text=Change to 4×4?")).toBeVisible();
+
+    // Cancel → size stays at 7
+    await page.locator("button:has-text('Cancel')").last().click();
+    await page.waitForTimeout(200);
+    expect(await page.locator("button[title^='Region']").count()).toBe(7);
+
+    // Confirm → size changes to 4
+    await page.selectOption("select", "4");
+    await page.waitForTimeout(300);
+    await page.locator("button:has-text('Change size')").click();
+    await page.waitForTimeout(300);
+    expect(await page.locator("button[title^='Region']").count()).toBe(4);
   });
 
   test("Export JSON button is present and clickable", async ({ page }) => {

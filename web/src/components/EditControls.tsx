@@ -1,5 +1,6 @@
 import React from "react";
 import { WasmPuzzle } from "queens-puzzle-wasm";
+import type { AnalysisResult } from "../types";
 
 const CHECKERBOARD_BG: React.CSSProperties = {
   backgroundImage:
@@ -29,6 +30,7 @@ interface Props {
   canUndo: boolean;
   hasWork: boolean;
   validationError: string | null;
+  analysisResult: AnalysisResult | null;
   exportToast: boolean;
   onSelectColor: (color: number | null) => void;
   onSizeChange: (n: number) => void;
@@ -40,6 +42,26 @@ interface Props {
   children: React.ReactNode;
 }
 
+function renderAnalysis(result: AnalysisResult | null): React.ReactNode {
+  if (!result) return null;
+  switch (result.status) {
+    case "no-solution":
+      return <span style={{ color: "#c0392b", fontWeight: "bold" }}>✗ No solution</span>;
+    case "multiple":
+      return (
+        <span style={{ color: "#b8860b", fontWeight: "bold" }}>
+          ⚠ {result.count >= 10 ? "10+" : result.count} solution{result.count === 1 ? "" : "s"}
+        </span>
+      );
+    case "unique":
+      return (
+        <span style={{ color: "#27ae60", fontWeight: "bold" }}>
+          ✓ Unique solution{result.difficulty ? ` — ${result.difficulty}` : ""}
+        </span>
+      );
+  }
+}
+
 export function EditControls({
   n,
   boardPx,
@@ -47,6 +69,7 @@ export function EditControls({
   canUndo,
   hasWork,
   validationError,
+  analysisResult,
   exportToast,
   onSelectColor,
   onSizeChange,
@@ -57,6 +80,8 @@ export function EditControls({
   onPlay,
   children,
 }: Props) {
+  const analysisWarning =
+    analysisResult?.status === "no-solution" || analysisResult?.status === "multiple";
   return (
     <div style={{ width: Math.max(boardPx, 300), maxWidth: "calc(100vw - 2rem)" }}>
       {/* Header */}
@@ -117,14 +142,14 @@ export function EditControls({
           onClick={onPlay}
           style={{
             ...btn,
-            background: "#2980b9",
+            background: analysisWarning ? "#e67e22" : "#2980b9",
             color: "white",
             border: "none",
             fontWeight: "bold",
           }}
-          title="Play this puzzle"
+          title={analysisWarning ? "Play this puzzle (warning: not a unique puzzle)" : "Play this puzzle"}
         >
-          Play ▶
+          {analysisWarning ? "Play ▶ !" : "Play ▶"}
         </button>
       </div>
 
@@ -147,6 +172,11 @@ export function EditControls({
 
       {/* Board (Grid) injected here */}
       {children}
+
+      {/* Analysis indicator */}
+      <div style={{ marginTop: "0.4rem", fontSize: "0.82rem", minHeight: "1.2em" }}>
+        {renderAnalysis(analysisResult)}
+      </div>
 
       {/* Colour palette */}
       <div

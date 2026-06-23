@@ -69,3 +69,14 @@ pub fn generate_puzzle(n: usize, seed: u64) -> QueensPuzzle {
 
     puzzle
 }
+
+/// Place n non-attacking queens as single-cell starter regions.
+pub fn scatter_queens(n: usize, seed: u64) -> QueensPuzzle {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let queens = shuffle_queens::shuffle_queens(n, &mut rng).unwrap_or_default();
+    let mut puzzle = QueensPuzzle::new_empty(n);
+    for (i, cell) in queens.iter().enumerate() {
+        puzzle.set_cell_region(*cell, Some(i as u8));
+    }
+    puzzle
+}
