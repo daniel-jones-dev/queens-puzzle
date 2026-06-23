@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { WasmPuzzle } from "queens-puzzle-wasm";
-import styles from "./Board.module.css";
+import styles from "./Grid.module.css";
 
 interface Props {
   regions: (number | null)[][];
@@ -10,11 +10,8 @@ interface Props {
   onCellClick: (row: number, col: number, visualState: number) => void;
   locked?: boolean;
   cellSize?: number;
-  /** When set, cells NOT in this set are dimmed (hint mode). */
   hintInvolved?: Set<string>;
-  /** Cells that would be changed by the hint — shown with a green border. */
   hintChanges?: Set<string>;
-  /** Edit mode: paints region colours instead of placing queens/crosses. */
   editMode?: boolean;
   onCellPaint?: (row: number, col: number) => void;
   onPaintStart?: () => void;
@@ -23,7 +20,6 @@ interface Props {
 
 const BORDER_THIN = "1px solid rgba(0,0,0,0.15)";
 
-// CSS checkerboard background for unassigned cells in edit mode
 const CHECKERBOARD_STYLE = {
   backgroundImage:
     "linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%)," +
@@ -54,7 +50,7 @@ function regionBorderSegments(regions: (number | null)[][], cellSize: number): S
   return segs;
 }
 
-export function Board({
+export function Grid({
   regions,
   cellStates,
   clashingSet,
@@ -127,10 +123,7 @@ export function Board({
         const cell = getCellFromPoint(e.clientX, e.clientY);
         if (!cell) return;
         const [r, c] = cell;
-        if (editMode && onCellPaint) {
-          onCellPaint(r, c);
-          return;
-        }
+        if (editMode && onCellPaint) { onCellPaint(r, c); return; }
         if ((cellStates[r]?.[c] ?? 0) === 0) onCellCross(r, c);
       }}
       onPointerUp={(e) => {
@@ -193,10 +186,7 @@ export function Board({
                 </span>
               )}
               {!editMode && state === 2 && (
-                <span
-                  className={styles.cross}
-                  style={{ fontSize: Math.round(cellSize * 0.36) }}
-                >
+                <span className={styles.cross} style={{ fontSize: Math.round(cellSize * 0.36) }}>
                   ✕
                 </span>
               )}
@@ -216,7 +206,6 @@ export function Board({
         })
       )}
 
-      {/* SVG region borders — square linecap fills corner pixels correctly */}
       <svg
         style={{
           position: "absolute",
@@ -230,10 +219,7 @@ export function Board({
         {segments.map((s, i) => (
           <line
             key={i}
-            x1={s.x1}
-            y1={s.y1}
-            x2={s.x2}
-            y2={s.y2}
+            x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
             stroke="#333"
             strokeWidth={3}
             strokeLinecap="square"

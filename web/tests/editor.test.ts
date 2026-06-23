@@ -82,18 +82,24 @@ test.describe("Editor: undo / back", () => {
     await expect(page.locator("button:has-text('↩ Undo')")).toBeDisabled();
   });
 
-  test("← Back restores play mode", async ({ page }) => {
+  test("'Edit this puzzle' clears cell states on entry", async ({ page }) => {
     await freshLoad(page);
+
+    // Place a cross in play mode first
+    const board = page.locator('[class*="board"]').first();
+    const bb = await board.boundingBox();
+    if (!bb) throw new Error("board not found");
+    await page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+    await expect(board.locator("[class*='cross']").first()).toBeVisible();
+
+    // Enter edit mode — crosses should be cleared
     await page.click("button[title='Settings']");
     await page.waitForTimeout(300);
     await page.locator("text=Edit this puzzle").click();
     await page.waitForTimeout(400);
 
-    await page.locator("button:has-text('← Back')").click();
-    await page.waitForTimeout(300);
-
-    await expect(page.locator("text=EDITOR")).not.toBeVisible();
-    await expect(page.locator("button:has-text('Hint')")).toBeVisible();
+    await expect(page.locator("text=EDITOR")).toBeVisible();
+    await expect(board.locator("[class*='cross']")).toHaveCount(0);
   });
 });
 
