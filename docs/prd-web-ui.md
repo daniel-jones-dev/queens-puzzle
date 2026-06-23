@@ -411,6 +411,88 @@ No state management library is needed at this scale; React `useState` / `useRedu
 
 ---
 
+## Frontend component design
+
+App.tsx is the single state hub: all `useState` hooks, `WasmPuzzle` interactions, and derived
+values live there. Components below it are presentational — they receive plain data props and
+callbacks, never touch WASM directly.
+
+```
+App
+├── Grid              (web/src/components/Grid.tsx)
+├── PlayControls      (web/src/components/PlayControls.tsx)
+├── HintBar           (web/src/components/HintBar.tsx)
+├── SolvedBanner      (web/src/components/SolvedBanner.tsx)
+├── EditControls      (web/src/components/EditControls.tsx)
+├── SettingsPanel     (web/src/components/SettingsPanel.tsx)
+├── ConfirmModal      (web/src/components/ConfirmModal.tsx)
+└── ImportModal       (web/src/components/ImportModal.tsx)
+```
+
+### State model: one WasmPuzzle ref
+
+App maintains a single `puzzleRef` holding the one active `WasmPuzzle`. Play mode and edit mode
+share it — there is no second editor ref.
+
+- **Entering edit mode** ("Edit this puzzle" or "New puzzle (Editor)…") clears all cell states to
+  Unknown (removing in-progress crosses and queens) and flips `mode` to `"edit"`. For a fresh
+  board, `puzzleRef.current` is replaced with `WasmPuzzle.new_empty(n)` first.
+- **While editing**, paint strokes call `set_cell_region` directly on `puzzleRef.current`. Undo
+  snapshots are `(number | null)[][]` region arrays — no serialisation needed.
+- **"Play ▶"** validates completeness and flips `mode` to `"play"`. This is the only way to exit
+  edit mode.
+
+Keeping a single live `WasmPuzzle` in the editor means milestone 8 (live analysis) can call solver
+methods directly on `puzzleRef.current` without any conversion step.
+
+App derives the plain arrays that Grid and other components need from the active ref:
+`regions` from `cell_region(r, c)` and `cellStates` from `cell_state(r, c)`.
+
+### Grid
+Renamed from `Board`. Owns only the visual grid and pointer-event handling. Props are always plain
+arrays (`regions: (number | null)[][]`, `cellStates: number[][]`); App is responsible for deriving
+these from the active `WasmPuzzle` ref before each render. Grid never receives a WASM object
+directly — keeping it pure simplifies testing and means it works identically in both modes.
+Outputs pointer events via callbacks (`onCellClick`, `onCellCross`, `onCellPaint`, `onPaintStart`,
+`onPaintEnd`). SVG border overlay stays internal.
+
+### PlayControls
+The full controls row rendered below the board in play mode: Hint button (left), Timer (centred,
+`pointerEvents: none`), and the ↩ / ⚙ / 🗑 group (right). Receives `onHint`, `onUndo`,
+`onSettings`, `onReset` callbacks and display state (`timerElapsed`, `timerRunning`, `solved`,
+`canUndo`, `hintActive`).
+
+### HintBar
+Shown below PlayControls while a hint is active. Displays the hint `description` and renders
+Apply / Dismiss buttons. Receives `hint: HintState | null`; renders nothing when `null`.
+
+### SolvedBanner
+The congratulations banner shown when the puzzle is solved. Always occupies its layout height
+(`visibility: hidden` when not solved) so the board never shifts. Receives `solved: boolean` and
+`elapsed: number` (to display finishing time). Renders as an empty placeholder when `!solved`.
+
+### EditControls
+All editor chrome that appears in edit mode: the n-colour palette + eraser, the toolbar (Scatter
+queens, Shuffle colours, ↩ Undo, Export JSON), the board-size picker, and the Play ▶ button. Receives `n`, `selectedColor`, `canUndo`, `canShuffle` as data and callbacks for every
+action. Validation errors are passed in as `validationError: string | null`.
+
+### SettingsPanel
+The flyout panel anchored to the ⚙ button. Receives its `anchorRect` (computed via
+`getBoundingClientRect` at open time) and renders at `position: fixed` to avoid stacking-context
+issues. Contains the auto-cross toggle, timer toggle, Import puzzle…, Share puzzle, Edit this
+puzzle, and New puzzle (Editor)… controls.
+
+### ConfirmModal
+Generic reusable confirm dialog. Props: `message`, `confirmLabel`, `onConfirm`, `onCancel`. Used
+for reset confirmation, scatter-queens confirmation, and the play-from-editor confirmation.
+Replacing three near-identical inline modals with one component.
+
+### ImportModal
+Modal with a JSON textarea, Import / Cancel buttons, and an inline error message. Owns the textarea
+value as local state; surfaces the submitted JSON string via `onImport(json: string)`.
+
+---
+
 ## Milestones
 
 | # | Milestone | Deliverable |
