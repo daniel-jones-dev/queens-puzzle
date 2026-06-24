@@ -12,6 +12,7 @@ interface Props {
   onTimerEnabled: (v: boolean) => void;
   onShare: () => void;
   onImport: () => void;
+  onGenerate: () => void;
   onEditFromPlay: () => void;
   onNewPuzzle: () => void;
   onClose: () => void;
@@ -35,6 +36,7 @@ export function SettingsPanel({
   onTimerEnabled,
   onShare,
   onImport,
+  onGenerate,
   onEditFromPlay,
   onNewPuzzle,
   onClose,
@@ -87,6 +89,9 @@ export function SettingsPanel({
         </button>
         <button onClick={onImport} style={menuBtn}>
           Import puzzle…
+        </button>
+        <button onClick={onGenerate} style={menuBtn}>
+          Generate puzzle…
         </button>
         <hr style={{ margin: "0.1rem 0", border: "none", borderTop: "1px solid #eee" }} />
         <button onClick={onEditFromPlay} style={menuBtn}>

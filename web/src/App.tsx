@@ -8,6 +8,7 @@ import { EditControls } from "./components/EditControls";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { ImportModal } from "./components/ImportModal";
+import { GenerateModal } from "./components/GenerateModal";
 import type { HintState, AnalysisResult } from "./types";
 import {
   toBase64Url,
@@ -75,6 +76,7 @@ export function App() {
   const [resetPending, setResetPending] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [generateOpen, setGenerateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<{ bottom: number; right: number } | null>(null);
   const clusterRef = useRef<HTMLDivElement>(null);
@@ -419,6 +421,34 @@ export function App() {
       setImportError(null);
     } catch (e) {
       setImportError(String(e).replace(/^.*?Error:\s*/, ""));
+    }
+  }, []);
+
+  const handleGenerateLoad = useCallback((json: string) => {
+    try {
+      const puzzle = WasmPuzzle.from_json(json);
+      puzzleRef.current = puzzle;
+      if (timerIntervalRef.current !== null) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setCellSize(computeCellSize(puzzle.n()));
+      setRegions(readRegions(puzzle));
+      setPlayerStates(readStates(puzzle));
+      setPast([]);
+      setHint(null);
+      setNoHintMsg(false);
+      setSolved(false);
+      setShowBanner(false);
+      setTimerElapsed(0);
+      setTimerRunning(false);
+      try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+      try { localStorage.removeItem(TIMER_KEY); } catch {}
+      setGenerateOpen(false);
+      setSettingsOpen(false);
+      setMode("play");
+    } catch (e) {
+      setError(String(e));
     }
   }, []);
 
@@ -784,6 +814,10 @@ export function App() {
             setImportError(null);
             setSettingsOpen(false);
           }}
+          onGenerate={() => {
+            setGenerateOpen(true);
+            setSettingsOpen(false);
+          }}
           onEditFromPlay={handleEnterEditFromPuzzle}
           onNewPuzzle={handleEnterEditFresh}
           onClose={() => setSettingsOpen(false)}
@@ -806,6 +840,13 @@ export function App() {
           error={importError}
           onImport={handleImport}
           onCancel={() => { setImportOpen(false); setImportError(null); }}
+        />
+      )}
+
+      {generateOpen && (
+        <GenerateModal
+          onLoad={handleGenerateLoad}
+          onCancel={() => setGenerateOpen(false)}
         />
       )}
 
