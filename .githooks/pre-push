@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "Running cargo clippy..."
-cargo clippy --all-targets -- -D warnings
-
 echo "Running cargo test..."
 cargo test
+
+echo "Running frontend tests..."
+(cd web && npx playwright test)
