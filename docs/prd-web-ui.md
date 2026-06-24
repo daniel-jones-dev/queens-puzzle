@@ -505,7 +505,7 @@ value as local state; surfaces the submitted JSON string via `onImport(json: str
 | 6 | Puzzle import + share ✓ | JSON import modal (inline errors, states preserved); base64url share URL; hash-on-load with fallback |
 | 7 | Custom editor ✓ | Edit-from-play; fresh board; scatter queens (with confirmation); shuffle colours; n-colour palette; JSON export |
 | 8 | Editor live analysis ✓ | 300ms-debounced background analysis; cancellable; three indicator states (no-solution / multiple / unique); runs on partial and complete boards; Play "!" for non-unique puzzles; size-change confirmation when board has work; scatter confirmation only after user edits since last scatter |
-| 9 | Generator UX | Generate button; size selector; optional seed (u32); Web Worker; difficulty shown |
+| 9 | Generator UX ✓ | Generate button; size selector; optional seed (u32); Web Worker; difficulty shown |
 
 ---
 
