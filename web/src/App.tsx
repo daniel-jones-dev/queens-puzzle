@@ -275,7 +275,6 @@ export function App() {
       const snapshot = readStates(puzzle);
       try {
         setTimerRunning(true);
-        const n = puzzle.n();
         const next = visualState === 2 ? 1 : 0;
         puzzle.set_cell_state(r, c, next);
         if (next === 1 && autoCrossEnabled) {

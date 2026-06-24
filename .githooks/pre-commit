@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+# Check if any staged .rs files exist
+if git diff --cached --name-only | grep -q '\.rs$'; then
+  echo "Running cargo fmt --check..."
+  cargo fmt --check
+fi
+
+# Check if any staged web source files exist
+if git diff --cached --name-only | grep -q 'web/src/.*\.\(ts\|tsx\)$'; then
+  echo "Running tsc --noEmit..."
+  (cd web && npx tsc --noEmit)
+  echo "Running eslint..."
+  (cd web && npx eslint src)
+fi
