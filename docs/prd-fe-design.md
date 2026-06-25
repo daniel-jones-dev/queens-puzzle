@@ -14,12 +14,19 @@ All views support hotkeys (e.g. `Ctrl+Z` to undo, `H` to show hint).
 
 Four top-level tabs replace the current single-page mode-toggle:
 
-| Tab | Route | Purpose |
-|-----|-------|---------|
-| Play | `/` | Solve a puzzle |
-| Solve | `/solve` | Step through the solver with explanations |
-| Editor | `/editor` | Design a custom puzzle |
-| Generator | `/generator` | Run and manage puzzle generation |
+| Tab | Route        | Purpose                                    |
+|-----|--------------|--------------------------------------------|
+| Play | `/play`      | Solve a puzzle (default, redirects from /) |
+| Solve | `/solve`     | Step through the solver with explanations  |
+| Editor | `/editor`    | Design a custom puzzle                     |
+| Generator | `/generator` | Run and manage puzzle generation           |
+
+feedback
+> some more ideas:
+> - solver-rules page that explains the rules in more detail
+> - puzzle importer to import a puzzle from a screenshot eg from linkedin
+> - i want to include an optional name, source, difficulty fields in the puzzle representation (and correspondingly in the json and other formats) 
+> - editor should have hotkeys to change tool (e.g. numbers for colours), make a suggestion in prd
 
 ---
 
@@ -68,6 +75,10 @@ A step-through view that exposes the solver's internal reasoning.
 ## Generator
 
 ### Management view
+feedback:
+> actually would be clearer if from the generator page, opening a given puzzle opens in a new tab. but still, it should
+> not interfere with the generator page
+ 
 The generator becomes a persistent background management view rather than a blocking modal.
 
 - **Worker panel**: shows in-progress searches from one or more workers, with live status.
