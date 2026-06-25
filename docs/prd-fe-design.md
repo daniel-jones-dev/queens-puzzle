@@ -140,36 +140,59 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 
 ---
 
+## Decisions
+
+- **Settings location**: Dropdown panel anchored to a ⚙ Settings ▾ button in the header right (not a page or slide-in drawer)
+- **Screenshot importer**: Client-side — WASM/canvas, faster and works offline
+- **About page**: Probably not needed as a separate page; too little content. May fold into footer or a tooltip.
+- **Tutorial/rules pages**: TBD — see trade-offs below
+
+### Tutorial/rules pages: SPA routes vs. static pages
+
+**SPA routes** (`/tutorial`, `/rules` inside the React app):
+- Pro: consistent header/nav, can deep-link to specific rules, no extra deploy step
+- Con: slightly larger JS bundle, rules content needs to live in the repo as JSX/MDX
+
+**Static pages** (separate HTML files, e.g. `tutorial.html`):
+- Pro: zero JS overhead, easy to author in plain HTML/markdown, faster first load
+- Con: loses the shared nav header unless duplicated; harder to link to board state
+
+Recommendation: SPA routes — the nav consistency is worth it and rules content is small.
+
+## Play layout
+
+Below the board, three rows:
+1. **Controls**: `[Hint]` — `[02:34]` — `[Undo]` `[Reset]`
+2. **How to play** (collapsible, collapsed by default): one-line rules summary
+3. **Actions**: `[Open in Solver]` `[Open in Editor]` `[Share]`
+   - Open in Solver / Editor navigate the current page (not a new tab)
+   - Share copies the current puzzle URL (base64url fragment) to clipboard
+
+## Header
+
+The header uses a three-column grid: logo (left) · nav tabs (centre) · settings (right). This prevents the settings button from colliding with the tab row at any viewport width.
+
+Settings ▾ opens a dropdown panel containing: Share puzzle, Import puzzle, New game, Export, and cross-links to Solver/Editor.
+
+## Editor layout
+
+Tools and the colour palette sit **below the board**, not above it. The toolbar contains three tools:
+- **🪄 Paint** (default): drag to paint the active colour
+- **Reset region** (checkerboard icon): click to clear all cells in a region
+- **Toggle queen** (♛): manually override a queen position
+
+Keyboard hotkeys `1`–`N` switch the active colour.
+
+## Generator
+
+Worker cards show:
+- Seed value — when the user left the seed blank, the resolved random seed is shown (e.g. `7,834,920 (auto)`)
+- Stopped workers show **Restart** and **Delete** buttons instead of Stop
+
+## Solve
+
+Solver rules are grouped into **Easy / Medium / Hard** difficulty categories. Each rule name is a link to its entry on the `/rules` reference page.
+
 ## Open questions
 
-- Tutorial/rules pages: same SPA routes or separate static pages?
-  - feedback: not sure, give me pros and cons
-- Settings: slide-in drawer, dedicated page, or floating panel?
-  - feedback: i think it should be a dropdown panel in the header
-- Screenshot importer: client-side (WASM/canvas) or server-side OCR?
-  - feedback: i think it should be client-side, because it is faster and more reliable
-- About page: add `/about` to the footer? What would it contain?
-  - feedback: it would just be a short info about the project motivation and author. maybe it is so little info it isnt necessary to click
-- Play mode secondary actions: should there be "View solver steps" and "Edit this puzzle" links visible in Play mode?
-  - feedback: below the puzzle, there should be a few rows:
-    - first row: Hint / timer / Undo / reset
-    - next row: collapsible How To Play (with very short rules description) (by defualt collapsed)
-    - next row: Buttons with "Open puzzle in Solver" and "Open puzzle in Editor" and Share
-      - the first 2 buttons change the current page, share copies current state URL to clipboard, 
-
-## More Feedback
-- the toolbar is broken at the moment, seems settings clashes with in. figure out a clean way to show both the other tabs and settings near the top but not have them interfere with each other
-
-### editor
-- combine tool and colours and put them below the puzzle
-- the color-by-drag brush gets a 🪄 emoji
-- add a toggle queen tool button
-
-### generator
-- for random seed, show the actual seed used in the UI
-- have buttons to delete workers too, after stopping them 
-
-### solver
-- when a rule is selected, it should have a link to the explanation page
-- categorise rules by difficulty
-- 
+- Tutorial/rules pages: recommendation is SPA routes — confirm?

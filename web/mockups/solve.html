@@ -12,15 +12,15 @@
     :root { --bg:#F8F8F5; --surface:#fff; --text:#1A1A18; --text2:#6B6B62; --accent:#2B3A5E; --border:#E2E2DC; }
     body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; font-size:14px; min-height:100vh; display:flex; flex-direction:column; }
 
-    header { background:var(--surface); border-bottom:1px solid var(--border); padding:0 28px; height:56px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    header { background:var(--surface); border-bottom:1px solid var(--border); height:56px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 28px; flex-shrink:0; position:relative; }
     .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:22px; color:var(--accent); text-decoration:none; }
-    .header-middle { display:flex; }
+    nav { display:flex; justify-content:center; }
     nav a { font-size:14px; font-weight:500; padding:0 18px; height:56px; display:flex; align-items:center; text-decoration:none; color:var(--text2); border-bottom:2.5px solid transparent; transition:color 0.12s; }
     nav a:hover { color:var(--text); }
     nav a.active { color:var(--text); border-bottom-color:var(--accent); }
-    .header-right { display:flex; align-items:center; }
-    .icon-btn { background:none; border:none; padding:8px; border-radius:6px; cursor:pointer; color:var(--text2); font-size:16px; line-height:1; transition:background 0.1s; }
-    .icon-btn:hover { background:var(--bg); color:var(--text); }
+    .header-right { display:flex; justify-content:flex-end; }
+    .settings-btn { background:none; border:none; padding:7px 10px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text2); font-family:'Inter',sans-serif; transition:background 0.1s; }
+    .settings-btn:hover { background:var(--bg); color:var(--text); }
 
     main { flex:1; display:flex; justify-content:center; padding:36px 28px 32px; }
     .layout { display:flex; gap:32px; align-items:flex-start; width:100%; max-width:780px; }
@@ -37,30 +37,36 @@
 
     .step-nav { display:flex; align-items:center; gap:10px; width:100%; }
     .step-label { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text2); flex:1; text-align:center; }
-    .btn { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:7px 16px; border-radius:6px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background 0.1s; }
+    .btn { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:7px 16px; border-radius:6px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background 0.1s; white-space:nowrap; }
     .btn:hover { background:var(--bg); border-color:#C8C8C0; }
     .btn:disabled { opacity:0.4; cursor:default; }
     .btn-sm { padding:5px 12px; font-size:12px; }
     .btn-accent { background:var(--accent); border-color:var(--accent); color:white; }
     .btn-accent:hover { background:#233050; }
 
-    .continue-row { display:flex; justify-content:center; }
-
+    /* Rules panel */
     .rules-panel { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
     .rules-header { padding:14px 18px 12px; border-bottom:1px solid var(--border); display:flex; align-items:baseline; justify-content:space-between; }
     .rules-title { font-weight:600; font-size:14px; }
     .rules-meta  { font-size:12px; color:var(--text2); cursor:pointer; }
     .rules-meta:hover { color:var(--accent); }
-    .rule-list { padding:8px 0; }
-    .rule-item { padding:10px 18px; display:flex; align-items:flex-start; gap:12px; border-left:3px solid transparent; }
-    .rule-item.done   { opacity:0.55; }
+
+    .rule-category { padding:8px 18px 4px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--text2); }
+    .rule-category-line { height:1px; background:var(--border); margin:0 18px 4px; }
+
+    .rule-item { padding:9px 18px; display:flex; align-items:flex-start; gap:11px; border-left:3px solid transparent; }
+    .rule-item.done   { opacity:0.5; }
     .rule-item.active { background:#EEF1F8; border-left-color:var(--accent); }
     .rule-item.active .rule-name { color:var(--accent); }
     .rule-icon { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; margin-top:1px; }
     .rule-item.done   .rule-icon { background:#d1fae5; color:#065f46; }
     .rule-item.active .rule-icon { background:var(--accent); color:white; }
     .rule-item.pending .rule-icon { background:var(--border); color:var(--text2); }
+    .rule-body { flex:1; }
+    .rule-name-row { display:flex; align-items:baseline; gap:8px; }
     .rule-name { font-weight:500; font-size:13px; line-height:1.4; }
+    .rule-link { font-size:11px; color:var(--accent); text-decoration:none; opacity:0.8; }
+    .rule-link:hover { opacity:1; text-decoration:underline; }
     .rule-desc { font-size:12px; color:var(--text2); line-height:1.55; margin-top:4px; }
     .rule-desc strong { color:var(--text); font-weight:600; }
 
@@ -77,16 +83,14 @@
 
 <header>
   <a class="logo" href="play.html">♛ Queens</a>
-  <div class="header-middle">
-    <nav>
-      <a href="play.html">Play</a>
-      <a href="solve.html" class="active">Solve</a>
-      <a href="editor.html">Editor</a>
-      <a href="generator.html">Generator</a>
-    </nav>
-  </div>
+  <nav>
+    <a href="play.html">Play</a>
+    <a href="solve.html" class="active">Solve</a>
+    <a href="editor.html">Editor</a>
+    <a href="generator.html">Generator</a>
+  </nav>
   <div class="header-right">
-    <button class="icon-btn" title="Settings">⚙</button>
+    <button class="settings-btn">⚙ Settings ▾</button>
   </div>
 </header>
 
@@ -100,65 +104,96 @@
         <span class="step-label">Step 3 of 14</span>
         <button class="btn btn-sm">Next →</button>
       </div>
-      <div class="continue-row">
-        <button class="btn btn-accent btn-sm">Continue playing from here →</button>
-      </div>
+      <button class="btn btn-accent btn-sm" style="width:100%">Continue playing from here →</button>
     </div>
 
     <div class="rules-panel">
       <div class="rules-header">
         <span class="rules-title">Solver steps</span>
-        <a href="#" class="rules-meta">All rules explained →</a>
+        <a href="#" class="rules-meta">All rules →</a>
       </div>
-      <div class="rule-list">
 
-        <div class="rule-item done">
-          <div class="rule-icon">✓</div>
-          <div>
-            <div class="rule-name">Single cell in row</div>
-            <div class="rule-desc">Row 4 had only one empty cell — placed queen there.</div>
+      <!-- Easy rules -->
+      <div class="rule-category">Easy</div>
+      <div class="rule-category-line"></div>
+
+      <div class="rule-item done">
+        <div class="rule-icon">✓</div>
+        <div class="rule-body">
+          <div class="rule-name-row">
+            <span class="rule-name">Single cell in row</span>
+            <a href="#" class="rule-link">explain →</a>
           </div>
+          <div class="rule-desc">Row 4 had only one empty cell — placed queen there.</div>
         </div>
-
-        <div class="rule-item done">
-          <div class="rule-icon">✓</div>
-          <div>
-            <div class="rule-name">Single cell in region</div>
-            <div class="rule-desc">Region Orange had only one remaining candidate cell.</div>
-          </div>
-        </div>
-
-        <div class="rule-item active">
-          <div class="rule-icon">→</div>
-          <div>
-            <div class="rule-name">Region spans one row</div>
-            <div class="rule-desc">
-              <strong>Region Blue</strong> can only place its queen in <strong>row 1</strong>
-              (columns F–H are its only remaining cells). No other queen can occupy row 1 —
-              those cells are eliminated.
-            </div>
-          </div>
-        </div>
-
-        <div class="rule-item pending">
-          <div class="rule-icon">·</div>
-          <div><div class="rule-name">Region spans one column</div></div>
-        </div>
-
-        <div class="rule-item pending">
-          <div class="rule-icon">·</div>
-          <div><div class="rule-name">Exclusion chain</div></div>
-        </div>
-
-        <div class="rule-item pending">
-          <div class="rule-icon">·</div>
-          <div><div class="rule-name">Single cell in column</div></div>
-        </div>
-
       </div>
+
+      <div class="rule-item done">
+        <div class="rule-icon">✓</div>
+        <div class="rule-body">
+          <div class="rule-name-row">
+            <span class="rule-name">Single cell in region</span>
+            <a href="#" class="rule-link">explain →</a>
+          </div>
+          <div class="rule-desc">Region Orange had only one remaining candidate.</div>
+        </div>
+      </div>
+
+      <!-- Medium rules -->
+      <div class="rule-category" style="margin-top:4px">Medium</div>
+      <div class="rule-category-line"></div>
+
+      <div class="rule-item active">
+        <div class="rule-icon">→</div>
+        <div class="rule-body">
+          <div class="rule-name-row">
+            <span class="rule-name">Region spans one row</span>
+            <a href="#" class="rule-link">explain →</a>
+          </div>
+          <div class="rule-desc">
+            <strong>Region Blue</strong> can only place its queen in <strong>row 1</strong>
+            (columns F–H). No other queen can occupy row 1 — those cells are eliminated.
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-item pending">
+        <div class="rule-icon">·</div>
+        <div class="rule-body">
+          <div class="rule-name-row">
+            <span class="rule-name">Region spans one column</span>
+            <a href="#" class="rule-link">explain →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hard rules -->
+      <div class="rule-category" style="margin-top:4px">Hard</div>
+      <div class="rule-category-line"></div>
+
+      <div class="rule-item pending">
+        <div class="rule-icon">·</div>
+        <div class="rule-body">
+          <div class="rule-name-row">
+            <span class="rule-name">Exclusion chain</span>
+            <a href="#" class="rule-link">explain →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-item pending">
+        <div class="rule-icon">·</div>
+        <div class="rule-body">
+          <div class="rule-name-row">
+            <span class="rule-name">Single cell in column</span>
+            <a href="#" class="rule-link">explain →</a>
+          </div>
+        </div>
+      </div>
+
       <div class="legend">
-        <span><span class="legend-swatch" style="outline:2.5px solid rgba(43,58,94,0.65);outline-offset:0"></span>Constrained cells</span>
-        <span><span class="legend-swatch" style="outline:2.5px solid rgba(180,30,30,0.45);outline-offset:0"></span>Eliminated cells</span>
+        <span><span class="legend-swatch" style="outline:2.5px solid rgba(43,58,94,0.65);outline-offset:0"></span>Constrained</span>
+        <span><span class="legend-swatch" style="outline:2.5px solid rgba(180,30,30,0.45);outline-offset:0"></span>Eliminated</span>
       </div>
     </div>
 
