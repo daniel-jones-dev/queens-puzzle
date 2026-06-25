@@ -9,7 +9,8 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { ImportModal } from "./components/ImportModal";
 import { GenerateModal } from "./components/GenerateModal";
-import type { HintState, AnalysisResult } from "./types";
+import type { HintState } from "./types";
+import { useAnalysisWorker } from "./hooks/useAnalysisWorker";
 import {
   toBase64Url,
   fromBase64Url,
@@ -94,9 +95,7 @@ export function App() {
   const [playValidationError, setPlayValidationError] = useState<string | null>(null);
   const [exportToast, setExportToast] = useState(false);
 
-  // Live analysis (edit mode)
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const analysisWorkerRef = useRef<Worker | null>(null);
+  const analysisResult = useAnalysisWorker(mode, regions, puzzleRef);
 
   const clashingSet = useMemo(() => {
     const puzzle = puzzleRef.current;
@@ -165,6 +164,11 @@ export function App() {
     return () => { cancelled = true; };
   }, []);
 
+  const regionColors = useMemo(
+    () => ready ? Array.from({ length: 12 }, (_, i) => WasmPuzzle.region_color_hex(i)) : [],
+    [ready],
+  );
+
   useEffect(() => {
     if (!ready) return;
     const n = regions.length || 7;
@@ -191,46 +195,30 @@ export function App() {
     if (solved) { setShowBanner(true); setHint(null); setNoHintMsg(false); }
   }, [solved]);
 
-  useEffect(() => {
-    if (mode !== "edit") {
-      setAnalysisResult(null);
-      return;
+  // ── Shared: load a puzzle into play mode ─────────────────────────────
+
+  const enterPlayWith = useCallback((puzzle: WasmPuzzle) => {
+    puzzleRef.current = puzzle;
+    if (timerIntervalRef.current !== null) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
     }
-
-    const n = regions.length;
-    if (n === 0) {
-      setAnalysisResult(null);
-      return;
-    }
-
-    const timerId = setTimeout(() => {
-      const puzzle = puzzleRef.current;
-      if (!puzzle) return;
-      const worker = new Worker(new URL("./analysisWorker.ts", import.meta.url), { type: "module" });
-      analysisWorkerRef.current = worker;
-      worker.onmessage = (e: MessageEvent<{ count: number; difficulty: string | null }>) => {
-        const { count, difficulty } = e.data;
-        if (count === 0) setAnalysisResult({ status: "no-solution" });
-        else if (count === 1) setAnalysisResult({ status: "unique", difficulty });
-        else setAnalysisResult({ status: "multiple", count });
-        worker.terminate();
-        if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
-      };
-      worker.onerror = () => {
-        worker.terminate();
-        if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
-      };
-      worker.postMessage({ json: puzzle.to_json() });
-    }, 300);
-
-    return () => {
-      clearTimeout(timerId);
-      if (analysisWorkerRef.current) {
-        analysisWorkerRef.current.terminate();
-        analysisWorkerRef.current = null;
-      }
-    };
-  }, [mode, regions]);
+    const states = readStates(puzzle);
+    const isSolved = puzzle.is_solved();
+    const hasProgress = states.some((row) => row.some((s) => s !== 0));
+    setCellSize(computeCellSize(puzzle.n()));
+    setRegions(readRegions(puzzle));
+    setPlayerStates(states);
+    setPast([]);
+    setHint(null);
+    setNoHintMsg(false);
+    setSolved(isSolved);
+    setShowBanner(isSolved);
+    setTimerElapsed(0);
+    setTimerRunning(hasProgress && !isSolved);
+    try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+    try { localStorage.removeItem(TIMER_KEY); } catch {}
+  }, []);
 
   // ── Play mode handlers ────────────────────────────────────────────────
 
@@ -396,61 +384,25 @@ export function App() {
 
   const handleImport = useCallback((json: string) => {
     try {
-      const puzzle = WasmPuzzle.from_json(json);
-      const states = readStates(puzzle);
-      const hasProgress = states.some((row) => row.some((s) => s !== 0));
-      const isSolved = puzzle.is_solved();
-      puzzleRef.current = puzzle;
-      if (timerIntervalRef.current !== null) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-      setCellSize(computeCellSize(puzzle.n()));
-      setRegions(readRegions(puzzle));
-      setPlayerStates(states);
-      setPast([]);
-      setHint(null);
-      setNoHintMsg(false);
-      setSolved(isSolved);
-      setShowBanner(isSolved);
-      setTimerElapsed(0);
-      setTimerRunning(hasProgress && !isSolved);
-      try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
-      try { localStorage.removeItem(TIMER_KEY); } catch {}
+      enterPlayWith(WasmPuzzle.from_json(json));
+      setMode("play");
       setImportOpen(false);
       setImportError(null);
     } catch (e) {
       setImportError(String(e).replace(/^.*?Error:\s*/, ""));
     }
-  }, []);
+  }, [enterPlayWith]);
 
   const handleGenerateLoad = useCallback((json: string) => {
     try {
-      const puzzle = WasmPuzzle.from_json(json);
-      puzzleRef.current = puzzle;
-      if (timerIntervalRef.current !== null) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-      setCellSize(computeCellSize(puzzle.n()));
-      setRegions(readRegions(puzzle));
-      setPlayerStates(readStates(puzzle));
-      setPast([]);
-      setHint(null);
-      setNoHintMsg(false);
-      setSolved(false);
-      setShowBanner(false);
-      setTimerElapsed(0);
-      setTimerRunning(false);
-      try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
-      try { localStorage.removeItem(TIMER_KEY); } catch {}
+      enterPlayWith(WasmPuzzle.from_json(json));
+      setMode("play");
       setGenerateOpen(false);
       setSettingsOpen(false);
-      setMode("play");
     } catch (e) {
       setError(String(e));
     }
-  }, []);
+  }, [enterPlayWith]);
 
   const handleOpenSettings = useCallback(() => {
     if (settingsOpen) {
@@ -639,29 +591,13 @@ export function App() {
   const doSwitchToPlay = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
-    const n = puzzle.n();
-    setCellSize(computeCellSize(n));
-    setRegions(readRegions(puzzle));
-    setPlayerStates(readStates(puzzle));
-    setPast([]);
-    setHint(null);
-    setNoHintMsg(false);
-    setSolved(false);
-    setShowBanner(false);
-    if (timerIntervalRef.current !== null) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    setTimerElapsed(0);
-    setTimerRunning(false);
-    try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
-    try { localStorage.removeItem(TIMER_KEY); } catch {}
+    enterPlayWith(puzzle);
     try { localStorage.removeItem(EDITOR_KEY); } catch {}
     setEditorPast([]);
     setPlayConfirmPending(false);
     setPlayValidationError(null);
     setMode("play");
-  }, []);
+  }, [enterPlayWith]);
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -689,6 +625,7 @@ export function App() {
         <EditControls
           n={n}
           boardPx={boardPx}
+          regionColors={regionColors}
           selectedColor={selectedColor}
           canUndo={editorPast.length > 0}
           hasWork={hasWork}
@@ -705,6 +642,7 @@ export function App() {
         >
           <Grid
             regions={regions}
+            regionColors={regionColors}
             cellStates={playerStates}
             clashingSet={new Set()}
             onCellCross={() => {}}
@@ -765,6 +703,7 @@ export function App() {
           <div style={{ position: "relative" }}>
             <Grid
               regions={regions}
+              regionColors={regionColors}
               cellStates={playerStates}
               clashingSet={clashingSet}
               onCellCross={handleCellCross}

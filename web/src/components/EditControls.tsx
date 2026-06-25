@@ -1,5 +1,4 @@
 import React from "react";
-import { WasmPuzzle } from "queens-puzzle-wasm";
 import type { AnalysisResult } from "../types";
 
 const CHECKERBOARD_BG: React.CSSProperties = {
@@ -26,6 +25,7 @@ const btn: React.CSSProperties = {
 interface Props {
   n: number;
   boardPx: number;
+  regionColors: string[];
   selectedColor: number | null;
   canUndo: boolean;
   hasWork: boolean;
@@ -65,6 +65,7 @@ function renderAnalysis(result: AnalysisResult | null): React.ReactNode {
 export function EditControls({
   n,
   boardPx,
+  regionColors,
   selectedColor,
   canUndo,
   hasWork,
@@ -197,7 +198,7 @@ export function EditControls({
             style={{
               width: 26,
               height: 26,
-              background: WasmPuzzle.region_color_hex(i),
+              background: regionColors[i],
               border:
                 selectedColor === i ? "3px solid #111" : "2px solid rgba(0,0,0,0.22)",
               borderRadius: "4px",

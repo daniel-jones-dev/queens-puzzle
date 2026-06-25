@@ -1,9 +1,9 @@
 import { useRef } from "react";
-import { WasmPuzzle } from "queens-puzzle-wasm";
 import styles from "./Grid.module.css";
 
 interface Props {
   regions: (number | null)[][];
+  regionColors: string[];
   cellStates: number[][];
   clashingSet: Set<string>;
   onCellCross: (row: number, col: number) => void;
@@ -52,6 +52,7 @@ function regionBorderSegments(regions: (number | null)[][], cellSize: number): S
 
 export function Grid({
   regions,
+  regionColors,
   cellStates,
   clashingSet,
   onCellCross,
@@ -160,7 +161,7 @@ export function Grid({
           const isNull = region === null;
           const baseStyle = isNull && editMode
             ? CHECKERBOARD_STYLE
-            : { background: region != null ? WasmPuzzle.region_color_hex(region) : "#ccc" };
+            : { background: region != null ? regionColors[region] : "#ccc" };
 
           return (
             <div
