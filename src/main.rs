@@ -1,17 +1,11 @@
-mod generator;
-mod grid;
-mod io;
-mod puzzle;
-mod solver;
-
-use crate::generator::generate_puzzles;
-use crate::grid::Cell;
-use crate::puzzle::region_color;
 use clap::{Parser, Subcommand};
 use colored::*;
 use log::{info, LevelFilter};
-use puzzle::{QueensPuzzle, State};
-use solver::rule::RuleResult;
+use queens_puzzle_core::generator::generate_puzzles;
+use queens_puzzle_core::grid::Cell;
+use queens_puzzle_core::puzzle::{region_color, QueensPuzzle, State};
+use queens_puzzle_core::solver::rule::RuleResult;
+use queens_puzzle_core::{io, solver};
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -75,9 +69,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Generate { size, count, seed } => {
             for mut puzzle in generate_puzzles(size, count, seed) {
                 info!("{}", format_board(&puzzle));
-                match solver::solve_and_rate_puzzle(&mut puzzle) {
-                    Some(difficulty) => info!("Difficulty: {:?}\n", difficulty),
-                    None => info!("Difficulty: unrated (needs brute force)\n"),
+                match solver::rate_puzzle(&mut puzzle) {
+                    Some(difficulty) => info!("Difficulty: {}\n", difficulty),
+                    None => info!("Difficulty: unrated (no unique solution)\n"),
                 }
             }
         }
@@ -86,8 +80,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Initialises the logger. The verbosity count maps to a maximum log level:
-/// 0 -> results only, 1 -> solver steps, 2+ -> generator steps too.
 fn init_logging(verbosity: u8) {
     let level = match verbosity {
         0 => LevelFilter::Info,
@@ -98,7 +90,6 @@ fn init_logging(verbosity: u8) {
     env_logger::Builder::new()
         .filter_level(level)
         .target(env_logger::Target::Stdout)
-        // Print only the message, so boards render cleanly without log metadata.
         .format(|buf, record| {
             use std::io::Write;
             writeln!(buf, "{}", record.args())
@@ -106,37 +97,23 @@ fn init_logging(verbosity: u8) {
         .init();
 }
 
-/// Solves a puzzle in place, logging the starting board, the solved board and its difficulty,
-/// and falling back to brute force if the logical solver gets stuck.
 fn solve_puzzle(puzzle: &QueensPuzzle) {
     info!("{}", format_board(puzzle));
 
     let mut working = puzzle.clone();
-    let difficulty = solver::solve_and_rate_puzzle(&mut working);
+    let difficulty = solver::rate_puzzle(&mut working);
 
     info!("{}", format_board(&working));
-    if let Some(difficulty) = difficulty {
-        info!("Difficulty: {:?}", difficulty);
-    }
-
-    if !working.is_solved() {
-        info!("No logical solution found; resorting to brute force");
-        let mut solutions = vec![];
-        let num_solutions = solver::brute_force::solve(&mut working, &mut solutions);
-        info!("Found {} solution(s)", num_solutions);
-        for solution in &solutions {
-            info!("{}", format_board(solution));
-        }
+    match difficulty {
+        Some(d) => info!("Difficulty: {}", d),
+        None => info!("Difficulty: unrated (no unique solution)"),
     }
 }
 
-/// Renders a puzzle board as a colorized, multi-line string.
 fn format_board(puzzle: &QueensPuzzle) -> String {
     format_board_result(puzzle, &None)
 }
 
-/// Renders a puzzle board, highlighting the cells changed (green) and involved (underlined)
-/// by a rule result, and appending the rule's description.
 fn format_board_result(puzzle: &QueensPuzzle, rule_result: &Option<RuleResult>) -> String {
     let n = puzzle.n();
     let mut out = String::new();

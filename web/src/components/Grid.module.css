@@ -1,0 +1,36 @@
+.board {
+  display: inline-grid;
+  border: 3px solid #333;
+  user-select: none;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.cell:hover {
+  filter: brightness(0.88);
+}
+
+.queen {
+  line-height: 1;
+  color: #111;
+  pointer-events: none;
+}
+
+.queenClash {
+  line-height: 1;
+  color: #c0392b;
+  pointer-events: none;
+}
+
+.cross {
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.5);
+  font-weight: bold;
+  pointer-events: none;
+}

@@ -4,15 +4,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-orange.svg)](https://doc.rust-lang.org/edition-guide/rust-2024/)
 
-A solver and generator for the **Queens** puzzle (as featured daily on LinkedIn), written in Rust.
+A solver and generator for the **Queens** puzzle game (as made popular by LinkedIn).
+
+This tool can solve any puzzle: using logical deduction steps the way a person would to rate its difficulty, or using
+brute-force to verify validity and unique solutions. It can also generate new puzzles.
 
 In Queens, an *n×n* board is divided into *n* coloured regions. The goal is to place *n* queens so that:
 
 - exactly one queen sits in each **row**, each **column**, and each coloured **region**, and
-- no two queens are **diagonally adjacent**.
-
-This tool can solve a given puzzle — explaining each deduction the way a human would — rate its
-difficulty, and generate brand-new puzzles that have a unique solution.
+- no two queens are placed **next to each other** (including diagonally).
 
 <p align="center">
   <img src="docs/example_game.png" alt="A 7×7 Queens puzzle part-way through being solved" width="380">
@@ -22,25 +22,21 @@ difficulty, and generate brand-new puzzles that have a unique solution.
 
 ## Features
 
+- **Web UI** — play, edit, and generate puzzles in the browser; step through solver hints; import/export/share puzzles via URL.
 - **Logical solver** that applies human-style techniques in order of increasing difficulty and
   rates the puzzle (Trivial / Easy / Medium / Hard) by the hardest technique it needed.
 - **Brute-force fallback** that finds the solution(s) for puzzles the logical solver can't crack.
 - **Generator** that builds new puzzles with a guaranteed unique solution from a random seed.
-- **Colourful terminal output** of boards, with optional step-by-step explanations.
+- **CLI** with colourful terminal output, step-by-step explanations, and batch generation.
 - Reads puzzles from a simple **text format** or from the **archived JSON** of past LinkedIn puzzles.
 
-> Boards are rendered with true-colour region backgrounds, so a terminal with 24-bit colour support
-> gives the best results.
+> Terminal boards are rendered with true-colour region backgrounds; a terminal with 24-bit colour support gives the best results.
 
-## Installation
+## Building
+
+### CLI
 
 Requires a [Rust toolchain](https://www.rust-lang.org/tools/install).
-
-```sh
-cargo install --git https://github.com/daniel-jones-dev/queens-puzzle
-```
-
-Or build from source:
 
 ```sh
 git clone https://github.com/daniel-jones-dev/queens-puzzle
@@ -48,8 +44,19 @@ cd queens-puzzle
 cargo build --release
 ```
 
-The binary is then at `target/release/queens-puzzle`. The examples below use `cargo run --` for
-convenience.
+The binary is at `target/release/queens-puzzle`. The examples below use `cargo run --` for convenience.
+
+### Web UI
+
+Requires the Rust toolchain, [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/), and Node.js.
+
+```sh
+cd web
+npm install
+npm run dev   # builds WASM and starts the Vite dev server
+```
+
+For a production build: `npm run build` (output in `web/dist/`).
 
 ## Usage
 
@@ -105,35 +112,8 @@ watch the generator grow and shrink regions as it searches.
 
 ## Puzzle file formats
 
-### Text format
-
-An *n*-line file where each line has *n* characters. Each character is a letter identifying the
-region that cell belongs to; cells sharing a letter belong to the same region. For example, a 7×7
-puzzle:
-
-```
-pppppob
-ppppooo
-pgppwow
-ggprwww
-ggrrrww
-grrrrrw
-rrryrrr
-```
-
-### Archived JSON format
-
-The JSON used by the [LinkedIn Queens](https://www.archivedqueens.com/) site is a list of puzzles, each
-with an `id`, a `regions` grid (region id per cell) and the solution `grid`:
-
-```json
-[{ "id": 353, "date": "2025/04/18",
-   "grid":    [[1,0,0,0,0,0,0], ...],
-   "regions": [[0,0,0,0,0,0,1], ...] }]
-```
-
-Only the `id` and `regions` are needed to solve a puzzle. Region ids are remapped internally, so
-non-contiguous numbering is handled.
+See [docs/formats.md](docs/formats.md) for the full specification of all supported formats (text,
+archived JSON, and canonical JSON).
 
 ## How it works
 
@@ -173,10 +153,6 @@ source.)
 
 Ideas for future work, roughly in priority order:
 
-- **Web UI** — a React frontend backed by the Rust solver/generator compiled to WASM via
-  `wasm-bindgen`. The UI should support playing puzzles interactively, editing or drawing custom
-  boards, stepping through the solver's deductions one move at a time, and generating new puzzles
-  on demand.
 - **More solving techniques**, to reduce reliance on brute force:
   - a rule for when a region's remaining unknowns all lie in a single row or column;
   - a rule for two or three candidate cells adjacent to each other crossing out their shared neighbours;
