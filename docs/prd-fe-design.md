@@ -83,11 +83,11 @@ A step-through view that exposes the solver's internal reasoning.
 ## Editor
 
 ### Toolbar
-A single row below the board. Left-to-right order:
-1. **🪄** (active tool — paint; click to re-select if a swatch was last clicked)
-2. Colour swatches 1–N (one per region colour). Hotkeys `1`–`N` switch the active colour.
-3. **Unset region** (checkerboard icon): click any cell in a region to clear it.
-4. **Toggle queen** (♛): manually override a queen position.
+A single row below the board, user can select one of these tools at a time. Left-to-right order:
+1. **🪄** drag-paint tool (default) - used by dragging from an existing cells to extend that colour
+2. Colour swatches 1–N (one per region colour). Hotkeys `1`–`N` switch the active colour. clicking/dragging any cell paints that colour.
+3. **Unset region** (checkerboard icon): click/drag any cell in a region to clear it.
+4. **Toggle queen** (♛): toggles a queen placement in a cell, but does not change the region colour.
 
 No two-row layout — everything in one row.
 
@@ -109,7 +109,7 @@ A how-to-use guide is shown in the editor UI, suggesting:
 1. Select a colour and drag-paint cells.
 2. Use *Shuffle queens* to find valid queen positions for the painted regions.
 3. Alternatively, sketch a letter or shape first, then shuffle queens in.
-4. Aim for exactly 1 solution — analysis updates as you paint.
+4. Puzzle should have exactly 1 solution — analysis updates as you edit.
 
 ### Queen overlay
 The board displays the solver-determined queen positions for the current region layout so the user can see the solved state as they paint.
@@ -198,5 +198,14 @@ Worker cards show:
 ## Open questions
 
 - Tutorial/rules pages: recommendation is SPA routes — confirm?
+  - feedback yes use SPA routes
 - Built-in puzzle list: need to generate a curated set before shipping the Play landing state.
+  -  feedback for now just use a dummy puzzle list
+
+
+## feedback
+
+import from screenshot would be a new tab, not part of play tab. can be removed for now, and noted in possible next steps in readme
+
+the about can just be a modal
 
