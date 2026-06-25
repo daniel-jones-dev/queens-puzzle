@@ -22,17 +22,19 @@ In Queens, an *n×n* board is divided into *n* coloured regions. The goal is to 
 
 ## Features
 
+- **Web UI** — play, edit, and generate puzzles in the browser; step through solver hints; import/export/share puzzles via URL.
 - **Logical solver** that applies human-style techniques in order of increasing difficulty and
   rates the puzzle (Trivial / Easy / Medium / Hard) by the hardest technique it needed.
 - **Brute-force fallback** that finds the solution(s) for puzzles the logical solver can't crack.
 - **Generator** that builds new puzzles with a guaranteed unique solution from a random seed.
-- **Colourful terminal output** of boards, with optional step-by-step explanations.
+- **CLI** with colourful terminal output, step-by-step explanations, and batch generation.
 - Reads puzzles from a simple **text format** or from the **archived JSON** of past LinkedIn puzzles.
 
-> Boards are rendered with true-colour region backgrounds, so a terminal with 24-bit colour support
-> gives the best results.
+> Terminal boards are rendered with true-colour region backgrounds; a terminal with 24-bit colour support gives the best results.
 
-## Installation
+## Building
+
+### CLI
 
 Requires a [Rust toolchain](https://www.rust-lang.org/tools/install).
 
@@ -42,8 +44,19 @@ cd queens-puzzle
 cargo build --release
 ```
 
-The binary is then at `target/release/queens-puzzle`. The examples below use `cargo run --` for
-convenience.
+The binary is at `target/release/queens-puzzle`. The examples below use `cargo run --` for convenience.
+
+### Web UI
+
+Requires the Rust toolchain, [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/), and Node.js.
+
+```sh
+cd web
+npm install
+npm run dev   # builds WASM and starts the Vite dev server
+```
+
+For a production build: `npm run build` (output in `web/dist/`).
 
 ## Usage
 
@@ -140,10 +153,6 @@ source.)
 
 Ideas for future work, roughly in priority order:
 
-- **Web UI** — a React frontend backed by the Rust solver/generator compiled to WASM via
-  `wasm-bindgen`. The UI should support playing puzzles interactively, editing or drawing custom
-  boards, stepping through the solver's deductions one move at a time, and generating new puzzles
-  on demand.
 - **More solving techniques**, to reduce reliance on brute force:
   - a rule for when a region's remaining unknowns all lie in a single row or column;
   - a rule for two or three candidate cells adjacent to each other crossing out their shared neighbours;
