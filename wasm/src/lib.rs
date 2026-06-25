@@ -139,7 +139,7 @@ impl WasmPuzzle {
     /// Returns the difficulty string, or `undefined` if it cannot be determined.
     pub fn difficulty(&self) -> Option<String> {
         let mut clone = self.inner.clone();
-        solver::solve_and_rate_puzzle(&mut clone).map(|d| format!("{:?}", d))
+        solver::rate_puzzle(&mut clone).map(|d| format!("{}", d))
     }
 
     /// Returns flattened [row, col, ...] pairs for all queens currently in conflict.

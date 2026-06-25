@@ -74,6 +74,8 @@ export function App() {
   const [noHintMsg, setNoHintMsg] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [playValidityWarning, setPlayValidityWarning] = useState<string | null>(null);
+  const validityWorkerRef = useRef<Worker | null>(null);
   const [resetPending, setResetPending] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -105,6 +107,25 @@ export function App() {
     for (let i = 0; i < raw.length; i += 2) s.add(`${raw[i]},${raw[i + 1]}`);
     return s;
   }, [playerStates]);
+
+  const runPlayValidityCheck = useCallback((json: string) => {
+    setPlayValidityWarning(null);
+    if (validityWorkerRef.current) {
+      validityWorkerRef.current.terminate();
+      validityWorkerRef.current = null;
+    }
+    const worker = new Worker(new URL("./analysisWorker.ts", import.meta.url), { type: "module" });
+    validityWorkerRef.current = worker;
+    worker.onmessage = (e: MessageEvent<{ count: number; difficulty: string | null }>) => {
+      const { count } = e.data;
+      if (count === 0) setPlayValidityWarning("This puzzle has no solution.");
+      else if (count > 1) setPlayValidityWarning(`This puzzle has ${count >= 10 ? "10+" : count} solutions — the answer is not unique.`);
+      validityWorkerRef.current = null;
+      worker.terminate();
+    };
+    worker.onerror = () => { validityWorkerRef.current = null; worker.terminate(); };
+    worker.postMessage({ json });
+  }, []);
 
   // ── Init ──────────────────────────────────────────────────────────────
 
@@ -146,6 +167,7 @@ export function App() {
         setShowBanner(isSolved);
 
         // Restore an in-progress editor session
+        let inEdit = false;
         try {
           const saved = localStorage.getItem(EDITOR_KEY);
           if (saved) {
@@ -155,14 +177,16 @@ export function App() {
             setPlayerStates(readStates(wp));
             setCellSize(computeCellSize(wp.n()));
             setMode("edit");
+            inEdit = true;
           }
         } catch {}
 
+        if (!inEdit) runPlayValidityCheck(puzzle.to_json());
         setReady(true);
       })
       .catch((err) => setError(String(err)));
     return () => { cancelled = true; };
-  }, []);
+  }, [runPlayValidityCheck]);
 
   const regionColors = useMemo(
     () => ready ? Array.from({ length: 12 }, (_, i) => WasmPuzzle.region_color_hex(i)) : [],
@@ -216,9 +240,11 @@ export function App() {
     setShowBanner(isSolved);
     setTimerElapsed(0);
     setTimerRunning(hasProgress && !isSolved);
-    try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+    const json = puzzle.to_json();
+    try { localStorage.setItem(STORAGE_KEY, json); } catch {}
     try { localStorage.removeItem(TIMER_KEY); } catch {}
-  }, []);
+    runPlayValidityCheck(json);
+  }, [runPlayValidityCheck]);
 
   // ── Play mode handlers ────────────────────────────────────────────────
 
@@ -684,6 +710,38 @@ export function App() {
               <span>{urlError}</span>
               <button
                 onClick={() => setUrlError(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  padding: "0 0 0 0.5rem",
+                  color: "#856404",
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {playValidityWarning && (
+            <div
+              style={{
+                background: "#fff3cd",
+                border: "1px solid #ffc107",
+                color: "#856404",
+                padding: "0.4rem 0.75rem",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                marginBottom: "0.5rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span>⚠ {playValidityWarning}</span>
+              <button
+                onClick={() => setPlayValidityWarning(null)}
                 style={{
                   background: "none",
                   border: "none",

@@ -69,9 +69,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Generate { size, count, seed } => {
             for mut puzzle in generate_puzzles(size, count, seed) {
                 info!("{}", format_board(&puzzle));
-                match solver::solve_and_rate_puzzle(&mut puzzle) {
-                    Some(difficulty) => info!("Difficulty: {:?}\n", difficulty),
-                    None => info!("Difficulty: unrated (needs brute force)\n"),
+                match solver::rate_puzzle(&mut puzzle) {
+                    Some(difficulty) => info!("Difficulty: {}\n", difficulty),
+                    None => info!("Difficulty: unrated (no unique solution)\n"),
                 }
             }
         }
@@ -101,21 +101,12 @@ fn solve_puzzle(puzzle: &QueensPuzzle) {
     info!("{}", format_board(puzzle));
 
     let mut working = puzzle.clone();
-    let difficulty = solver::solve_and_rate_puzzle(&mut working);
+    let difficulty = solver::rate_puzzle(&mut working);
 
     info!("{}", format_board(&working));
-    if let Some(difficulty) = difficulty {
-        info!("Difficulty: {:?}", difficulty);
-    }
-
-    if !working.is_solved() {
-        info!("No logical solution found; resorting to brute force");
-        let mut solutions = vec![];
-        let num_solutions = solver::brute_force::solve(&mut working, &mut solutions);
-        info!("Found {} solution(s)", num_solutions);
-        for solution in &solutions {
-            info!("{}", format_board(solution));
-        }
+    match difficulty {
+        Some(d) => info!("Difficulty: {}", d),
+        None => info!("Difficulty: unrated (no unique solution)"),
     }
 }
 

@@ -6,7 +6,7 @@ use rule_mark_queen::MarkQueen;
 use rule_naked_set::NakedSet;
 use rule_pointers::Pointers;
 use std::cmp::max;
-use std::fmt::Display;
+use std::fmt::{self, Display};
 
 pub mod brute_force;
 pub mod rule;
@@ -23,6 +23,20 @@ pub enum Difficulty {
     Easy,
     Medium,
     Hard,
+    /// Unique solution exists but cannot be reached by logical deduction alone.
+    RequiresGuessing,
+}
+
+impl Display for Difficulty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Difficulty::Trivial => write!(f, "Trivial"),
+            Difficulty::Easy => write!(f, "Easy"),
+            Difficulty::Medium => write!(f, "Medium"),
+            Difficulty::Hard => write!(f, "Hard"),
+            Difficulty::RequiresGuessing => write!(f, "Requires guessing"),
+        }
+    }
 }
 
 pub fn oxford_comma(items: impl Iterator<Item: Display>) -> String {
@@ -69,6 +83,23 @@ pub fn next_hint(puzzle: &QueensPuzzle) -> Option<rule::RuleResult> {
         }
     }
     None
+}
+
+/// Rates the puzzle difficulty, falling back to brute force if logic alone cannot solve it.
+/// Returns `Some(RequiresGuessing)` when the puzzle has a unique solution but requires guessing.
+/// Returns `None` only when the puzzle has no solution or multiple solutions.
+pub fn rate_puzzle(puzzle: &mut QueensPuzzle) -> Option<Difficulty> {
+    let mut clone = puzzle.clone();
+    if let Some(d) = solve_and_rate_puzzle(&mut clone) {
+        return Some(d);
+    }
+    let mut solutions = Vec::new();
+    brute_force::solve(puzzle, &mut solutions);
+    if solutions.len() == 1 {
+        Some(Difficulty::RequiresGuessing)
+    } else {
+        None
+    }
 }
 
 /// Solves the given puzzle by applying logical rules in order of increasing difficulty,
