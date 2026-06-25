@@ -158,4 +158,3 @@ Import calls `WasmPuzzle.from_json(text)` and on success replaces all puzzle sta
 | 8 | Editor live analysis | ✓ Complete |
 | 9 | Generator UX | ✓ Complete |
 
-See `docs/prd-web-ui.md` for full feature specs and acceptance criteria.
