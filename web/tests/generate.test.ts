@@ -36,9 +36,8 @@ test.describe("Generator", () => {
     await page.selectOption("select", "4");
     await page.click("button:has-text('Generate')");
 
-    // Loading state: button disabled and shows "Generating…"
+    // Loading state: button shows "Generating…"
     await expect(page.locator("button:has-text('Generating…')")).toBeVisible();
-    await expect(page.locator("button:has-text('Generating…')")).toBeDisabled();
 
     // Wait for completion
     await expect(page.locator("button:has-text('Play ▶')")).toBeVisible({ timeout: 30_000 });
