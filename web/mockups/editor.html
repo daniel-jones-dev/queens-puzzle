@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queens — Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F8F8F5;
+      --surface: #fff;
+      --text: #1A1A18;
+      --text2: #6B6B62;
+      --accent: #2B3A5E;
+      --border: #E2E2DC;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif; font-size: 14px;
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 56px; display: flex; align-items: center;
+      justify-content: space-between; flex-shrink: 0;
+    }
+    .logo { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 22px; color: var(--accent); text-decoration: none; }
+    nav { display: flex; }
+    nav a {
+      font-size: 14px; font-weight: 500; padding: 0 18px; height: 56px;
+      display: flex; align-items: center; text-decoration: none;
+      color: var(--text2); border-bottom: 2.5px solid transparent; transition: color 0.12s;
+    }
+    nav a:hover { color: var(--text); }
+    nav a.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    main {
+      flex: 1; display: flex; justify-content: center;
+      padding: 36px 28px 32px;
+    }
+    .layout {
+      display: flex; gap: 28px; align-items: flex-start;
+      width: 100%; max-width: 760px;
+    }
+
+    /* ── Board + tools column ── */
+    .board-col {
+      display: flex; flex-direction: column; gap: 14px; flex-shrink: 0;
+    }
+
+    .board {
+      display: grid; border: 2.5px solid rgba(0,0,0,0.22);
+      border-radius: 3px; overflow: hidden; cursor: crosshair;
+    }
+    .cell {
+      display: flex; align-items: center; justify-content: center;
+      border-right: 1px solid rgba(0,0,0,0.08);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .cell.rbr { border-right: 2.5px solid rgba(0,0,0,0.24); }
+    .cell.rbb { border-bottom: 2.5px solid rgba(0,0,0,0.24); }
+    .queen { color: rgba(0,0,0,0.35); font-size: 20px; user-select: none; line-height: 1; }
+
+    /* Colour palette */
+    .palette-row {
+      display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+    }
+    .swatch {
+      width: 30px; height: 30px; border-radius: 5px;
+      border: 2.5px solid transparent;
+      cursor: pointer; transition: transform 0.1s;
+      flex-shrink: 0;
+    }
+    .swatch:hover { transform: scale(1.12); }
+    .swatch.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent);
+      transform: scale(1.12);
+    }
+
+    .tool-label {
+      font-size: 12px; color: var(--text2);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tool-label strong { color: var(--text); }
+
+    .board-actions {
+      display: flex; gap: 8px;
+    }
+    .btn {
+      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+      padding: 7px 14px; border-radius: 6px;
+      border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+      cursor: pointer; transition: background 0.1s, border-color 0.1s;
+    }
+    .btn:hover { background: var(--bg); border-color: #C8C8C0; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn-primary:hover { background: #233050; border-color: #233050; }
+
+    /* ── Analysis panel ── */
+    .panel {
+      flex: 1; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 18px 12px; border-bottom: 1px solid var(--border);
+      font-weight: 600; font-size: 14px;
+    }
+    .panel-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+    .stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .stat-label { font-size: 13px; color: var(--text2); }
+    .stat-val   { font-size: 13px; font-weight: 600; }
+    .stat-val.ok    { color: #16a34a; }
+    .stat-val.warn  { color: #d97706; }
+    .stat-val.bad   { color: #dc2626; }
+    .stat-val.mono  { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+    .stat-val.computing {
+      font-size: 12px; color: var(--text2); font-style: italic; font-weight: 400;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .spinner {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    /* How-to guide */
+    .guide-section { }
+    .guide-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .guide-steps { display: flex; flex-direction: column; gap: 8px; }
+    .guide-step {
+      font-size: 12px; color: var(--text2); line-height: 1.5;
+      padding-left: 16px; position: relative;
+    }
+    .guide-step::before {
+      content: attr(data-n);
+      position: absolute; left: 0;
+      color: var(--accent); font-weight: 600; font-size: 11px;
+    }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 14px 28px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 14px; font-size: 12px; color: var(--text2); flex-shrink: 0;
+    }
+    footer a { color: var(--text2); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+    .sep { opacity: 0.35; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="play.html">♛ Queens</a>
+  <nav>
+    <a href="play.html">Play</a>
+    <a href="solve.html">Solve</a>
+    <a href="editor.html" class="active">Editor</a>
+    <a href="generator.html">Generator</a>
+  </nav>
+</header>
+
+<main>
+  <div class="layout">
+
+    <div class="board-col">
+      <div class="board" id="board"></div>
+
+      <!-- Palette -->
+      <div class="palette-row" id="palette"></div>
+
+      <div class="tool-label">
+        Tool: <strong>Drag to paint</strong> &nbsp;·&nbsp; Press <strong>1–8</strong> to switch colour
+      </div>
+
+      <div class="board-actions">
+        <button class="btn btn-primary">Shuffle queens</button>
+        <button class="btn">Clear board</button>
+        <button class="btn">Open in Play</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">Analysis</div>
+      <div class="panel-body">
+        <div class="stat-row">
+          <span class="stat-label">Valid layout</span>
+          <span class="stat-val ok">✓ Yes</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Regions complete</span>
+          <span class="stat-val mono">4 / 8</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Queens placed</span>
+          <span class="stat-val mono">4 / 8</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Difficulty</span>
+          <span class="stat-val warn">Calculating…</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Solutions</span>
+          <span class="stat-val computing">
+            <span class="spinner"></span>Calculating…
+          </span>
+        </div>
+
+        <hr class="divider">
+
+        <div class="guide-section">
+          <div class="guide-title">How to build a puzzle</div>
+          <div class="guide-steps">
+            <div class="guide-step" data-n="1.">Select a colour and drag-paint cells to define a region.</div>
+            <div class="guide-step" data-n="2.">Use <em>Shuffle queens</em> to find valid queen positions for your regions.</div>
+            <div class="guide-step" data-n="3.">You can also sketch a letter or shape first, then shuffle queens in.</div>
+            <div class="guide-step" data-n="4.">Aim for exactly 1 solution. Analysis updates as you paint.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <span>Made by <a href="https://github.com/daniel-jones-dev">Daniel Jones</a></span>
+  <span class="sep">·</span>
+  <a href="https://github.com/daniel-jones-dev/queens-puzzle">GitHub</a>
+  <span class="sep">·</span>
+  <span>Made popular by <a href="https://www.linkedin.com/games/queens/">LinkedIn Queens</a></span>
+</footer>
+
+<script>
+  const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
+  const NAMES   = ["Purple","Orange","Blue","Green","White","Red","Yellow","Grey"];
+
+  // Partial region assignment: -1 = unassigned
+  const REGIONS = [
+    [ 0, 0, 0, 1, 1, 1, 2, 2],
+    [ 0, 0, 3, 1, 1, 2, 2, 2],
+    [ 0, 3, 3, 3,-1,-1, 2,-1],
+    [-1, 3, 3,-1,-1,-1,-1,-1],
+    [-1,-1, 3,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1],
+  ];
+  // Show queens at solver-determined positions for the 4 painted regions
+  // R0 queen at (1,1), R1 at (0,4), R2 at (2,6), R3 at (4,2)
+  const QUEENS = new Set(['1,1','0,4','2,6','4,2']);
+  const UNASSIGNED = "#ECEAE6";
+  const N = 8, SZ = 44;
+
+  // Build board
+  const board = document.getElementById('board');
+  board.style.gridTemplateColumns = `repeat(${N},${SZ}px)`;
+  board.style.gridTemplateRows    = `repeat(${N},${SZ}px)`;
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const rg = REGIONS[r][c];
+      const bg = rg === -1 ? UNASSIGNED : PALETTE[rg];
+      const el = document.createElement('div');
+      el.className = 'cell';
+      el.style.cssText = `background:${bg};width:${SZ}px;height:${SZ}px`;
+      // Region borders (skip unassigned boundaries — they look better without)
+      if (rg !== -1 && c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
+      if (rg !== -1 && r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
+      if (QUEENS.has(`${r},${c}`)) {
+        const q = document.createElement('span');
+        q.className = 'queen'; q.textContent = '♛';
+        el.appendChild(q);
+      }
+      board.appendChild(el);
+    }
+  }
+
+  // Build palette swatches
+  const palRow = document.getElementById('palette');
+  PALETTE.forEach((color, i) => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (i === 2 ? ' selected' : '');
+    sw.style.background = color;
+    sw.title = `${NAMES[i]} (${i+1})`;
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+    });
+    palRow.appendChild(sw);
+  });
+</script>
+</body>
+</html>

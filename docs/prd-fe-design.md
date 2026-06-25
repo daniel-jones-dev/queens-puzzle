@@ -4,7 +4,7 @@
 
 The site is more than a place to play — it is a tool for understanding how constraint puzzles are solved. The four primary modes (Play, Solve, Editor, Generator) should each be reachable from a top-level tab bar so new visitors understand the full scope at a glance.
 
-A footer on every page shows "Made by Daniel Jones", a link to the GitHub project, and any other relevant links.
+A footer on every page shows "Made by Daniel Jones", a link to the GitHub project, and "Made popular by [LinkedIn Queens](https://www.linkedin.com/games/queens/)".
 
 All views support hotkeys (e.g. `Ctrl+Z` to undo, `H` to show hint).
 
@@ -14,30 +14,44 @@ All views support hotkeys (e.g. `Ctrl+Z` to undo, `H` to show hint).
 
 Four top-level tabs replace the current single-page mode-toggle:
 
-| Tab | Route        | Purpose                                    |
-|-----|--------------|--------------------------------------------|
-| Play | `/play`      | Solve a puzzle (default, redirects from /) |
-| Solve | `/solve`     | Step through the solver with explanations  |
-| Editor | `/editor`    | Design a custom puzzle                     |
+| Tab       | Route        | Purpose                                    |
+|-----------|--------------|--------------------------------------------|
+| Play      | `/play`      | Solve a puzzle (default, redirects from /) |
+| Solve     | `/solve`     | Step through the solver with explanations  |
+| Editor    | `/editor`    | Design a custom puzzle                     |
 | Generator | `/generator` | Run and manage puzzle generation           |
 
-feedback
-> some more ideas:
-> - solver-rules page that explains the rules in more detail
-> - puzzle importer to import a puzzle from a screenshot eg from linkedin
-> - i want to include an optional name, source, difficulty fields in the puzzle representation (and correspondingly in the json and other formats) 
-> - editor should have hotkeys to change tool (e.g. numbers for colours), make a suggestion in prd
+Additional pages (not in the tab bar):
+- `/rules` — Solver rules reference: every rule the solver knows, with plain-English explanations and worked examples. Linked from the Solve tab.
+- `/tutorial` — How-to-play guide for first-time visitors. Linked from the Play tab.
+
+---
+
+## Puzzle representation
+
+The canonical JSON format gains three optional metadata fields:
+
+| Field        | Type     | Example             |
+|--------------|----------|---------------------|
+| `name`       | `string` | `"My Puzzle"`       |
+| `source`     | `string` | `"LinkedIn Queens"` |
+| `difficulty` | `string` | `"Medium"`          |
+
+These are surfaced in the UI when present (e.g. displayed above the board in Play mode) and preserved on import/export. The text and archived formats are updated correspondingly.
 
 ---
 
 ## Play
 
 ### Landing state
-The default puzzle is chosen randomly from a curated list of easy puzzles. A link to a tutorial/explanation page is shown prominently so first-time visitors can learn the rules.
+The default puzzle is chosen randomly from a curated list of easy puzzles. A link to the tutorial page is shown prominently so first-time visitors can learn the rules.
 
 ### Controls
 - **Hint**, **Reset**, and **Undo** become labelled buttons (text, not just icons). Settings moves out of the controls row into a global location shared across all tabs.
-- After 10 seconds of inactivity, the Hint button is highlighted and a "Tap to show hint" prompt appears.
+- After 10 seconds of inactivity, the Hint button is highlighted and a prompt appears near it ("Tap for a hint").
+
+### Import from screenshot
+A "Import from screenshot" option lets users paste or upload an image of a Queens puzzle (e.g. from LinkedIn) and automatically extracts the region layout. This is a long-term feature.
 
 ### Current user flows (unchanged)
 - Load puzzle from localStorage / URL hash → tap cells (empty → X → queen → empty cycle) → solved banner appears.
@@ -53,38 +67,48 @@ The default puzzle is chosen randomly from a curated list of easy puzzles. A lin
 A step-through view that exposes the solver's internal reasoning.
 
 - **Left panel**: the puzzle board, showing the current state at each step.
-- **Right panel**: the list of solver rules, with the active rule highlighted and a plain-English explanation of why it applies.
-- The solver iterates through rules in priority order; each step advances one rule application.
+- **Right panel**: the list of solver rules in priority order. The active rule is highlighted with a plain-English explanation of exactly why it applies to the current board state, with board cells highlighted accordingly.
 - Supports both **undo** and **redo** so the user can walk back and forth through the solution.
-- Long-term: a separate page lists all solver rules with explanations, linked from this view.
+- A link to `/rules` allows users to read about any rule in depth.
 
 ---
 
 ## Editor
 
-### Improvements
-- The default tool is **drag-paint**: hold and drag to paint the selected colour across cells rather than single-click per cell.
+### Tool
+The default tool is **drag-paint**: hold and drag to paint the selected colour across cells. Press keys `1`–`8` (or `1`–`N` for an N×N board) to switch to that colour without leaving the keyboard.
+
+### Analysis
 - The real-time validity calculation shows **"Calculating…"** immediately when a change invalidates the cached result, before the debounce fires.
-- A **how-to-use guide** is shown in the editor UI, suggesting a workflow: e.g. start by placing queens, shuffle them, then grow regions around them; or draw a letter/shape first and then shuffle queens in.
-- The board displays **queen positions** from the current region layout so the user sees the solved state as they paint.
-- **Partial-region start**: allow beginning with some regions already assigned, then invoking the generator/shuffler to fill in remaining queens and regions. For example, draw a letter or two, then let the tool place the remaining queens.
-- Long-term: a check that explores remaining region-assignment possibilities to verify a unique solution is achievable.
+- Analysis shows: valid layout, regions complete, queens placed, difficulty, and solution count.
+
+### Workflow guide
+A how-to-use guide is shown in the editor UI, suggesting:
+1. Select a colour and drag-paint cells.
+2. Use *Shuffle queens* to find valid queen positions for the painted regions.
+3. Alternatively, sketch a letter or shape first, then shuffle queens in.
+4. Aim for exactly 1 solution — analysis updates as you paint.
+
+### Queen overlay
+The board displays the solver-determined queen positions for the current region layout so the user can see the solved state as they paint.
+
+### Partial-region start
+Allow beginning with some regions already assigned, then invoking Shuffle queens to fill in remaining placements.
+
+### Long-term
+A check that explores remaining region-assignment possibilities to verify a unique solution is achievable before all regions are fully drawn.
 
 ---
 
 ## Generator
 
 ### Management view
-feedback:
-> actually would be clearer if from the generator page, opening a given puzzle opens in a new tab. but still, it should
-> not interfere with the generator page
- 
-The generator becomes a persistent background management view rather than a blocking modal.
+The generator is a persistent background management view. Generation runs independently of what the user is doing elsewhere.
 
-- **Worker panel**: shows in-progress searches from one or more workers, with live status.
-- **Results list**: found puzzles displayed with their size and difficulty. Generation continues independently — the user can leave this tab to play or edit a found puzzle without interrupting the search.
-- **Counter**: total number of solutions found is always visible.
-- Selecting a found puzzle opens it in Play or Editor without stopping generation.
+- **Worker panel**: shows in-progress searches from one or more workers, with live status (candidates tried, found count, progress).
+- **Results list**: found puzzles with size and difficulty. Opening a puzzle from the results list opens it in a **new browser tab** (Play or Editor) so generation is never interrupted.
+- **Counter**: total puzzles found is always visible.
+- Workers continue running when the user navigates away and resumes on return.
 
 ---
 
@@ -102,6 +126,6 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 
 ## Open questions
 
-- What links belong in the footer alongside GitHub and the author credit?
-- Tutorial/rules page: same SPA route or a separate static page?
+- Tutorial/rules pages: same SPA routes or separate static pages?
 - Settings: slide-in drawer, dedicated page, or floating panel?
+- Screenshot importer: client-side (WASM/canvas) or server-side OCR?
