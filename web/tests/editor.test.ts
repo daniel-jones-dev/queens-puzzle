@@ -132,11 +132,12 @@ test.describe("Editor: scatter queens", () => {
     await page.locator("button:has-text('Scatter queens')").click();
     await page.waitForTimeout(300);
 
-    // Paint a cell to mark a change since last scatter
+    // Paint the entire first row to guarantee a change regardless of which
+    // cell scatter_queens placed region 0 on (clicking a single cell is
+    // flaky when that cell already holds the selected colour).
     const board = page.locator('[class*="board"]').first();
     await page.locator("button[title='Region 1']").click();
-    await clickCell(page, board, (await board.boundingBox())!.width / 7, 0, 0);
-    await page.waitForTimeout(100);
+    await dragPaintFirstRow(page, board);
 
     // Second scatter → confirm because board changed
     await page.locator("button:has-text('Scatter queens')").click();
