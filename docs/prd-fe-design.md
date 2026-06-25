@@ -57,9 +57,6 @@ Puzzle metadata displayed above the board (when present):
 - **Hint**, **Reset**, **Undo** are labelled buttons. Share is labelled **Copy link**. Settings moves to a global ⚙ icon in the header.
 - After 10 seconds of inactivity, the Hint button pulses. No tooltip text is shown — the visual pulse is sufficient.
 
-### Import from screenshot
-A "Import from screenshot" option lets users paste or upload an image of a Queens puzzle (e.g. from LinkedIn) and automatically extracts the region layout. This is a long-term feature.
-
 ### Current user flows (unchanged)
 - Load puzzle from localStorage / URL hash → tap cells (empty → X → queen → empty cycle) → solved banner appears.
 - Tap Hint → cells dim, hint bar appears with description → tap Apply or interact freely → hint clears.
@@ -150,8 +147,8 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 ## Decisions
 
 - **Settings location**: Dropdown panel anchored to a ⚙ Settings ▾ button in the header right (not a page or slide-in drawer)
-- **Screenshot importer**: Client-side — WASM/canvas, faster and works offline
-- **About page**: Probably not needed as a separate page; too little content. May fold into footer or a tooltip.
+- **Screenshot importer**: Removed from Play tab for now. Potential future feature as its own tab; note in README as a possible next step.
+- **About page**: A modal (not a separate page or tooltip).
 - **Tutorial/rules pages**: TBD — see trade-offs below
 
 ### Tutorial/rules pages: SPA routes vs. static pages
@@ -197,15 +194,6 @@ Worker cards show:
 
 ## Open questions
 
-- Tutorial/rules pages: recommendation is SPA routes — confirm?
-  - feedback yes use SPA routes
-- Built-in puzzle list: need to generate a curated set before shipping the Play landing state.
-  -  feedback for now just use a dummy puzzle list
-
-
-## feedback
-
-import from screenshot would be a new tab, not part of play tab. can be removed for now, and noted in possible next steps in readme
-
-the about can just be a modal
+- ~~Tutorial/rules pages~~ — resolved: use SPA routes.
+- ~~Built-in puzzle list~~ — resolved: use a dummy puzzle list for now; generate real puzzles later.
 
