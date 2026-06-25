@@ -72,7 +72,7 @@ Puzzle metadata displayed above the board (when present):
 An annotated play view — you interact with the board exactly as in Play mode, and the solver rules panel on the right reflects the solver's analysis of the current board state in real time.
 
 - **Entry point**: Solve is opened with a specific puzzle (e.g. via "Open in Solver" from Play). Navigating directly to `/solve` with no puzzle loaded shows a prompt: "Select a puzzle to solve — open a puzzle in Play first."
-- **Left panel**: the puzzle board. Click cells to cycle states (empty → X → queen) exactly as in Play mode. Puzzle name and difficulty are shown below the board.
+- **Left panel**: the puzzle board. Puzzle name and difficulty are shown **above** the board (same position as in Play). Click cells to cycle states (empty → X → queen) exactly as in Play mode.
 - **Right panel**: the list of **solver rules** in priority order, grouped Easy / Medium / Hard. The rule the solver would apply next (given the current board state) is highlighted with a plain-English explanation. Board cells affected by that rule are highlighted.
 - **No step counter.** Navigation is undo/redo of the player's own moves — there is no separate solver-controlled stepping.
 - Undo/redo are available (same as Play). Undo history is preserved if the puzzle was originally opened from Play mid-solve.
@@ -135,10 +135,10 @@ The generator is a persistent background management view. Generation runs indepe
 
 ## Settings
 
-Settings is a preference panel accessible from all tabs via the ⚙ button in the header. It contains only user preferences — no navigation commands. Example items:
-- Show timer (toggle)
-- Auto-mark eliminated cells (toggle, equivalent to the current "auto-cross cells" setting)
-- New game (with confirmation dialog)
+Settings is a preference panel accessible from all tabs via the ⚙ button in the header. It contains only user preferences — no navigation commands. The three settings are:
+- **Show clock** (toggle)
+- **Auto-check** (toggle) — auto-validates queen placement
+- **Auto-place X's** (toggle) — equivalent to the current "auto-cross cells" setting
 
 ---
 
@@ -186,7 +186,7 @@ Below the board, three rows:
 
 The header uses a three-column grid: logo (left) · nav tabs (centre) · settings (right). This prevents the settings button from colliding with the tab row at any viewport width.
 
-Settings ▾ opens a preference panel containing toggles (Show timer, Auto-mark eliminated cells) and the New game action. It does not contain navigation commands — those live in the action row below the board.
+Settings ▾ opens a preference panel with three toggles: Show clock, Auto-check, Auto-place X's. No navigation commands, no New game button.
 
 ## Editor layout
 
@@ -200,16 +200,10 @@ Worker cards show:
 
 ## Solve
 
-The rules panel header is "Solver rules". Rules are grouped Easy / Medium / Hard. Each rule name links to `/rules`. Puzzle name and difficulty are shown below the board. No step counter or Back/Next buttons — undo/redo of player moves drives navigation.
+The rules panel header is "Solver rules". Rules are grouped Easy / Medium / Hard. Each rule name links to `/rules`. Puzzle name and difficulty are shown **above** the board (same as Play). No step counter or Back/Next buttons — undo/redo of player moves drives navigation.
 
 ## Open questions
 
 - ~~Tutorial/rules pages~~ — resolved: use SPA routes.
 - ~~Built-in puzzle list~~ — resolved: use a dummy puzzle list for now; generate real puzzles later.
 
-## feedback
-
-settings should have the settings in this image: (no new game button)
-![img.png](img.png)
-
-- put the puzzle name and difficulty above the puzzle in solver, same as in play.

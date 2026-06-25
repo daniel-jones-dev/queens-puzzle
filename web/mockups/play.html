@@ -51,7 +51,6 @@
     .toggle.on { background:var(--accent); }
     .toggle::after { content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:white; transition:left 0.1s; }
     .toggle.on::after { left:14px; }
-    .settings-danger { color:#b91c1c; }
 
     /* ── Main ── */
     main { flex:1; display:flex; flex-direction:column; align-items:center; padding:28px 24px 32px; gap:0; }
@@ -124,17 +123,20 @@
       <!-- Settings dropdown shown open for mockup -->
       <div class="settings-panel" id="settings-panel">
         <div class="settings-item settings-toggle">
-          <span class="settings-item-icon">⏱</span>
-          <span style="flex:1">Show timer</span>
+          <span class="settings-item-icon">🕐</span>
+          <span style="flex:1">Show clock</span>
+          <span class="toggle on"></span>
+        </div>
+        <div class="settings-item settings-toggle">
+          <span class="settings-item-icon">✓</span>
+          <span style="flex:1">Auto-check</span>
           <span class="toggle on"></span>
         </div>
         <div class="settings-item settings-toggle">
           <span class="settings-item-icon">✕</span>
-          <span style="flex:1">Auto-mark eliminated cells</span>
+          <span style="flex:1">Auto-place X's</span>
           <span class="toggle on"></span>
         </div>
-        <hr class="settings-sep">
-        <div class="settings-item settings-danger"><span class="settings-item-icon">⊕</span> New game…</div>
       </div>
     </div>
   </div>
