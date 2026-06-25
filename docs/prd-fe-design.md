@@ -202,6 +202,131 @@ Worker cards show:
 
 The rules panel header is "Solver rules". Rules are grouped Easy / Medium / Hard. Each rule name links to `/rules`. Puzzle name and difficulty are shown **above** the board (same as Play). No step counter or Back/Next buttons — undo/redo of player moves drives navigation.
 
+## Component plan
+
+### Routing
+
+Add React Router. The current `mode` state (`"play" | "edit"`) is replaced by the URL.
+
+```
+/           → redirect to /play
+/play       → PlayPage
+/solve      → SolvePage
+/editor     → EditorPage
+/generator  → GeneratorPage
+/rules      → RulesPage        (SPA route, not tab)
+/tutorial   → TutorialPage     (SPA route, not tab)
+```
+
+### App shell
+
+`main.tsx` mounts `<RouterProvider>`. The root layout component (`AppShell`) renders the `<Header>`, `<Outlet>` (tab page), `<Footer>`, and `<BottomNav>` (mobile only).
+
+```
+AppShell
+├── Header              logo · NavTabs (desktop) · SettingsButton
+├── <Outlet>            one of the four tab pages
+├── Footer
+└── BottomNav           mobile only, fixed to bottom
+```
+
+`AppShell` owns the three global settings (`showClock`, `autoCheck`, `autoPlaceXs`) as state and passes them via context (`SettingsContext`) so any tab can read them without prop-drilling. Settings persist to `localStorage`.
+
+### Shared / reusable components
+
+These are used across more than one tab:
+
+- **`Board`** (`components/Board.tsx`) — board grid + SVG region borders; rename from `Grid`
+- **`PuzzleMeta`** (`components/PuzzleMeta.tsx`) — name · author · difficulty badge · uniqueness badge
+- **`ConfirmModal`** (`components/ConfirmModal.tsx`) — generic confirmation dialog; no change
+- **`SettingsPanel`** (`components/SettingsPanel.tsx`) — 3-toggle preferences panel; refactor existing
+- **`SolvedBanner`** (`components/SolvedBanner.tsx`) — solved state overlay; no change
+
+### Play tab
+
+`PlayPage` owns all play state. Its children are pure display components.
+
+```
+PlayPage                  puzzle, playerStates, timer, hint, past[], solved
+├── PuzzleMeta            name, difficulty, uniqueness
+├── Board                 regions, cellStates, hint highlights
+├── HintBar               hint description, Apply / Dismiss
+├── PlayControls          Hint · timer · Undo · Reset
+├── HowToPlay             <details> collapsible
+├── PlayActions           Open in Solver · Open in Editor · Copy link
+└── ConfirmModal          reset confirm, new-game confirm
+```
+
+Cross-tab navigation from PlayPage uses React Router `navigate`:
+- "Open in Solver" → `navigate('/solve', { state: { puzzleJson, playerStates, past } })`
+- "Open in Editor" → `navigate('/editor', { state: { puzzleJson } })`
+
+### Solve tab
+
+`SolvePage` receives the puzzle via `location.state`. If absent, renders an empty state prompt.
+
+```
+SolvePage                 puzzle (from location.state), playerStates, past[]
+├── EmptyState            "Select a puzzle to solve — open one in Play first"  (conditional)
+├── PuzzleMeta            name, difficulty (shown above board)
+├── Board                 regions, cellStates, rule highlights
+├── SolveControls         Undo · Redo · Continue in Play →
+└── SolverRulesPanel      right panel (desktop) / below board (mobile)
+    └── RuleItem[]        done / active / pending, with explain → links
+```
+
+`SolverRulesPanel` calls `puzzle.next_hint()` after each state change to determine the active rule and highlighted cells.
+
+### Editor tab
+
+`EditorPage` owns region-editing state. The analysis panel is the desktop sidebar / mobile drawer.
+
+```
+EditorPage                puzzle (regions), editorPast[], activeTool
+├── AnalysisSummaryBar    mobile only — collapsed summary, tap to expand
+├── AnalysisDrawer        mobile only — full analysis in a drawer
+├── Board                 regions, queen overlay, multi-solution cell highlights
+│   └── row/col markers   warning indicators for ambiguous rows/columns
+├── EditorToolbar         🪄 · swatch1…N · UnsetRegion · ToggleQueen (single row)
+├── EditorActions         Undo · Redo | Shuffle queens · Clear | Size ▾ | Export | Play ↗
+└── AnalysisPanel         desktop right panel
+    ├── PuzzleInfoFields  name, author inputs
+    ├── AnalysisStats     validity, regions, queens, difficulty, solutions
+    └── WorkflowGuide     numbered how-to steps
+```
+
+`activeTool` is a discriminated union: `{ kind: 'wand' } | { kind: 'colour'; index: number } | { kind: 'unset' } | { kind: 'queen' }`.
+
+### Generator tab
+
+`GeneratorPage` manages worker lifecycle. Each worker is a `Worker` instance (Web Worker) running `generatorWorker.ts`.
+
+```
+GeneratorPage             workers[], results[]
+├── WorkersSection
+│   ├── WorkerCard[]      status badge, stats, progress bar, Stop/Restart/Delete
+│   └── AddWorkerButton   opens AddWorkerModal
+├── AddWorkerModal        size select, seed input
+└── ResultsSection
+    ├── ResultsFilters    size select, difficulty select
+    └── ResultsList
+        └── ResultRow[]   mini board preview, size/diff badges, Play ↗ · Edit ↗
+```
+
+Navigate-away guard: `GeneratorPage` registers a `beforeunload` listener and a React Router `blocker` when any worker is running, both triggering the confirmation.
+
+### Existing components: what changes
+
+- **`App.tsx`** — break up: becomes the router root; play state moves to `PlayPage`; edit state moves to `EditorPage`
+- **`Grid.tsx`** → rename to `Board.tsx`; keep internals unchanged
+- **`PlayControls.tsx`** — keep; update labels (Copy link; remove settings button, it moves to header)
+- **`EditControls.tsx`** → replace with `EditorToolbar` + `EditorActions`
+- **`SettingsPanel.tsx`** — refactor to 3-toggle panel; remove share/import/navigation items
+- **`ImportModal.tsx`** — move import into a dialog opened from settings or a dedicated route
+- **`GenerateModal.tsx`** → delete; replaced by `GeneratorPage`
+- **`HintBar.tsx`**, **`SolvedBanner.tsx`**, **`ConfirmModal.tsx`** — keep as-is
+- **`useAnalysisWorker.ts`** — keep; used by `EditorPage`
+
 ## Testing
 
 ### Principles
