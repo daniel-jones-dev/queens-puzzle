@@ -144,18 +144,3 @@ On startup the init `useEffect` checks `window.location.hash` before falling bac
 
 Import calls `WasmPuzzle.from_json(text)` and on success replaces all puzzle state (regions, playerStates, timer, history, hint). Errors set `importError` which renders as inline red text below the textarea.
 
-## Milestone status (as of 2026-06-23)
-
-| # | Milestone | Status |
-|---|-----------|--------|
-| 1 | WASM scaffold | ✓ Complete |
-| 2 | Playable board | ✓ Complete |
-| 3 | Improved board | ✓ Complete |
-| 4 | Solver step-through | ✓ Complete |
-| 5 | Change history | ✓ Complete |
-| 6 | Puzzle import + share | ✓ Complete |
-| 7 | Custom editor | ✓ Complete |
-| 8 | Editor live analysis | ✓ Complete |
-| 9 | Generator UX | ✓ Complete |
-
-See `docs/prd-web-ui.md` for full feature specs and acceptance criteria.
