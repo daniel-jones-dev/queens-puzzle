@@ -129,3 +129,34 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 - Tutorial/rules pages: same SPA routes or separate static pages?
 - Settings: slide-in drawer, dedicated page, or floating panel?
 - Screenshot importer: client-side (WASM/canvas) or server-side OCR?
+
+
+
+## Feedback on the mockups
+maybe there is a better phrase than "Made popular by"?
+do we also want an about page?
+
+# Editor
+- in the tool select, also show drag-to-paint tool (with a magic wand icon) and the reset region option (with checkerboard look)
+- open in Play should be a new tab (show the arrow up-right icon)
+- can you show have a marker to the right (for problematic rows) and bottom (for problematic columns) where the multiple
+   solutions have variations (and highlight the problematic cells)
+- add undo/redo buttons
+- add a change board size button
+- add a share or export button (the open in play button should be connected to that one)
+- add box above analysis to name the puzzle and enter the author
+
+# generator
+- also make a mockup of what is shown when Add worker is clicked
+- show worker seeds
+- allow filtering found puzzles by difficulty and size
+
+# play
+- no settings button is shown
+- add button to share puzzle
+- add (optional) puzzle name and author, and calculated difficulty, and confirmed solution count
+  - note: the difficulty should be determined by the solver steps from an *unsolved* puzzle 
+- question: should there be buttons to solve or edit this puzzle?
+
+# solve
+- add button to continue playing from this point
