@@ -9,224 +9,246 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #F8F8F5;
-      --surface: #fff;
-      --text: #1A1A18;
-      --text2: #6B6B62;
-      --accent: #2B3A5E;
-      --border: #E2E2DC;
-    }
-    body {
-      background: var(--bg); color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif; font-size: 14px;
-      min-height: 100vh; display: flex; flex-direction: column;
-    }
-    header {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 0 28px; height: 56px; display: flex; align-items: center;
-      justify-content: space-between; flex-shrink: 0;
-    }
-    .logo { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 22px; color: var(--accent); text-decoration: none; }
-    nav { display: flex; }
-    nav a {
-      font-size: 14px; font-weight: 500; padding: 0 18px; height: 56px;
-      display: flex; align-items: center; text-decoration: none;
-      color: var(--text2); border-bottom: 2.5px solid transparent; transition: color 0.12s;
-    }
-    nav a:hover { color: var(--text); }
-    nav a.active { color: var(--text); border-bottom-color: var(--accent); }
+    :root { --bg:#F8F8F5; --surface:#fff; --text:#1A1A18; --text2:#6B6B62; --accent:#2B3A5E; --border:#E2E2DC; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; font-size:14px; min-height:100vh; display:flex; flex-direction:column; }
 
-    main {
-      flex: 1; display: flex; justify-content: center;
-      padding: 36px 28px 32px;
-    }
-    .layout {
-      display: flex; gap: 28px; align-items: flex-start;
-      width: 100%; max-width: 760px;
-    }
+    header { background:var(--surface); border-bottom:1px solid var(--border); padding:0 28px; height:56px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:22px; color:var(--accent); text-decoration:none; }
+    .header-middle { display:flex; }
+    nav a { font-size:14px; font-weight:500; padding:0 18px; height:56px; display:flex; align-items:center; text-decoration:none; color:var(--text2); border-bottom:2.5px solid transparent; transition:color 0.12s; }
+    nav a:hover { color:var(--text); }
+    nav a.active { color:var(--text); border-bottom-color:var(--accent); }
+    .header-right { display:flex; align-items:center; }
+    .icon-btn { background:none; border:none; padding:8px; border-radius:6px; cursor:pointer; color:var(--text2); font-size:16px; line-height:1; transition:background 0.1s; }
+    .icon-btn:hover { background:var(--bg); color:var(--text); }
 
-    /* ── Board + tools column ── */
-    .board-col {
-      display: flex; flex-direction: column; gap: 14px; flex-shrink: 0;
-    }
+    main { flex:1; display:flex; justify-content:center; padding:28px 28px 32px; }
+    .layout { display:flex; gap:24px; align-items:flex-start; width:100%; max-width:820px; }
 
-    .board {
-      display: grid; border: 2.5px solid rgba(0,0,0,0.22);
-      border-radius: 3px; overflow: hidden; cursor: crosshair;
-    }
-    .cell {
-      display: flex; align-items: center; justify-content: center;
-      border-right: 1px solid rgba(0,0,0,0.08);
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-    }
-    .cell.rbr { border-right: 2.5px solid rgba(0,0,0,0.24); }
-    .cell.rbb { border-bottom: 2.5px solid rgba(0,0,0,0.24); }
-    .queen { color: rgba(0,0,0,0.35); font-size: 20px; user-select: none; line-height: 1; }
+    /* ── Board column ── */
+    .board-col { display:flex; flex-direction:column; gap:12px; flex-shrink:0; }
 
-    /* Colour palette */
-    .palette-row {
-      display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+    /* Toolbar: tools + palette */
+    .toolbar { display:flex; flex-direction:column; gap:8px; }
+    .toolbar-row { display:flex; align-items:center; gap:8px; }
+    .toolbar-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; width:40px; flex-shrink:0; }
+
+    /* Tool buttons */
+    .tool-btn {
+      display:flex; align-items:center; gap:6px;
+      font-family:'Inter',sans-serif; font-size:12px; font-weight:500;
+      padding:6px 10px; border-radius:6px;
+      border:1.5px solid var(--border); background:var(--surface); color:var(--text);
+      cursor:pointer; transition:background 0.1s, border-color 0.1s;
+      white-space:nowrap;
     }
-    .swatch {
-      width: 30px; height: 30px; border-radius: 5px;
-      border: 2.5px solid transparent;
-      cursor: pointer; transition: transform 0.1s;
-      flex-shrink: 0;
-    }
-    .swatch:hover { transform: scale(1.12); }
-    .swatch.selected {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent);
-      transform: scale(1.12);
+    .tool-btn:hover { background:var(--bg); }
+    .tool-btn.active { background:var(--accent); border-color:var(--accent); color:white; }
+    .tool-icon { font-size:14px; line-height:1; }
+
+    /* Checkerboard icon for "reset region" */
+    .checker-icon {
+      width:14px; height:14px; border-radius:2px; flex-shrink:0;
+      background-image:
+        linear-gradient(45deg,#aaa 25%,transparent 25%),
+        linear-gradient(-45deg,#aaa 25%,transparent 25%),
+        linear-gradient(45deg,transparent 75%,#aaa 75%),
+        linear-gradient(-45deg,transparent 75%,#aaa 75%);
+      background-size:7px 7px;
+      background-position:0 0,0 3.5px,3.5px -3.5px,-3.5px 0;
     }
 
-    .tool-label {
-      font-size: 12px; color: var(--text2);
-      display: flex; align-items: center; gap: 8px;
+    /* Colour swatches */
+    .palette-row { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+    .swatch { width:28px; height:28px; border-radius:5px; border:2.5px solid transparent; cursor:pointer; transition:transform 0.1s; flex-shrink:0; position:relative; }
+    .swatch:hover { transform:scale(1.1); }
+    .swatch.selected { border-color:var(--accent); box-shadow:0 0 0 2px white,0 0 0 4px var(--accent); transform:scale(1.1); }
+    .swatch-num {
+      position:absolute; bottom:1px; right:2px;
+      font-size:8px; font-weight:700; color:rgba(0,0,0,0.45); line-height:1;
     }
-    .tool-label strong { color: var(--text); }
 
-    .board-actions {
-      display: flex; gap: 8px;
+    /* Board + markers area */
+    .board-area {
+      display:grid;
+      grid-template-columns:auto 22px;
+      grid-template-rows:auto 22px;
+      gap:4px;
     }
-    .btn {
-      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
-      padding: 7px 14px; border-radius: 6px;
-      border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
-      cursor: pointer; transition: background 0.1s, border-color 0.1s;
-    }
-    .btn:hover { background: var(--bg); border-color: #C8C8C0; }
-    .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
-    .btn-primary:hover { background: #233050; border-color: #233050; }
+    .board { display:grid; border:2.5px solid rgba(0,0,0,0.22); border-radius:3px; overflow:hidden; cursor:crosshair; }
+    .cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); position:relative; }
+    .cell.rbr { border-right:2.5px solid rgba(0,0,0,0.24); }
+    .cell.rbb { border-bottom:2.5px solid rgba(0,0,0,0.24); }
+    .cell.multi::after { content:''; position:absolute; inset:2px; border:2px solid rgba(220,60,60,0.5); border-radius:2px; pointer-events:none; }
+    .queen { color:rgba(0,0,0,0.32); user-select:none; line-height:1; }
 
-    /* ── Analysis panel ── */
-    .panel {
-      flex: 1; background: var(--surface);
-      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
-    }
-    .panel-header {
-      padding: 14px 18px 12px; border-bottom: 1px solid var(--border);
-      font-weight: 600; font-size: 14px;
-    }
-    .panel-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+    /* Row markers (right of board) */
+    .row-markers { grid-column:2; grid-row:1; display:flex; flex-direction:column; }
+    .row-marker { display:flex; align-items:center; justify-content:center; font-size:11px; color:transparent; }
+    .row-marker.warn { color:#ef4444; }
 
-    .stat-row {
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .stat-label { font-size: 13px; color: var(--text2); }
-    .stat-val   { font-size: 13px; font-weight: 600; }
-    .stat-val.ok    { color: #16a34a; }
-    .stat-val.warn  { color: #d97706; }
-    .stat-val.bad   { color: #dc2626; }
-    .stat-val.mono  { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
-    .stat-val.computing {
-      font-size: 12px; color: var(--text2); font-style: italic; font-weight: 400;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .spinner {
-      width: 12px; height: 12px; border-radius: 50%;
-      border: 2px solid var(--border); border-top-color: var(--accent);
-      animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Col markers (below board) */
+    .col-markers { grid-column:1; grid-row:2; display:flex; }
+    .col-marker { display:flex; align-items:center; justify-content:center; font-size:11px; color:transparent; }
+    .col-marker.warn { color:#ef4444; }
 
-    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+    /* Action buttons */
+    .actions-row { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+    .btn { font-family:'Inter',sans-serif; font-size:12px; font-weight:500; padding:7px 13px; border-radius:6px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background 0.1s; white-space:nowrap; }
+    .btn:hover { background:var(--bg); border-color:#C8C8C0; }
+    .btn-primary { background:var(--accent); border-color:var(--accent); color:white; }
+    .btn-primary:hover { background:#233050; }
+    .btn-icon { display:flex; align-items:center; gap:5px; }
+    .divider-v { width:1px; height:24px; background:var(--border); }
+
+    /* ── Right panel ── */
+    .panel { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+    .panel-section { padding:16px 18px; border-bottom:1px solid var(--border); }
+    .panel-section:last-child { border-bottom:none; flex:1; }
+    .section-title { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+
+    /* Puzzle info inputs */
+    .field { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+    .field:last-child { margin-bottom:0; }
+    .field label { font-size:11px; font-weight:600; color:var(--text2); }
+    .field input { font-family:'Inter',sans-serif; font-size:13px; padding:7px 10px; border:1.5px solid var(--border); border-radius:6px; color:var(--text); background:var(--bg); outline:none; }
+    .field input:focus { border-color:var(--accent); background:white; }
+    .field input::placeholder { color:var(--text2); opacity:0.6; }
+
+    /* Analysis stats */
+    .stat-row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; }
+    .stat-label { font-size:12px; color:var(--text2); }
+    .stat-val { font-size:12px; font-weight:600; }
+    .ok   { color:#16a34a; }
+    .warn { color:#d97706; }
+    .mono { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:400; color:var(--text); }
+    .computing { font-size:11px; color:var(--text2); font-style:italic; font-weight:400; display:flex; align-items:center; gap:5px; }
+    .spinner { width:11px; height:11px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--accent); animation:spin 0.7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Multi-solution warning */
+    .multi-warn { background:#fef2f2; border:1px solid #fca5a5; border-radius:6px; padding:8px 10px; font-size:11px; color:#991b1b; line-height:1.5; margin-top:8px; }
+    .multi-warn strong { font-weight:600; }
 
     /* How-to guide */
-    .guide-section { }
-    .guide-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-    .guide-steps { display: flex; flex-direction: column; gap: 8px; }
-    .guide-step {
-      font-size: 12px; color: var(--text2); line-height: 1.5;
-      padding-left: 16px; position: relative;
-    }
-    .guide-step::before {
-      content: attr(data-n);
-      position: absolute; left: 0;
-      color: var(--accent); font-weight: 600; font-size: 11px;
-    }
+    .guide-steps { display:flex; flex-direction:column; gap:7px; }
+    .guide-step { font-size:12px; color:var(--text2); line-height:1.5; padding-left:16px; position:relative; }
+    .guide-step::before { content:attr(data-n); position:absolute; left:0; color:var(--accent); font-weight:600; font-size:11px; }
 
-    footer {
-      border-top: 1px solid var(--border); padding: 14px 28px;
-      display: flex; align-items: center; justify-content: center;
-      gap: 14px; font-size: 12px; color: var(--text2); flex-shrink: 0;
-    }
-    footer a { color: var(--text2); text-decoration: none; }
-    footer a:hover { color: var(--text); }
-    .sep { opacity: 0.35; }
+    footer { border-top:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:center; gap:14px; font-size:12px; color:var(--text2); flex-shrink:0; }
+    footer a { color:var(--text2); text-decoration:none; }
+    footer a:hover { color:var(--text); }
+    .sep { opacity:0.35; }
   </style>
 </head>
 <body>
 
 <header>
   <a class="logo" href="play.html">♛ Queens</a>
-  <nav>
-    <a href="play.html">Play</a>
-    <a href="solve.html">Solve</a>
-    <a href="editor.html" class="active">Editor</a>
-    <a href="generator.html">Generator</a>
-  </nav>
+  <div class="header-middle">
+    <nav>
+      <a href="play.html">Play</a>
+      <a href="solve.html">Solve</a>
+      <a href="editor.html" class="active">Editor</a>
+      <a href="generator.html">Generator</a>
+    </nav>
+  </div>
+  <div class="header-right">
+    <button class="icon-btn" title="Settings">⚙</button>
+  </div>
 </header>
 
 <main>
   <div class="layout">
 
     <div class="board-col">
-      <div class="board" id="board"></div>
 
-      <!-- Palette -->
-      <div class="palette-row" id="palette"></div>
-
-      <div class="tool-label">
-        Tool: <strong>Drag to paint</strong> &nbsp;·&nbsp; Press <strong>1–8</strong> to switch colour
+      <!-- Toolbar: tools + colour -->
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <span class="toolbar-label">Tool</span>
+          <button class="tool-btn active" title="Drag across cells to paint (P)">
+            <span class="tool-icon">✏</span> Paint
+          </button>
+          <button class="tool-btn" title="Click to clear all cells in a region">
+            <span class="checker-icon"></span> Reset region
+          </button>
+        </div>
+        <div class="toolbar-row">
+          <span class="toolbar-label">Colour</span>
+          <div class="palette-row" id="palette"></div>
+        </div>
       </div>
 
-      <div class="board-actions">
+      <!-- Board with row/col markers -->
+      <div class="board-area">
+        <div class="board" id="board"></div>
+        <div class="row-markers" id="row-markers"></div>
+        <div class="col-markers" id="col-markers"></div>
+      </div>
+
+      <!-- Action buttons row 1 -->
+      <div class="actions-row">
+        <button class="btn btn-icon">↩ Undo</button>
+        <button class="btn btn-icon" style="opacity:0.4">↪ Redo</button>
+        <div class="divider-v"></div>
         <button class="btn btn-primary">Shuffle queens</button>
         <button class="btn">Clear board</button>
-        <button class="btn">Open in Play</button>
       </div>
+
+      <!-- Action buttons row 2 -->
+      <div class="actions-row">
+        <button class="btn">Size: 8×8 ▾</button>
+        <div class="divider-v"></div>
+        <button class="btn btn-icon">Share / Export</button>
+        <button class="btn btn-primary btn-icon">Open in Play ↗</button>
+      </div>
+
     </div>
 
+    <!-- Right panel -->
     <div class="panel">
-      <div class="panel-header">Analysis</div>
-      <div class="panel-body">
-        <div class="stat-row">
-          <span class="stat-label">Valid layout</span>
-          <span class="stat-val ok">✓ Yes</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Regions complete</span>
-          <span class="stat-val mono">4 / 8</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Queens placed</span>
-          <span class="stat-val mono">4 / 8</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Difficulty</span>
-          <span class="stat-val warn">Calculating…</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Solutions</span>
-          <span class="stat-val computing">
-            <span class="spinner"></span>Calculating…
-          </span>
-        </div>
 
-        <hr class="divider">
-
-        <div class="guide-section">
-          <div class="guide-title">How to build a puzzle</div>
-          <div class="guide-steps">
-            <div class="guide-step" data-n="1.">Select a colour and drag-paint cells to define a region.</div>
-            <div class="guide-step" data-n="2.">Use <em>Shuffle queens</em> to find valid queen positions for your regions.</div>
-            <div class="guide-step" data-n="3.">You can also sketch a letter or shape first, then shuffle queens in.</div>
-            <div class="guide-step" data-n="4.">Aim for exactly 1 solution. Analysis updates as you paint.</div>
-          </div>
+      <!-- Puzzle info -->
+      <div class="panel-section">
+        <div class="section-title">Puzzle info</div>
+        <div class="field">
+          <label>Name</label>
+          <input type="text" value="Wednesday's Puzzle" placeholder="Puzzle name">
+        </div>
+        <div class="field">
+          <label>Author</label>
+          <input type="text" value="Daniel Jones" placeholder="Author (optional)">
         </div>
       </div>
+
+      <!-- Analysis -->
+      <div class="panel-section">
+        <div class="section-title">Analysis</div>
+        <div class="stat-row"><span class="stat-label">Valid layout</span><span class="stat-val ok">✓ Yes</span></div>
+        <div class="stat-row"><span class="stat-label">Regions complete</span><span class="stat-val mono">6 / 8</span></div>
+        <div class="stat-row"><span class="stat-label">Queens placed</span><span class="stat-val mono">6 / 8</span></div>
+        <div class="stat-row"><span class="stat-label">Difficulty</span><span class="stat-val warn">Calculating…</span></div>
+        <div class="stat-row">
+          <span class="stat-label">Solutions</span>
+          <span class="stat-val computing"><span class="spinner"></span>Calculating…</span>
+        </div>
+        <div class="multi-warn">
+          <strong>Multiple solutions detected.</strong> Rows 6–7 and columns 5–7 have ambiguity — highlighted in red on the board. Finish painting those regions to narrow to one solution.
+        </div>
+      </div>
+
+      <!-- How-to -->
+      <div class="panel-section">
+        <div class="section-title">How to build a puzzle</div>
+        <div class="guide-steps">
+          <div class="guide-step" data-n="1.">Select a colour and drag-paint cells to define a region.</div>
+          <div class="guide-step" data-n="2.">Use <em>Shuffle queens</em> to find valid placements for your regions.</div>
+          <div class="guide-step" data-n="3.">Or sketch a letter/shape first, then shuffle queens in.</div>
+          <div class="guide-step" data-n="4.">Aim for exactly 1 solution — analysis updates as you paint.</div>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -237,27 +259,32 @@
   <span class="sep">·</span>
   <a href="https://github.com/daniel-jones-dev/queens-puzzle">GitHub</a>
   <span class="sep">·</span>
-  <span>Made popular by <a href="https://www.linkedin.com/games/queens/">LinkedIn Queens</a></span>
+  <span>Inspired by <a href="https://www.linkedin.com/games/queens/">LinkedIn Queens</a></span>
 </footer>
 
 <script>
   const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
   const NAMES   = ["Purple","Orange","Blue","Green","White","Red","Yellow","Grey"];
 
-  // Partial region assignment: -1 = unassigned
+  // 6 of 8 regions painted; rows 5-7 / cols 5-7 mostly unassigned
   const REGIONS = [
     [ 0, 0, 0, 1, 1, 1, 2, 2],
     [ 0, 0, 3, 1, 1, 2, 2, 2],
-    [ 0, 3, 3, 3,-1,-1, 2,-1],
-    [-1, 3, 3,-1,-1,-1,-1,-1],
-    [-1,-1, 3,-1,-1,-1,-1,-1],
-    [-1,-1,-1,-1,-1,-1,-1,-1],
-    [-1,-1,-1,-1,-1,-1,-1,-1],
-    [-1,-1,-1,-1,-1,-1,-1,-1],
+    [ 0, 3, 3, 3, 4, 4, 2, 5],
+    [ 6, 3, 3, 4, 4, 4, 5, 5],
+    [ 6, 6, 3, 4,-1, 4, 5, 5],
+    [ 6, 6, 6,-1,-1,-1, 5, 5],
+    [ 6, 6,-1,-1,-1,-1,-1, 5],
+    [ 6,-1,-1,-1,-1,-1,-1,-1],
   ];
-  // Show queens at solver-determined positions for the 4 painted regions
-  // R0 queen at (1,1), R1 at (0,4), R2 at (2,6), R3 at (4,2)
-  const QUEENS = new Set(['1,1','0,4','2,6','4,2']);
+  // Queens at solver positions for the 6 defined regions
+  const QUEENS = new Set(['1,1','0,4','2,6','3,0','4,3','2,7']);
+  // Ambiguous rows and cols
+  const WARN_ROWS = new Set([5,6,7]);
+  const WARN_COLS = new Set([5,6,7]);
+  // Cells that are ambiguous (in unassigned area, within warn rows+cols)
+  function isMulti(r,c) { return REGIONS[r][c] === -1 && WARN_ROWS.has(r) && WARN_COLS.has(c); }
+
   const UNASSIGNED = "#ECEAE6";
   const N = 8, SZ = 44;
 
@@ -265,32 +292,52 @@
   const board = document.getElementById('board');
   board.style.gridTemplateColumns = `repeat(${N},${SZ}px)`;
   board.style.gridTemplateRows    = `repeat(${N},${SZ}px)`;
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      const rg = REGIONS[r][c];
-      const bg = rg === -1 ? UNASSIGNED : PALETTE[rg];
-      const el = document.createElement('div');
-      el.className = 'cell';
-      el.style.cssText = `background:${bg};width:${SZ}px;height:${SZ}px`;
-      // Region borders (skip unassigned boundaries — they look better without)
-      if (rg !== -1 && c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
-      if (rg !== -1 && r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
-      if (QUEENS.has(`${r},${c}`)) {
-        const q = document.createElement('span');
-        q.className = 'queen'; q.textContent = '♛';
-        el.appendChild(q);
-      }
-      board.appendChild(el);
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const rg = REGIONS[r][c];
+    const bg = rg === -1 ? UNASSIGNED : PALETTE[rg];
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.style.cssText = `background:${bg};width:${SZ}px;height:${SZ}px`;
+    if (rg !== -1 && c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
+    if (rg !== -1 && r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
+    if (isMulti(r,c)) el.classList.add('multi');
+    if (QUEENS.has(`${r},${c}`)) {
+      const q = document.createElement('span');
+      q.className='queen'; q.style.fontSize='22px'; q.textContent='♛'; el.appendChild(q);
     }
+    board.appendChild(el);
   }
 
-  // Build palette swatches
+  // Row markers
+  const rowMarkers = document.getElementById('row-markers');
+  for (let r = 0; r < N; r++) {
+    const m = document.createElement('div');
+    m.className = 'row-marker' + (WARN_ROWS.has(r) ? ' warn' : '');
+    m.style.cssText = `width:22px;height:${SZ}px`;
+    m.textContent = '!';
+    rowMarkers.appendChild(m);
+  }
+
+  // Col markers
+  const colMarkers = document.getElementById('col-markers');
+  for (let c = 0; c < N; c++) {
+    const m = document.createElement('div');
+    m.className = 'col-marker' + (WARN_COLS.has(c) ? ' warn' : '');
+    m.style.cssText = `width:${SZ}px;height:22px`;
+    m.textContent = '!';
+    colMarkers.appendChild(m);
+  }
+
+  // Palette swatches
   const palRow = document.getElementById('palette');
   PALETTE.forEach((color, i) => {
     const sw = document.createElement('div');
     sw.className = 'swatch' + (i === 2 ? ' selected' : '');
     sw.style.background = color;
     sw.title = `${NAMES[i]} (${i+1})`;
+    const num = document.createElement('span');
+    num.className = 'swatch-num'; num.textContent = i+1;
+    sw.appendChild(num);
     sw.addEventListener('click', () => {
       document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
       sw.classList.add('selected');

@@ -4,7 +4,9 @@
 
 The site is more than a place to play — it is a tool for understanding how constraint puzzles are solved. The four primary modes (Play, Solve, Editor, Generator) should each be reachable from a top-level tab bar so new visitors understand the full scope at a glance.
 
-A footer on every page shows "Made by Daniel Jones", a link to the GitHub project, and "Made popular by [LinkedIn Queens](https://www.linkedin.com/games/queens/)".
+A footer on every page shows "Made by Daniel Jones", a link to the GitHub project, and "Inspired by [LinkedIn Queens](https://www.linkedin.com/games/queens/)".
+
+An `/about` page is under consideration for the footer; see open questions.
 
 All views support hotkeys (e.g. `Ctrl+Z` to undo, `H` to show hint).
 
@@ -46,8 +48,10 @@ These are surfaced in the UI when present (e.g. displayed above the board in Pla
 ### Landing state
 The default puzzle is chosen randomly from a curated list of easy puzzles. A link to the tutorial page is shown prominently so first-time visitors can learn the rules.
 
+When puzzle metadata is present (`name`, `source`, `difficulty`, solution count), it is displayed above the board. Difficulty is computed by the solver from an *unsolved* puzzle state, not derived from the stored field.
+
 ### Controls
-- **Hint**, **Reset**, and **Undo** become labelled buttons (text, not just icons). Settings moves out of the controls row into a global location shared across all tabs.
+- **Hint**, **Reset**, **Undo**, and **Share** become labelled buttons in the controls row. Settings moves to a global ⚙ icon in the header, accessible from all tabs.
 - After 10 seconds of inactivity, the Hint button is highlighted and a prompt appears near it ("Tap for a hint").
 
 ### Import from screenshot
@@ -76,11 +80,22 @@ A step-through view that exposes the solver's internal reasoning.
 ## Editor
 
 ### Tool
-The default tool is **drag-paint**: hold and drag to paint the selected colour across cells. Press keys `1`–`8` (or `1`–`N` for an N×N board) to switch to that colour without leaving the keyboard.
+The toolbar shows two tools plus the colour palette:
+- **Paint** (✏ icon, default): drag across cells to paint the selected colour. Hotkeys `1`–`N` switch the active colour.
+- **Reset region** (checkerboard icon): click any cell in a region to clear the entire region back to unassigned.
+
+"Open in Play" opens in a new tab (↗ icon). It sits alongside a **Share / Export** button.
 
 ### Analysis
 - The real-time validity calculation shows **"Calculating…"** immediately when a change invalidates the cached result, before the debounce fires.
 - Analysis shows: valid layout, regions complete, queens placed, difficulty, and solution count.
+- When multiple solutions exist, **row markers** (right of the board) and **column markers** (below the board) highlight which rows/columns have ambiguity. The problematic cells on the board are also highlighted so the author knows exactly where to add more region constraints.
+
+### Puzzle info
+A puzzle name and author field sit above the analysis panel so the author can label their creation before exporting.
+
+### Other controls
+Undo/Redo buttons, a **Change size** button (shows current size e.g. "8×8 ▾"), and Share/Export are all in the editor toolbar.
 
 ### Workflow guide
 A how-to-use guide is shown in the editor UI, suggesting:
@@ -105,10 +120,11 @@ A check that explores remaining region-assignment possibilities to verify a uniq
 ### Management view
 The generator is a persistent background management view. Generation runs independently of what the user is doing elsewhere.
 
-- **Worker panel**: shows in-progress searches from one or more workers, with live status (candidates tried, found count, progress).
-- **Results list**: found puzzles with size and difficulty. Opening a puzzle from the results list opens it in a **new browser tab** (Play or Editor) so generation is never interrupted.
+- **Worker panel**: shows in-progress searches from one or more workers, with live status (size, seed, candidates tried, found count, progress bar).
+- **Add worker** opens a dialog to configure size and seed (blank seed = random).
+- **Results list**: found puzzles with size and difficulty, filterable by size and difficulty. Opening a puzzle from the results list opens it in a **new browser tab** (Play ↗ or Edit ↗) so generation is never interrupted.
 - **Counter**: total puzzles found is always visible.
-- Workers continue running when the user navigates away and resumes on return.
+- Workers continue running when the user navigates away and resume on return.
 
 ---
 
@@ -129,34 +145,5 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 - Tutorial/rules pages: same SPA routes or separate static pages?
 - Settings: slide-in drawer, dedicated page, or floating panel?
 - Screenshot importer: client-side (WASM/canvas) or server-side OCR?
-
-
-
-## Feedback on the mockups
-maybe there is a better phrase than "Made popular by"?
-do we also want an about page?
-
-# Editor
-- in the tool select, also show drag-to-paint tool (with a magic wand icon) and the reset region option (with checkerboard look)
-- open in Play should be a new tab (show the arrow up-right icon)
-- can you show have a marker to the right (for problematic rows) and bottom (for problematic columns) where the multiple
-   solutions have variations (and highlight the problematic cells)
-- add undo/redo buttons
-- add a change board size button
-- add a share or export button (the open in play button should be connected to that one)
-- add box above analysis to name the puzzle and enter the author
-
-# generator
-- also make a mockup of what is shown when Add worker is clicked
-- show worker seeds
-- allow filtering found puzzles by difficulty and size
-
-# play
-- no settings button is shown
-- add button to share puzzle
-- add (optional) puzzle name and author, and calculated difficulty, and confirmed solution count
-  - note: the difficulty should be determined by the solver steps from an *unsolved* puzzle 
-- question: should there be buttons to solve or edit this puzzle?
-
-# solve
-- add button to continue playing from this point
+- About page: add `/about` to the footer? What would it contain?
+- Play mode secondary actions: should there be "View solver steps" and "Edit this puzzle" links visible in Play mode?

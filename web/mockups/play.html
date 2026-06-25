@@ -10,182 +10,67 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #F8F8F5;
-      --surface: #fff;
-      --text: #1A1A18;
-      --text2: #6B6B62;
-      --accent: #2B3A5E;
-      --border: #E2E2DC;
+      --bg: #F8F8F5; --surface: #fff; --text: #1A1A18;
+      --text2: #6B6B62; --accent: #2B3A5E; --border: #E2E2DC;
     }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 14px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 28px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-    .logo {
-      font-family: 'DM Serif Display', serif;
-      font-style: italic;
-      font-size: 22px;
-      color: var(--accent);
-      text-decoration: none;
-      letter-spacing: -0.3px;
-    }
-    nav { display: flex; }
-    nav a {
-      font-size: 14px;
-      font-weight: 500;
-      padding: 0 18px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      color: var(--text2);
-      border-bottom: 2.5px solid transparent;
-      transition: color 0.12s;
-    }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .logo { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 22px; color: var(--accent); text-decoration: none; }
+    .header-middle { display: flex; }
+    nav a { font-size: 14px; font-weight: 500; padding: 0 18px; height: 56px; display: flex; align-items: center; text-decoration: none; color: var(--text2); border-bottom: 2.5px solid transparent; transition: color 0.12s; }
     nav a:hover { color: var(--text); }
     nav a.active { color: var(--text); border-bottom-color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 4px; }
+    .icon-btn { background: none; border: none; padding: 8px; border-radius: 6px; cursor: pointer; color: var(--text2); font-size: 16px; line-height: 1; transition: background 0.1s, color 0.1s; }
+    .icon-btn:hover { background: var(--bg); color: var(--text); }
 
     /* ── Main ── */
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 24px 32px;
-      gap: 18px;
-    }
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 28px 24px 32px; gap: 14px; }
+
+    /* ── Puzzle metadata strip ── */
+    .puzzle-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+    .meta-name { font-weight: 600; color: var(--text); }
+    .meta-sep  { opacity: 0.35; }
+    .meta-diff { background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+    .meta-solutions { font-size: 12px; }
 
     /* ── Board ── */
-    .board {
-      display: grid;
-      border: 2.5px solid rgba(0,0,0,0.22);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .cell {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-right: 1px solid rgba(0,0,0,0.08);
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-      cursor: pointer;
-      transition: filter 0.1s;
-    }
+    .board { display: grid; border: 2.5px solid rgba(0,0,0,0.22); border-radius: 3px; overflow: hidden; }
+    .cell { display: flex; align-items: center; justify-content: center; border-right: 1px solid rgba(0,0,0,0.08); border-bottom: 1px solid rgba(0,0,0,0.08); cursor: pointer; transition: filter 0.1s; }
     .cell:hover { filter: brightness(0.90); }
     .cell.rbr { border-right: 2.5px solid rgba(0,0,0,0.24); }
     .cell.rbb { border-bottom: 2.5px solid rgba(0,0,0,0.24); }
-    .queen {
-      color: white;
-      text-shadow: 0 0 8px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4);
-      user-select: none;
-      line-height: 1;
-    }
-    .xmark {
-      font-weight: 700;
-      color: rgba(0,0,0,0.30);
-      user-select: none;
-    }
+    .queen { color: white; text-shadow: 0 0 8px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4); user-select: none; line-height: 1; }
+    .xmark { font-weight: 700; color: rgba(0,0,0,0.30); user-select: none; }
 
-    /* ── Controls row ── */
-    .controls {
-      display: flex;
-      align-items: center;
-      position: relative;
-      width: 389px; /* 8×48 + 5 for borders */
-    }
-    .ctrl-center {
-      position: absolute;
-      left: 0; right: 0;
-      display: flex;
-      justify-content: center;
-      pointer-events: none;
-    }
+    /* ── Controls ── */
+    .controls { display: flex; align-items: center; position: relative; width: 389px; }
+    .ctrl-center { position: absolute; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; }
     .ctrl-right { margin-left: auto; display: flex; gap: 8px; }
-    .timer {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--text2);
-      letter-spacing: 1px;
-    }
+    .timer { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 500; color: var(--text2); letter-spacing: 1px; }
 
-    /* ── Buttons ── */
-    .btn {
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 8px 18px;
-      border-radius: 6px;
-      border: 1.5px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      transition: background 0.1s, border-color 0.1s;
-    }
+    .btn { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; transition: background 0.1s, border-color 0.1s; }
     .btn:hover { background: var(--bg); border-color: #C8C8C0; }
-
-    /* Hint button — shown in "nudge" state (10 s inactivity) */
-    .btn-hint {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
-      animation: hint-pulse 1.8s ease-in-out infinite;
-    }
-    .btn-hint:hover { background: #233050; border-color: #233050; animation: none; }
-    @keyframes hint-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(43,58,94,0.5); }
-      50%       { box-shadow: 0 0 0 7px rgba(43,58,94,0); }
-    }
-
-    /* Hint nudge label */
-    .hint-nudge {
-      position: absolute;
-      left: 0;
-      top: calc(100% + 6px);
-      font-size: 11px;
-      color: var(--accent);
-      font-weight: 500;
-      white-space: nowrap;
-      opacity: 0.85;
-    }
+    .btn-hint { background: var(--accent); border-color: var(--accent); color: white; animation: hint-pulse 1.8s ease-in-out infinite; }
+    .btn-hint:hover { background: #233050; animation: none; }
+    @keyframes hint-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(43,58,94,0.5); } 50% { box-shadow: 0 0 0 7px rgba(43,58,94,0); } }
     .ctrl-left { position: relative; }
+    .hint-nudge { position: absolute; left: 0; top: calc(100% + 5px); font-size: 11px; color: var(--accent); font-weight: 500; white-space: nowrap; opacity: 0.85; }
 
-    .subtext {
-      font-size: 13px;
-      color: var(--text2);
-    }
-    .subtext a { color: var(--text2); text-decoration: underline; text-underline-offset: 2px; }
-    .subtext a:hover { color: var(--accent); }
+    /* ── Secondary actions ── */
+    .secondary-row { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--text2); margin-top: 4px; }
+    .secondary-row a { color: var(--text2); text-decoration: none; border-bottom: 1px dashed var(--border); padding-bottom: 1px; }
+    .secondary-row a:hover { color: var(--accent); border-color: var(--accent); }
+    .secondary-note { font-size: 11px; opacity: 0.5; }
+
+    /* ── Tutorial link ── */
+    .tutorial-link { font-size: 13px; color: var(--text2); text-decoration: none; }
+    .tutorial-link:hover { color: var(--accent); }
 
     /* ── Footer ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 14px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      font-size: 12px;
-      color: var(--text2);
-      flex-shrink: 0;
-    }
+    footer { border-top: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 12px; color: var(--text2); flex-shrink: 0; }
     footer a { color: var(--text2); text-decoration: none; }
     footer a:hover { color: var(--text); }
     .sep { opacity: 0.35; }
@@ -195,15 +80,30 @@
 
 <header>
   <a class="logo" href="play.html">♛ Queens</a>
-  <nav>
-    <a href="play.html" class="active">Play</a>
-    <a href="solve.html">Solve</a>
-    <a href="editor.html">Editor</a>
-    <a href="generator.html">Generator</a>
-  </nav>
+  <div class="header-middle">
+    <nav>
+      <a href="play.html" class="active">Play</a>
+      <a href="solve.html">Solve</a>
+      <a href="editor.html">Editor</a>
+      <a href="generator.html">Generator</a>
+    </nav>
+  </div>
+  <div class="header-right">
+    <button class="icon-btn" title="Settings">⚙</button>
+  </div>
 </header>
 
 <main>
+  <div class="puzzle-meta">
+    <span class="meta-name">Wednesday's Puzzle</span>
+    <span class="meta-sep">·</span>
+    <span>by Daniel Jones</span>
+    <span class="meta-sep">·</span>
+    <span class="meta-diff">Medium</span>
+    <span class="meta-sep">·</span>
+    <span class="meta-solutions">1 solution</span>
+  </div>
+
   <div class="board" id="board"></div>
 
   <div class="controls">
@@ -216,11 +116,19 @@
     </div>
     <div class="ctrl-right">
       <button class="btn">Undo</button>
+      <button class="btn">Share</button>
       <button class="btn">Reset</button>
     </div>
   </div>
 
-  <p class="subtext"><a href="#">How to play</a> — place one queen per row, column, and colour region. Queens may not touch.</p>
+  <!-- Design question: show Solve/Edit as secondary actions? -->
+  <div class="secondary-row">
+    <a href="solve.html">View solver steps →</a>
+    <a href="editor.html">Edit this puzzle ↗</a>
+    <span class="secondary-note">(design question: show these?)</span>
+  </div>
+
+  <a class="tutorial-link" href="#">How to play →</a>
 </main>
 
 <footer>
@@ -228,55 +136,35 @@
   <span class="sep">·</span>
   <a href="https://github.com/daniel-jones-dev/queens-puzzle">GitHub</a>
   <span class="sep">·</span>
-  <span>Made popular by <a href="https://www.linkedin.com/games/queens/">LinkedIn Queens</a></span>
+  <span>Inspired by <a href="https://www.linkedin.com/games/queens/">LinkedIn Queens</a></span>
 </footer>
 
 <script>
   const REGIONS = [
-    [0,0,0,1,1,1,2,2],
-    [0,0,3,1,1,2,2,2],
-    [0,3,3,3,4,4,2,5],
-    [6,3,3,4,4,4,5,5],
-    [6,6,3,4,7,4,5,5],
-    [6,6,6,7,7,7,5,5],
-    [6,6,7,7,7,7,7,5],
-    [6,7,7,7,7,7,7,7],
+    [0,0,0,1,1,1,2,2],[0,0,3,1,1,2,2,2],[0,3,3,3,4,4,2,5],
+    [6,3,3,4,4,4,5,5],[6,6,3,4,7,4,5,5],[6,6,6,7,7,7,5,5],
+    [6,6,7,7,7,7,7,5],[6,7,7,7,7,7,7,7],
   ];
-  // Queen at (3,0) in yellow region; appropriate eliminations applied.
   const STATES = [
-    [2,0,0,0,0,0,0,0],
-    [2,0,0,0,0,0,0,0],
-    [2,2,0,0,0,0,0,0],
-    [1,2,2,2,2,2,2,2],
-    [2,2,0,0,0,0,0,0],
-    [2,2,2,0,0,0,0,0],
-    [2,2,0,0,0,0,0,0],
-    [2,0,0,0,0,0,0,0],
+    [2,0,0,0,0,0,0,0],[2,0,0,0,0,0,0,0],[2,2,0,0,0,0,0,0],
+    [1,2,2,2,2,2,2,2],[2,2,0,0,0,0,0,0],[2,2,2,0,0,0,0,0],
+    [2,2,0,0,0,0,0,0],[2,0,0,0,0,0,0,0],
   ];
   const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
   const N = 8, SZ = 48;
   const board = document.getElementById('board');
   board.style.gridTemplateColumns = `repeat(${N},${SZ}px)`;
   board.style.gridTemplateRows    = `repeat(${N},${SZ}px)`;
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      const rg = REGIONS[r][c], st = STATES[r][c];
-      const el = document.createElement('div');
-      el.className = 'cell';
-      el.style.cssText = `background:${PALETTE[rg]};width:${SZ}px;height:${SZ}px`;
-      if (c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
-      if (r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
-      if (st === 1) {
-        const q = document.createElement('span');
-        q.className = 'queen'; q.style.fontSize = '26px'; q.textContent = '♛';
-        el.appendChild(q);
-      } else if (st === 2) {
-        const x = document.createElement('span');
-        x.className = 'xmark'; x.style.fontSize = '14px'; x.textContent = '✕';
-        el.appendChild(x);
-      }
-      board.appendChild(el);
-    }
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const rg = REGIONS[r][c], st = STATES[r][c];
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.style.cssText = `background:${PALETTE[rg]};width:${SZ}px;height:${SZ}px`;
+    if (c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
+    if (r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
+    if (st === 1) { const q = document.createElement('span'); q.className='queen'; q.style.fontSize='26px'; q.textContent='♛'; el.appendChild(q); }
+    else if (st === 2) { const x = document.createElement('span'); x.className='xmark'; x.style.fontSize='14px'; x.textContent='✕'; el.appendChild(x); }
+    board.appendChild(el);
   }
 </script>
 </body>
