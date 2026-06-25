@@ -22,22 +22,17 @@
       align-items: center;
       padding: 0 28px;
       flex-shrink: 0;
-      position: relative;
     }
     .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:22px; color:var(--accent); text-decoration:none; }
     nav { display:flex; justify-content:center; }
     nav a { font-size:14px; font-weight:500; padding:0 18px; height:56px; display:flex; align-items:center; text-decoration:none; color:var(--text2); border-bottom:2.5px solid transparent; transition:color 0.12s; }
     nav a:hover { color:var(--text); }
     nav a.active { color:var(--text); border-bottom-color:var(--accent); }
-    .header-right { display:flex; justify-content:flex-end; align-items:center; gap:4px; }
 
-    /* Settings button + dropdown */
-    .settings-btn { background:none; border:none; padding:7px 10px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text2); display:flex; align-items:center; gap:5px; font-family:'Inter',sans-serif; transition:background 0.1s; }
-    .settings-btn:hover { background:var(--bg); color:var(--text); }
-    .settings-btn.open { background:var(--bg); color:var(--text); }
+    /* Settings panel (anchored inside controls row) */
     .settings-anchor { position:relative; }
     .settings-panel {
-      position:absolute; top:calc(100% + 8px); right:0;
+      position:absolute; bottom:calc(100% + 8px); right:0;
       background:var(--surface); border:1px solid var(--border); border-radius:10px;
       box-shadow:0 8px 24px rgba(0,0,0,0.10); width:220px; z-index:50;
       padding:6px 0;
@@ -117,29 +112,6 @@
     <a href="editor.html">Editor</a>
     <a href="generator.html">Generator</a>
   </nav>
-  <div class="header-right">
-    <div class="settings-anchor">
-      <button class="settings-btn open" id="settings-btn">⚙ Settings ▾</button>
-      <!-- Settings dropdown shown open for mockup -->
-      <div class="settings-panel" id="settings-panel">
-        <div class="settings-item settings-toggle">
-          <span class="settings-item-icon">🕐</span>
-          <span style="flex:1">Show clock</span>
-          <span class="toggle on"></span>
-        </div>
-        <div class="settings-item settings-toggle">
-          <span class="settings-item-icon">✓</span>
-          <span style="flex:1">Auto-check</span>
-          <span class="toggle on"></span>
-        </div>
-        <div class="settings-item settings-toggle">
-          <span class="settings-item-icon">✕</span>
-          <span style="flex:1">Auto-place X's</span>
-          <span class="toggle on"></span>
-        </div>
-      </div>
-    </div>
-  </div>
 </header>
 
 <main>
@@ -164,8 +136,29 @@
       </div>
       <div class="ctrl-center"><span class="timer">02:34</span></div>
       <div class="ctrl-right">
-        <button class="btn">Undo</button>
-        <button class="btn">Reset</button>
+        <button class="btn">↩ Undo</button>
+        <div class="settings-anchor">
+          <button class="btn" id="settings-btn" style="padding:8px 11px;font-size:16px;line-height:1">⚙</button>
+          <!-- Settings panel shown open for mockup -->
+          <div class="settings-panel" id="settings-panel">
+            <div class="settings-item settings-toggle">
+              <span class="settings-item-icon">🕐</span>
+              <span style="flex:1">Show clock</span>
+              <span class="toggle on"></span>
+            </div>
+            <div class="settings-item settings-toggle">
+              <span class="settings-item-icon">✓</span>
+              <span style="flex:1">Auto-check</span>
+              <span class="toggle on"></span>
+            </div>
+            <div class="settings-item settings-toggle">
+              <span class="settings-item-icon">✕</span>
+              <span style="flex:1">Auto-place X's</span>
+              <span class="toggle on"></span>
+            </div>
+          </div>
+        </div>
+        <button class="btn">🗑 Reset</button>
       </div>
     </div>
 

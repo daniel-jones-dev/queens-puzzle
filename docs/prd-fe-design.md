@@ -134,7 +134,7 @@ The generator is a persistent background management view. Generation runs indepe
 
 ## Settings
 
-Settings is a preference panel accessible from all tabs via the ⚙ button in the header. It contains only user preferences — no navigation commands. The three settings are:
+Settings is a preference panel accessible from the **Play tab only** via a ⚙ button in the controls row (between Undo and Reset). It contains only user preferences — no navigation commands. The three settings are:
 - **Show clock** (toggle)
 - **Auto-check** (toggle) — auto-validates queen placement
 - **Auto-place X's** (toggle) — equivalent to the current "auto-cross cells" setting
@@ -155,7 +155,7 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 
 ## Decisions
 
-- **Settings location**: Dropdown panel anchored to a ⚙ Settings ▾ button in the header right (not a page or slide-in drawer)
+- **Settings location**: ⚙ button in the Play tab's controls row (right side, between Undo and Reset). Not in the header — other tabs do not need settings.
 - **Screenshot importer**: Removed from Play tab for now. Potential future feature as its own tab; note in README as a possible next step.
 - **About page**: A modal (not a separate page or tooltip).
 - **Rules page**: SPA route at `/rules` — consistent header/nav and small enough content to live in the repo as JSX.
@@ -163,7 +163,7 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 ## Play layout
 
 Below the board, three rows:
-1. **Controls**: `[Hint]` — `[02:34]` — `[Undo]` `[Reset]`
+1. **Controls**: `[Hint]` — `[02:34]` — `[↩ Undo]` `[⚙]` `[🗑 Reset]`
 2. **How to play** (collapsible, collapsed by default): one-line rules summary
 3. **Actions**: `[Open in Solver]` `[Open in Editor]` `[Copy link]`
    - Open in Solver / Editor navigate the current page (not a new tab)
@@ -171,9 +171,9 @@ Below the board, three rows:
 
 ## Header
 
-The header uses a three-column grid: logo (left) · nav tabs (centre) · settings (right). This prevents the settings button from colliding with the tab row at any viewport width.
+The header contains only the logo (left) and the nav tabs (centre on desktop, omitted on mobile in favour of the bottom tab bar). No global settings button — settings lives in the Play tab.
 
-Settings ▾ opens a preference panel with three toggles: Show clock, Auto-check, Auto-place X's. No navigation commands, no New game button.
+On desktop a two-column grid suffices: `logo | nav`. On mobile the header is just the logo.
 
 ## Editor layout
 
@@ -210,13 +210,13 @@ Add React Router. The current `mode` state (`"play" | "edit"`) is replaced by th
 
 ```
 AppShell
-├── Header              logo · NavTabs (desktop) · SettingsButton
+├── Header              logo · NavTabs (desktop only)
 ├── <Outlet>            one of the four tab pages
 ├── Footer
 └── BottomNav           mobile only, fixed to bottom
 ```
 
-`AppShell` owns the three global settings (`showClock`, `autoCheck`, `autoPlaceXs`) as state and passes them via context (`SettingsContext`) so any tab can read them without prop-drilling. Settings persist to `localStorage`.
+`AppShell` owns the three settings (`showClock`, `autoCheck`, `autoPlaceXs`) as state and passes them via `SettingsContext`. Settings persist to `localStorage`. The settings panel is opened from the ⚙ button inside `PlayControls`, not from the header.
 
 ### Shared / reusable components
 
@@ -237,7 +237,8 @@ PlayPage                  puzzle, playerStates, timer, hint, past[], solved
 ├── PuzzleMeta            name, difficulty, uniqueness
 ├── Board                 regions, cellStates, hint highlights
 ├── HintBar               hint description, Apply / Dismiss
-├── PlayControls          Hint · timer · Undo · Reset
+├── PlayControls          Hint · timer · Undo · ⚙ · Reset
+│   └── SettingsPanel     popover opened from the ⚙ button
 ├── HowToPlay             <details> collapsible
 ├── PlayActions           Open in Solver · Open in Editor · Copy link
 └── ConfirmModal          reset confirm, new-game confirm
