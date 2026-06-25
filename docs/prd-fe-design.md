@@ -24,8 +24,7 @@ Four top-level tabs replace the current single-page mode-toggle:
 | Generator | `/generator` | Run and manage puzzle generation           |
 
 Additional pages (not in the tab bar):
-- `/rules` — Solver rules reference: every rule the solver knows, with plain-English explanations and worked examples. Linked from the Solve tab.
-- `/tutorial` — How-to-play guide for first-time visitors. Linked from the Play tab.
+- `/rules` — Solver rules reference: every rule the solver knows, with plain-English explanations and worked examples. Linked from the Solve tab via "All solver rules →".
 
 ---
 
@@ -46,7 +45,7 @@ These are surfaced in the UI when present (e.g. displayed above the board in Pla
 ## Play
 
 ### Landing state
-The default puzzle is chosen randomly from a curated built-in list of puzzles. The built-in list needs to be generated before this can ship. A link to the tutorial page is shown prominently so first-time visitors can learn the rules.
+The default puzzle is chosen randomly from a curated built-in list of puzzles. The built-in list needs to be generated before this can ship.
 
 Puzzle metadata displayed above the board (when present):
 - Name and author
@@ -159,19 +158,7 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 - **Settings location**: Dropdown panel anchored to a ⚙ Settings ▾ button in the header right (not a page or slide-in drawer)
 - **Screenshot importer**: Removed from Play tab for now. Potential future feature as its own tab; note in README as a possible next step.
 - **About page**: A modal (not a separate page or tooltip).
-- **Tutorial/rules pages**: TBD — see trade-offs below
-
-### Tutorial/rules pages: SPA routes vs. static pages
-
-**SPA routes** (`/tutorial`, `/rules` inside the React app):
-- Pro: consistent header/nav, can deep-link to specific rules, no extra deploy step
-- Con: slightly larger JS bundle, rules content needs to live in the repo as JSX/MDX
-
-**Static pages** (separate HTML files, e.g. `tutorial.html`):
-- Pro: zero JS overhead, easy to author in plain HTML/markdown, faster first load
-- Con: loses the shared nav header unless duplicated; harder to link to board state
-
-Recommendation: SPA routes — the nav consistency is worth it and rules content is small.
+- **Rules page**: SPA route at `/rules` — consistent header/nav and small enough content to live in the repo as JSX.
 
 ## Play layout
 
@@ -215,7 +202,6 @@ Add React Router. The current `mode` state (`"play" | "edit"`) is replaced by th
 /editor     → EditorPage
 /generator  → GeneratorPage
 /rules      → RulesPage        (SPA route, not tab)
-/tutorial   → TutorialPage     (SPA route, not tab)
 ```
 
 ### App shell
@@ -376,6 +362,5 @@ Navigate-away guard: `GeneratorPage` registers a `beforeunload` listener and a R
 
 ### Open questions
 
-- ~~Tutorial/rules pages~~ — resolved: use SPA routes.
 - ~~Built-in puzzle list~~ — resolved: use a dummy puzzle list for now; generate real puzzles later.
 
