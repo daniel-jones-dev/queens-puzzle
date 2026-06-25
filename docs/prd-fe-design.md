@@ -196,3 +196,23 @@ Solver rules are grouped into **Easy / Medium / Hard** difficulty categories. Ea
 ## Open questions
 
 - Tutorial/rules pages: recommendation is SPA routes — confirm?
+
+
+
+## Feedback
+### Play
+- Show "difficulty: " label
+- instead of saying "1 solution" say "confirmed to have a unique solution" or a warning "this puzzle has no solution"/
+  "this puzzle has multiple solutions"
+- the "tap for a hint" box shows over the top of the box below it. I think we dont actually need this text if the highlight is obvious
+- question: is share clear? maybe copy sharable link is better?
+
+### Solver
+- say call them "solver rules" instead of "rules"
+- show the puzzle difficulty somewhere
+
+### Editor
+the bar under the puzzle should be: have buttons: 🪄, <colour 1>, <colour 2>, ... <colour N>, <unset region>, toggle queen
+dont put these on two rows
+
+
