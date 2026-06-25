@@ -202,7 +202,54 @@ Worker cards show:
 
 The rules panel header is "Solver rules". Rules are grouped Easy / Medium / Hard. Each rule name links to `/rules`. Puzzle name and difficulty are shown **above** the board (same as Play). No step counter or Back/Next buttons — undo/redo of player moves drives navigation.
 
-## Open questions
+## Testing
+
+### Principles
+
+- Tests live in `web/tests/`. One file per feature area (e.g. `play.test.ts`, `solve.test.ts`, `editor.test.ts`, `generator.test.ts`).
+- Shared utilities go in `helpers.ts`. Add new helpers there rather than repeating setup in individual test files.
+- Test against real WASM — no mocks. The existing `freshLoad` helper clears localStorage and waits for the app to be ready; use it as the default starting point.
+- Test user-visible behaviour: what a user can see and click. Avoid asserting on internal state, component names, or CSS class names where a text-content or ARIA role selector works instead.
+- Add `data-testid` attributes to elements that have no reliable text or role (e.g. the board grid, individual cells, worker cards).
+- Each new user flow described in this PRD needs at least one happy-path test. Destructive or confirmation-gated actions (New game, Delete worker, navigate-away) need a test that verifies the confirmation appears and that cancelling leaves state intact.
+
+### Coverage required per tab
+
+**Play (`play.test.ts` — extend existing)**
+- Settings panel opens and shows the three toggles (Show clock, Auto-check, Auto-place X's).
+- "New game" in settings shows a confirmation dialog; cancelling leaves the board unchanged.
+- "Copy link" copies a URL with a base64url fragment; loading that URL restores the same puzzle.
+- "Open in Solver" navigates to `/solve` with the puzzle loaded (board visible, not the empty-state prompt).
+- "Open in Editor" navigates to `/editor` with the puzzle's regions loaded.
+- Solved state: completing the puzzle shows the solved banner.
+
+**Solve (`solve.test.ts` — new)**
+- Navigating directly to `/solve` with no puzzle shows the empty-state prompt ("Select a puzzle to solve").
+- Opening via "Open in Solver" from Play loads the correct puzzle (same region layout).
+- Cells are interactive: clicking cycles empty → X → queen, same as Play.
+- The rules panel updates after a cell interaction (active rule changes or a rule is marked done).
+- Undo reverts the last cell change; the rules panel reflects the previous state.
+- "Continue in Play →" navigates to `/play` with the current board state intact.
+
+**Editor (`editor.test.ts` — extend existing)**
+- Selecting a colour swatch activates that swatch and deactivates the 🪄 tool.
+- Selecting the 🪄 tool deactivates the active swatch.
+- Unset region tool: clicking a painted cell clears its entire region.
+- Toggle queen tool: clicking a cell places a queen; clicking again removes it without changing the region colour.
+- Shuffle queens: clicking the button places exactly one queen per fully-painted region.
+- Analysis panel shows "Multiple solutions" warning and row/col markers when the layout is ambiguous.
+- "Open in Play →" opens a new tab with the current puzzle playable.
+
+**Generator (`generator.test.ts` — new)**
+- "+ Add worker" opens the modal with size and seed fields.
+- Starting a worker shows a running worker card with a Stop button.
+- Clicking Stop changes the badge to Stopped and shows Restart + Delete buttons.
+- Delete removes the worker card.
+- A found puzzle appears in the results list with size and difficulty badges.
+- Size and difficulty filters narrow the results list.
+- Navigating away while a worker is running shows a confirmation dialog; cancelling keeps the worker running.
+
+### Open questions
 
 - ~~Tutorial/rules pages~~ — resolved: use SPA routes.
 - ~~Built-in puzzle list~~ — resolved: use a dummy puzzle list for now; generate real puzzles later.
