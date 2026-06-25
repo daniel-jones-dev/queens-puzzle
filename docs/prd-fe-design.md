@@ -206,3 +206,10 @@ The rules panel header is "Solver rules". Rules are grouped Easy / Medium / Hard
 
 - ~~Tutorial/rules pages~~ — resolved: use SPA routes.
 - ~~Built-in puzzle list~~ — resolved: use a dummy puzzle list for now; generate real puzzles later.
+
+## feedback
+
+settings should have the settings in this image: (no new game button)
+![img.png](img.png)
+
+- put the puzzle name and difficulty above the puzzle in solver, same as in play.
