@@ -143,7 +143,33 @@ Both mobile and desktop are supported. Touch targets, button sizing, and layout 
 ## Open questions
 
 - Tutorial/rules pages: same SPA routes or separate static pages?
+  - feedback: not sure, give me pros and cons
 - Settings: slide-in drawer, dedicated page, or floating panel?
+  - feedback: i think it should be a dropdown panel in the header
 - Screenshot importer: client-side (WASM/canvas) or server-side OCR?
+  - feedback: i think it should be client-side, because it is faster and more reliable
 - About page: add `/about` to the footer? What would it contain?
+  - feedback: it would just be a short info about the project motivation and author. maybe it is so little info it isnt necessary to click
 - Play mode secondary actions: should there be "View solver steps" and "Edit this puzzle" links visible in Play mode?
+  - feedback: below the puzzle, there should be a few rows:
+    - first row: Hint / timer / Undo / reset
+    - next row: collapsible How To Play (with very short rules description) (by defualt collapsed)
+    - next row: Buttons with "Open puzzle in Solver" and "Open puzzle in Editor" and Share
+      - the first 2 buttons change the current page, share copies current state URL to clipboard, 
+
+## More Feedback
+- the toolbar is broken at the moment, seems settings clashes with in. figure out a clean way to show both the other tabs and settings near the top but not have them interfere with each other
+
+### editor
+- combine tool and colours and put them below the puzzle
+- the color-by-drag brush gets a 🪄 emoji
+- add a toggle queen tool button
+
+### generator
+- for random seed, show the actual seed used in the UI
+- have buttons to delete workers too, after stopping them 
+
+### solver
+- when a rule is selected, it should have a link to the explanation page
+- categorise rules by difficulty
+- 
