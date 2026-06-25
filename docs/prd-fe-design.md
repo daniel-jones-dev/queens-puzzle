@@ -1,87 +1,96 @@
 # PRD: Frontend Design Review
 
+## Vision
 
-feedback:
-> Default landing page:
-> - have an open puzzle (should be selected randomly a list of easy puzzles)
-> - should have a link to an explanation/tutorial of the game to explain what the puzzle is (this can be a different page)
-> - I want to make it clear this site is more than just a place to play, you can also: solve, editor, generator
-> - also eventually I want to have a list of the rules the sovler uses, with explanations
->
-> maybe there should be four "tabs"? Play, Solve, Editor, Generator
->
-> play mode:
-> - make hint, reset, undo into buttons with words. settings can be moved out of play mode, there will be settings for other modes too
-> - after 10 seconds of inactivity, suggest to show a hint by highlighting the hint button and displaying text like "tap to show hint"
->
-> should also add a solver mode
-> - the idea here is to explain more about the reasoning of solving a puzzle
-> - list the puzzle on the left, rules on the right, and show how the solver iterates down through the rules with each step
-> - the solver should have redo support too
->
-> the editor needs explanations and UI improvements:
-> - the default "tool" shouldnt be a colour but rather drag-paint the selected colour
-> - fix the real-time calculation to immediately show "calculating" when rechecking the number of solutions
-> - long-term: add a check that explores the remaining possibilities of assigning regions and explores suitability (ie will there be a unique solution)
-> - needs a how-to-use guide that suggests e.g. start by shuffling queens and then grow regions
-> - show where the queens are in the grid
-> - allow beginning by assigning some starting regions and then shuffling more queens in. e.g. you might start by drawing a letter or two in the grid then shuffling the queens in.
->
-> the generator needs a lot of changes:
-> - i want the generation view to be more a "management" view
-> - show in-progress searches from worker(s)
-> - list found solutions with sizes and difficulties. generation state should continue independent of viewing/editing/playing found puzzles
-> - show the number of solutions found
-> -
->
-> all views should have hotkeys, like ctrl+z to undo, H for hint
-> I also want a footer that says "Made by Daniel Jones", link to the github project, anyhting else?
+The site is more than a place to play — it is a tool for understanding how constraint puzzles are solved. The four primary modes (Play, Solve, Editor, Generator) should each be reachable from a top-level tab bar so new visitors understand the full scope at a glance.
 
+A footer on every page shows "Made by Daniel Jones", a link to the GitHub project, and any other relevant links.
 
-
-## Current user flows
-
-### Play
-Load puzzle from localStorage / URL hash → tap cells (empty → X → queen → empty cycle) → solved banner appears.
-
-### Hint
-Tap Hint button → cells dim, hint bar appears with description → tap Apply or interact freely → hint clears.
-
-### Undo
-Tap ↩ to step back through board state snapshots.
-
-### Settings panel
-Tap ⚙ → floating panel reveals: share puzzle, import puzzle, new game (generate), edit mode toggle.
-
-### Generate
-Modal with size / seed inputs → spinner → new puzzle loads in play mode.
-
-### Edit
-Separate mode (toggled from settings): paint regions on a blank grid; live analysis shows validity and difficulty.
-
-### Import
-Paste canonical JSON into a modal; replaces current puzzle on success.
-
-### Reset
-Tap 🗑 → confirm modal → board clears, timer resets.
+All views support hotkeys (e.g. `Ctrl+Z` to undo, `H` to show hint).
 
 ---
 
-## Open design questions
+## Navigation
 
-### Navigation model
-Play and Edit are currently a single-page mode-toggle inside the settings panel. Should these be distinct routes/pages (e.g. `/play`, `/edit`), or stay as modes on one screen?
+Four top-level tabs replace the current single-page mode-toggle:
 
-### Settings panel
-Currently a `position: fixed` floating panel anchored to the controls row via `getBoundingClientRect`. Is a floating panel the right pattern, or would a slide-in drawer or a proper menu page feel better?
+| Tab | Route | Purpose |
+|-----|-------|---------|
+| Play | `/` | Solve a puzzle |
+| Solve | `/solve` | Step through the solver with explanations |
+| Editor | `/editor` | Design a custom puzzle |
+| Generator | `/generator` | Run and manage puzzle generation |
 
-### Controls row layout
-Current grouping: Hint (left) · Timer (centre) · Undo / Settings / Reset (right). Is this the right priority order? Should any controls move?
+---
 
-### New game entry point
-Generate is currently two taps deep (⚙ → Generate). Should creating or loading a puzzle be more prominent — e.g. a top-level button or a dedicated screen?
+## Play
 
-### Mobile vs desktop
-Is there a target breakdown, or is desktop primary? This affects how much weight to give touch targets, bottom-sheet patterns, etc.
+### Landing state
+The default puzzle is chosen randomly from a curated list of easy puzzles. A link to a tutorial/explanation page is shown prominently so first-time visitors can learn the rules.
 
-feedback: I want to support both mobile and desktop.
+### Controls
+- **Hint**, **Reset**, and **Undo** become labelled buttons (text, not just icons). Settings moves out of the controls row into a global location shared across all tabs.
+- After 10 seconds of inactivity, the Hint button is highlighted and a "Tap to show hint" prompt appears.
+
+### Current user flows (unchanged)
+- Load puzzle from localStorage / URL hash → tap cells (empty → X → queen → empty cycle) → solved banner appears.
+- Tap Hint → cells dim, hint bar appears with description → tap Apply or interact freely → hint clears.
+- Tap Undo to step back through board state snapshots.
+- Share encodes the puzzle as base64url in the URL fragment and copies to clipboard.
+- Import: paste canonical JSON to replace the current puzzle.
+
+---
+
+## Solve
+
+A step-through view that exposes the solver's internal reasoning.
+
+- **Left panel**: the puzzle board, showing the current state at each step.
+- **Right panel**: the list of solver rules, with the active rule highlighted and a plain-English explanation of why it applies.
+- The solver iterates through rules in priority order; each step advances one rule application.
+- Supports both **undo** and **redo** so the user can walk back and forth through the solution.
+- Long-term: a separate page lists all solver rules with explanations, linked from this view.
+
+---
+
+## Editor
+
+### Improvements
+- The default tool is **drag-paint**: hold and drag to paint the selected colour across cells rather than single-click per cell.
+- The real-time validity calculation shows **"Calculating…"** immediately when a change invalidates the cached result, before the debounce fires.
+- A **how-to-use guide** is shown in the editor UI, suggesting a workflow: e.g. start by placing queens, shuffle them, then grow regions around them; or draw a letter/shape first and then shuffle queens in.
+- The board displays **queen positions** from the current region layout so the user sees the solved state as they paint.
+- **Partial-region start**: allow beginning with some regions already assigned, then invoking the generator/shuffler to fill in remaining queens and regions. For example, draw a letter or two, then let the tool place the remaining queens.
+- Long-term: a check that explores remaining region-assignment possibilities to verify a unique solution is achievable.
+
+---
+
+## Generator
+
+### Management view
+The generator becomes a persistent background management view rather than a blocking modal.
+
+- **Worker panel**: shows in-progress searches from one or more workers, with live status.
+- **Results list**: found puzzles displayed with their size and difficulty. Generation continues independently — the user can leave this tab to play or edit a found puzzle without interrupting the search.
+- **Counter**: total number of solutions found is always visible.
+- Selecting a found puzzle opens it in Play or Editor without stopping generation.
+
+---
+
+## Settings
+
+Settings (share, import, new game) are moved to a global location accessible from all tabs, no longer buried inside the Play controls row.
+
+---
+
+## Mobile and desktop
+
+Both mobile and desktop are supported. Touch targets, button sizing, and layout must work well on small screens. Where patterns differ (e.g. bottom sheets vs floating panels), prefer patterns that degrade gracefully on mobile.
+
+---
+
+## Open questions
+
+- What links belong in the footer alongside GitHub and the author credit?
+- Tutorial/rules page: same SPA route or a separate static page?
+- Settings: slide-in drawer, dedicated page, or floating panel?
