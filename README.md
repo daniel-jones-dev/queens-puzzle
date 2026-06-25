@@ -4,15 +4,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-orange.svg)](https://doc.rust-lang.org/edition-guide/rust-2024/)
 
-A solver and generator for the **Queens** puzzle (as featured daily on LinkedIn), written in Rust.
+A solver and generator for the **Queens** puzzle game (as made popular by LinkedIn).
+
+This tool can solve any puzzle: using logical deduction steps the way a person would to rate its difficulty, or using
+brute-force to verify validity and unique solutions. It can also generate new puzzles.
 
 In Queens, an *n×n* board is divided into *n* coloured regions. The goal is to place *n* queens so that:
 
 - exactly one queen sits in each **row**, each **column**, and each coloured **region**, and
-- no two queens are **diagonally adjacent**.
-
-This tool can solve a given puzzle — explaining each deduction the way a human would — rate its
-difficulty, and generate brand-new puzzles that have a unique solution.
+- no two queens are placed **next to each other** (including diagonally).
 
 <p align="center">
   <img src="docs/example_game.png" alt="A 7×7 Queens puzzle part-way through being solved" width="380">
@@ -105,35 +105,8 @@ watch the generator grow and shrink regions as it searches.
 
 ## Puzzle file formats
 
-### Text format
-
-An *n*-line file where each line has *n* characters. Each character is a letter identifying the
-region that cell belongs to; cells sharing a letter belong to the same region. For example, the 7×7
-puzzle shown in the introduction would be represented as:
-
-```
-ppppppp
-ooopppb
-ggggggb
-ggggwww
-grggwww
-gggywww
-gggywww
-```
-
-### Archived JSON format
-
-The JSON used by the [LinkedIn Queens](https://www.archivedqueens.com/) site is a list of puzzles, each
-with an `id`, a `regions` grid (region id per cell) and the solution `grid`:
-
-```json
-[{ "id": 353, "date": "2025/04/18",
-   "grid":    [[1,0,0,0,0,0,0], ...],
-   "regions": [[0,0,0,0,0,0,1], ...] }]
-```
-
-Only the `id` and `regions` are needed to solve a puzzle. Region ids are remapped internally, so
-non-contiguous numbering is handled.
+See [docs/formats.md](docs/formats.md) for the full specification of all supported formats (text,
+archived JSON, and canonical JSON).
 
 ## How it works
 

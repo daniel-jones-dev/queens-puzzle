@@ -64,23 +64,11 @@ await init();
 
 `getrandom` requires the `wasm_js` feature to compile for `wasm32-unknown-unknown`. This is already set in `wasm/Cargo.toml`. If you add a new dependency that transitively uses `getrandom`, ensure this feature remains active.
 
-## Puzzle JSON format
+## Puzzle formats
 
-The canonical interchange format used by the WASM API, frontend state, URL sharing, and import/export:
+See [docs/formats.md](docs/formats.md) for the full specification of all supported formats.
 
-```json
-{
-  "regions": [[0, 0, 1, 1], [0, 2, 1, 1], ...],
-  "states":  [[0, 0, 0, 0], [0, 1, 2, 0], ...]
-}
-```
-
-- `regions[row][col]` — 0-based region index, or `null` for unassigned (editor mode only).
-- `states[row][col]` — `0` Unknown, `1` Queen, `2` Empty.
-- `states` is omitted when all cells are Unknown.
-- `n` is inferred from `regions.length`.
-
-Implemented in `core/src/io/json.rs`.
+The canonical JSON format (used by the WASM API, frontend state, URL sharing, and import/export) is implemented in `core/src/io/json.rs`. The text and archived JSON formats used by the CLI are in `core/src/io/text.rs` and `core/src/io/json.rs` respectively.
 
 ## WASM API surface
 
