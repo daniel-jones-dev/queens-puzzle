@@ -37,12 +37,6 @@ In Queens, an *n×n* board is divided into *n* coloured regions. The goal is to 
 Requires a [Rust toolchain](https://www.rust-lang.org/tools/install).
 
 ```sh
-cargo install --git https://github.com/daniel-jones-dev/queens-puzzle
-```
-
-Or build from source:
-
-```sh
 git clone https://github.com/daniel-jones-dev/queens-puzzle
 cd queens-puzzle
 cargo build --release
