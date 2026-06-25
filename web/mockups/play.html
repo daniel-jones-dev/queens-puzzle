@@ -46,6 +46,12 @@
     .settings-item:hover { background:var(--bg); }
     .settings-item-icon { width:16px; text-align:center; font-size:14px; flex-shrink:0; }
     .settings-sep { border:none; border-top:1px solid var(--border); margin:4px 0; }
+    .settings-toggle { justify-content:space-between; }
+    .toggle { width:28px; height:16px; border-radius:8px; background:var(--border); flex-shrink:0; position:relative; }
+    .toggle.on { background:var(--accent); }
+    .toggle::after { content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:white; transition:left 0.1s; }
+    .toggle.on::after { left:14px; }
+    .settings-danger { color:#b91c1c; }
 
     /* ── Main ── */
     main { flex:1; display:flex; flex-direction:column; align-items:center; padding:28px 24px 32px; gap:0; }
@@ -117,12 +123,18 @@
       <button class="settings-btn open" id="settings-btn">⚙ Settings ▾</button>
       <!-- Settings dropdown shown open for mockup -->
       <div class="settings-panel" id="settings-panel">
-        <div class="settings-item"><span class="settings-item-icon">⎘</span> Share puzzle</div>
-        <div class="settings-item"><span class="settings-item-icon">↓</span> Import puzzle…</div>
-        <div class="settings-item"><span class="settings-item-icon">⊕</span> New game</div>
+        <div class="settings-item settings-toggle">
+          <span class="settings-item-icon">⏱</span>
+          <span style="flex:1">Show timer</span>
+          <span class="toggle on"></span>
+        </div>
+        <div class="settings-item settings-toggle">
+          <span class="settings-item-icon">✕</span>
+          <span style="flex:1">Auto-mark eliminated cells</span>
+          <span class="toggle on"></span>
+        </div>
         <hr class="settings-sep">
-        <div class="settings-item"><span class="settings-item-icon">✎</span> Edit this puzzle</div>
-        <div class="settings-item"><span class="settings-item-icon">↗</span> Open in Solver</div>
+        <div class="settings-item settings-danger"><span class="settings-item-icon">⊕</span> New game…</div>
       </div>
     </div>
   </div>

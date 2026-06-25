@@ -27,7 +27,8 @@
 
     .board-col { display:flex; flex-direction:column; gap:14px; flex-shrink:0; }
     .board { display:grid; border:2.5px solid rgba(0,0,0,0.22); border-radius:3px; overflow:hidden; }
-    .cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); }
+    .cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); cursor:pointer; transition:filter 0.1s; }
+    .cell:hover { filter:brightness(0.90); }
     .cell.rbr { border-right:2.5px solid rgba(0,0,0,0.24); }
     .cell.rbb { border-bottom:2.5px solid rgba(0,0,0,0.24); }
     .cell.hi  { outline:3px solid rgba(43,58,94,0.65); outline-offset:-3px; position:relative; z-index:1; }
@@ -38,8 +39,7 @@
     .puzzle-meta { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text2); }
     .meta-name { font-weight:600; color:var(--text); font-size:13px; }
     .diff-badge { font-size:11px; font-weight:600; padding:2px 7px; border-radius:20px; background:#fef3c7; color:#92400e; }
-    .step-nav { display:flex; align-items:center; gap:10px; width:100%; }
-    .step-label { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text2); flex:1; text-align:center; }
+    .undo-row { display:flex; gap:8px; }
     .btn { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:7px 16px; border-radius:6px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background 0.1s; white-space:nowrap; }
     .btn:hover { background:var(--bg); border-color:#C8C8C0; }
     .btn:disabled { opacity:0.4; cursor:default; }
@@ -107,12 +107,11 @@
         <span style="opacity:0.35">·</span>
         <span>Difficulty: <span class="diff-badge">Medium</span></span>
       </div>
-      <div class="step-nav">
-        <button class="btn btn-sm" disabled>← Back</button>
-        <span class="step-label">Step 3 of 14</span>
-        <button class="btn btn-sm">Next →</button>
+      <div class="undo-row">
+        <button class="btn btn-sm">↩ Undo</button>
+        <button class="btn btn-sm" style="opacity:0.4">↪ Redo</button>
       </div>
-      <button class="btn btn-accent btn-sm" style="width:100%">Continue playing from here →</button>
+      <button class="btn btn-accent btn-sm" style="width:100%">Continue in Play →</button>
     </div>
 
     <div class="rules-panel">

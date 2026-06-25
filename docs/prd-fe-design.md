@@ -56,6 +56,7 @@ Puzzle metadata displayed above the board (when present):
 ### Controls
 - **Hint**, **Reset**, **Undo** are labelled buttons. Share is labelled **Copy link**. Settings moves to a global ⚙ icon in the header.
 - After 10 seconds of inactivity, the Hint button pulses. No tooltip text is shown — the visual pulse is sufficient.
+- **New game** requires a confirmation dialog before clearing progress.
 
 ### Current user flows (unchanged)
 - Load puzzle from localStorage / URL hash → tap cells (empty → X → queen → empty cycle) → solved banner appears.
@@ -68,23 +69,26 @@ Puzzle metadata displayed above the board (when present):
 
 ## Solve
 
-A step-through view that exposes the solver's internal reasoning.
+An annotated play view — you interact with the board exactly as in Play mode, and the solver rules panel on the right reflects the solver's analysis of the current board state in real time.
 
-- **Left panel**: the puzzle board, showing the current state at each step. Puzzle name and difficulty ("Difficulty: Medium") are shown below the board.
-- **Right panel**: the list of **solver rules** in priority order. The active solver rule is highlighted with a plain-English explanation of exactly why it applies to the current board state, with board cells highlighted accordingly.
-- Supports both **undo** and **redo** so the user can walk back and forth through the solution.
-- A link to "All solver rules →" goes to `/rules` so users can read about any solver rule in depth.
+- **Entry point**: Solve is opened with a specific puzzle (e.g. via "Open in Solver" from Play). Navigating directly to `/solve` with no puzzle loaded shows a prompt: "Select a puzzle to solve — open a puzzle in Play first."
+- **Left panel**: the puzzle board. Click cells to cycle states (empty → X → queen) exactly as in Play mode. Puzzle name and difficulty are shown below the board.
+- **Right panel**: the list of **solver rules** in priority order, grouped Easy / Medium / Hard. The rule the solver would apply next (given the current board state) is highlighted with a plain-English explanation. Board cells affected by that rule are highlighted.
+- **No step counter.** Navigation is undo/redo of the player's own moves — there is no separate solver-controlled stepping.
+- Undo/redo are available (same as Play). Undo history is preserved if the puzzle was originally opened from Play mid-solve.
+- A link "All solver rules →" goes to `/rules`.
+- **"Continue in Play →"** button opens the current board state in Play mode (with undo history intact).
 
 ---
 
 ## Editor
 
 ### Toolbar
-A single row below the board, user can select one of these tools at a time. Left-to-right order:
-1. **🪄** drag-paint tool (default) - used by dragging from an existing cells to extend that colour
-2. Colour swatches 1–N (one per region colour). Hotkeys `1`–`N` switch the active colour. clicking/dragging any cell paints that colour.
-3. **Unset region** (checkerboard icon): click/drag any cell in a region to clear it.
-4. **Toggle queen** (♛): toggles a queen placement in a cell, but does not change the region colour.
+A single row below the board. Exactly one tool is active at a time — all choices are mutually exclusive:
+1. **🪄** (default): drag from an existing coloured cell to extend that region's colour into adjacent cells.
+2. **Colour swatches 1–N**: each swatch is itself a tool. Selecting swatch N paints with that colour — click or drag any cell to paint it. Hotkeys `1`–`N` select swatches.
+3. **Unset region** (checkerboard icon): click or drag any cell to clear it back to unassigned.
+4. **Toggle queen** (♛): click a cell to toggle a queen placement without changing its region colour.
 
 No two-row layout — everything in one row.
 
@@ -108,11 +112,8 @@ A how-to-use guide is shown in the editor UI, suggesting:
 3. Alternatively, sketch a letter or shape first, then shuffle queens in.
 4. Puzzle should have exactly 1 solution — analysis updates as you edit.
 
-### Queen overlay
-The board displays the solver-determined queen positions for the current region layout so the user can see the solved state as they paint.
-
-### Partial-region start
-Allow beginning with some regions already assigned, then invoking Shuffle queens to fill in remaining placements.
+### Queen overlay and Shuffle queens
+The board displays solver-determined queen positions as a live overlay. When **Shuffle queens** is clicked, the solver runs and places one queen per region, clearing any previously placed queens. This replaces the entire queen assignment — partial-region support (shuffle into existing placements) is a future improvement.
 
 ### Long-term
 A check that explores remaining region-assignment possibilities to verify a unique solution is achievable before all regions are fully drawn.
@@ -128,19 +129,28 @@ The generator is a persistent background management view. Generation runs indepe
 - **Add worker** opens a dialog to configure size and seed (blank seed = random).
 - **Results list**: found puzzles with size and difficulty, filterable by size and difficulty. Opening a puzzle from the results list opens it in a **new browser tab** (Play ↗ or Edit ↗) so generation is never interrupted.
 - **Counter**: total puzzles found is always visible.
-- Workers continue running when the user navigates away and resume on return.
+- Workers run as long as the Generator tab is open. Navigating away from the Generator page (or closing the browser tab) requires a confirmation: "Leaving will stop all running workers." Workers do not persist across page refresh.
 
 ---
 
 ## Settings
 
-Settings (share, import, new game) are moved to a global location accessible from all tabs, no longer buried inside the Play controls row.
+Settings is a preference panel accessible from all tabs via the ⚙ button in the header. It contains only user preferences — no navigation commands. Example items:
+- Show timer (toggle)
+- Auto-mark eliminated cells (toggle, equivalent to the current "auto-cross cells" setting)
+- New game (with confirmation dialog)
 
 ---
 
 ## Mobile and desktop
 
-Both mobile and desktop are supported. Touch targets, button sizing, and layout must work well on small screens. Where patterns differ (e.g. bottom sheets vs floating panels), prefer patterns that degrade gracefully on mobile.
+Both mobile and desktop are supported. Touch targets, button sizing, and layout must work well on small screens.
+
+- **Play**: the existing responsive cell-size formula handles small screens well. No structural change needed.
+- **Solve**: same board-left / rules-right layout on desktop; on mobile the rules panel moves below the board.
+- **Editor**: on mobile, the right-side analysis panel collapses to a compact summary row positioned **above** the board. Tapping the row expands a drawer with the full analysis and puzzle info. The board and toolbar remain visible and usable without the drawer open.
+- **Generator**: the workers column stacks above the results column on mobile.
+- **General**: prefer patterns that degrade gracefully (no fixed-width panels, use `flex-wrap` or column stacking rather than horizontal scroll).
 
 ---
 
@@ -176,7 +186,7 @@ Below the board, three rows:
 
 The header uses a three-column grid: logo (left) · nav tabs (centre) · settings (right). This prevents the settings button from colliding with the tab row at any viewport width.
 
-Settings ▾ opens a dropdown panel containing: Share puzzle, Import puzzle, New game, Export, and cross-links to Solver/Editor.
+Settings ▾ opens a preference panel containing toggles (Show timer, Auto-mark eliminated cells) and the New game action. It does not contain navigation commands — those live in the action row below the board.
 
 ## Editor layout
 
@@ -190,13 +200,9 @@ Worker cards show:
 
 ## Solve
 
-**Solver rules** are grouped into **Easy / Medium / Hard** difficulty categories. The panel header is "Solver rules". Each rule name links to its entry on `/rules` ("All solver rules →"). Puzzle name and difficulty are shown below the board (not only in the rules panel).
+The rules panel header is "Solver rules". Rules are grouped Easy / Medium / Hard. Each rule name links to `/rules`. Puzzle name and difficulty are shown below the board. No step counter or Back/Next buttons — undo/redo of player moves drives navigation.
 
 ## Open questions
 
 - ~~Tutorial/rules pages~~ — resolved: use SPA routes.
 - ~~Built-in puzzle list~~ — resolved: use a dummy puzzle list for now; generate real puzzles later.
-
-
-## Feedback notes
-- how queen overlay and shuffling should work: when shuffle queens is clicked, the queen overlay should have one queen assigned to each region. the existing regions can be cleared at this stage, later i will implement the change to allow shuffle to work with existing regions.
