@@ -54,6 +54,7 @@
     .meta-name { font-weight:600; color:var(--text); }
     .meta-sep  { opacity:0.35; }
     .diff-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; background:#fef3c7; color:#92400e; }
+    .unique-badge { font-size:11px; font-weight:500; padding:2px 8px; border-radius:20px; background:#d1fae5; color:#065f46; }
 
     .board { display:grid; border:2.5px solid rgba(0,0,0,0.22); border-radius:3px; overflow:hidden; }
     .cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); cursor:pointer; transition:filter 0.1s; }
@@ -72,7 +73,6 @@
     .ctrl-right { margin-left:auto; display:flex; gap:8px; }
     .timer { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:500; color:var(--text2); letter-spacing:1px; }
     .ctrl-left { position:relative; }
-    .hint-nudge { position:absolute; left:0; top:calc(100% + 5px); font-size:11px; color:var(--accent); font-weight:500; white-space:nowrap; }
 
     .btn { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:8px 16px; border-radius:6px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background 0.1s; white-space:nowrap; }
     .btn:hover { background:var(--bg); border-color:#C8C8C0; }
@@ -134,9 +134,9 @@
     <span class="meta-sep">·</span>
     <span>by Daniel Jones</span>
     <span class="meta-sep">·</span>
-    <span class="diff-badge">Medium</span>
+    <span>Difficulty: <span class="diff-badge">Medium</span></span>
     <span class="meta-sep">·</span>
-    <span>1 solution</span>
+    <span class="unique-badge">Confirmed unique</span>
   </div>
 
   <div class="board" id="board"></div>
@@ -147,7 +147,6 @@
     <div class="controls">
       <div class="ctrl-left">
         <button class="btn btn-hint">Hint</button>
-        <span class="hint-nudge">Tap for a hint ↑</span>
       </div>
       <div class="ctrl-center"><span class="timer">02:34</span></div>
       <div class="ctrl-right">
@@ -172,7 +171,7 @@
     <div class="action-row">
       <button class="btn">Open in Solver</button>
       <button class="btn">Open in Editor</button>
-      <button class="btn">Share</button>
+      <button class="btn">Copy link</button>
     </div>
 
   </div>

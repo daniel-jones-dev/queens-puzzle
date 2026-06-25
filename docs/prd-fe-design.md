@@ -46,13 +46,16 @@ These are surfaced in the UI when present (e.g. displayed above the board in Pla
 ## Play
 
 ### Landing state
-The default puzzle is chosen randomly from a curated list of easy puzzles. A link to the tutorial page is shown prominently so first-time visitors can learn the rules.
+The default puzzle is chosen randomly from a curated built-in list of puzzles. The built-in list needs to be generated before this can ship. A link to the tutorial page is shown prominently so first-time visitors can learn the rules.
 
-When puzzle metadata is present (`name`, `source`, `difficulty`, solution count), it is displayed above the board. Difficulty is computed by the solver from an *unsolved* puzzle state, not derived from the stored field.
+Puzzle metadata displayed above the board (when present):
+- Name and author
+- **Difficulty:** label with a styled badge (e.g. "Difficulty: Medium")
+- Solution uniqueness: "Confirmed unique" (green badge) / "No solution" (red) / "Multiple solutions" (amber) — not "1 solution"
 
 ### Controls
-- **Hint**, **Reset**, **Undo**, and **Share** become labelled buttons in the controls row. Settings moves to a global ⚙ icon in the header, accessible from all tabs.
-- After 10 seconds of inactivity, the Hint button is highlighted and a prompt appears near it ("Tap for a hint").
+- **Hint**, **Reset**, **Undo** are labelled buttons. Share is labelled **Copy link**. Settings moves to a global ⚙ icon in the header.
+- After 10 seconds of inactivity, the Hint button pulses. No tooltip text is shown — the visual pulse is sufficient.
 
 ### Import from screenshot
 A "Import from screenshot" option lets users paste or upload an image of a Queens puzzle (e.g. from LinkedIn) and automatically extracts the region layout. This is a long-term feature.
@@ -70,19 +73,23 @@ A "Import from screenshot" option lets users paste or upload an image of a Queen
 
 A step-through view that exposes the solver's internal reasoning.
 
-- **Left panel**: the puzzle board, showing the current state at each step.
-- **Right panel**: the list of solver rules in priority order. The active rule is highlighted with a plain-English explanation of exactly why it applies to the current board state, with board cells highlighted accordingly.
+- **Left panel**: the puzzle board, showing the current state at each step. Puzzle name and difficulty ("Difficulty: Medium") are shown below the board.
+- **Right panel**: the list of **solver rules** in priority order. The active solver rule is highlighted with a plain-English explanation of exactly why it applies to the current board state, with board cells highlighted accordingly.
 - Supports both **undo** and **redo** so the user can walk back and forth through the solution.
-- A link to `/rules` allows users to read about any rule in depth.
+- A link to "All solver rules →" goes to `/rules` so users can read about any solver rule in depth.
 
 ---
 
 ## Editor
 
-### Tool
-The toolbar shows two tools plus the colour palette:
-- **Paint** (✏ icon, default): drag across cells to paint the selected colour. Hotkeys `1`–`N` switch the active colour.
-- **Reset region** (checkerboard icon): click any cell in a region to clear the entire region back to unassigned.
+### Toolbar
+A single row below the board. Left-to-right order:
+1. **🪄** (active tool — paint; click to re-select if a swatch was last clicked)
+2. Colour swatches 1–N (one per region colour). Hotkeys `1`–`N` switch the active colour.
+3. **Unset region** (checkerboard icon): click any cell in a region to clear it.
+4. **Toggle queen** (♛): manually override a queen position.
+
+No two-row layout — everything in one row.
 
 "Open in Play" opens in a new tab (↗ icon). It sits alongside a **Share / Export** button.
 
@@ -164,9 +171,9 @@ Recommendation: SPA routes — the nav consistency is worth it and rules content
 Below the board, three rows:
 1. **Controls**: `[Hint]` — `[02:34]` — `[Undo]` `[Reset]`
 2. **How to play** (collapsible, collapsed by default): one-line rules summary
-3. **Actions**: `[Open in Solver]` `[Open in Editor]` `[Share]`
+3. **Actions**: `[Open in Solver]` `[Open in Editor]` `[Copy link]`
    - Open in Solver / Editor navigate the current page (not a new tab)
-   - Share copies the current puzzle URL (base64url fragment) to clipboard
+   - Copy link encodes the puzzle as base64url in the URL fragment and copies to clipboard
 
 ## Header
 
@@ -176,12 +183,7 @@ Settings ▾ opens a dropdown panel containing: Share puzzle, Import puzzle, New
 
 ## Editor layout
 
-Tools and the colour palette sit **below the board**, not above it. The toolbar contains three tools:
-- **🪄 Paint** (default): drag to paint the active colour
-- **Reset region** (checkerboard icon): click to clear all cells in a region
-- **Toggle queen** (♛): manually override a queen position
-
-Keyboard hotkeys `1`–`N` switch the active colour.
+The toolbar is a **single row** below the board — no two-row layout. Left-to-right: `[🪄]` `[colour 1]` `[colour 2]` … `[colour N]` `[unset region]` `[♛]`. Hotkeys `1`–`N` switch the active colour.
 
 ## Generator
 
@@ -191,28 +193,10 @@ Worker cards show:
 
 ## Solve
 
-Solver rules are grouped into **Easy / Medium / Hard** difficulty categories. Each rule name is a link to its entry on the `/rules` reference page.
+**Solver rules** are grouped into **Easy / Medium / Hard** difficulty categories. The panel header is "Solver rules". Each rule name links to its entry on `/rules` ("All solver rules →"). Puzzle name and difficulty are shown below the board (not only in the rules panel).
 
 ## Open questions
 
 - Tutorial/rules pages: recommendation is SPA routes — confirm?
-
-
-
-## Feedback
-### Play
-- Show "difficulty: " label
-- instead of saying "1 solution" say "confirmed to have a unique solution" or a warning "this puzzle has no solution"/
-  "this puzzle has multiple solutions"
-- the "tap for a hint" box shows over the top of the box below it. I think we dont actually need this text if the highlight is obvious
-- question: is share clear? maybe copy sharable link is better?
-
-### Solver
-- say call them "solver rules" instead of "rules"
-- show the puzzle difficulty somewhere
-
-### Editor
-the bar under the puzzle should be: have buttons: 🪄, <colour 1>, <colour 2>, ... <colour N>, <unset region>, toggle queen
-dont put these on two rows
-
+- Built-in puzzle list: need to generate a curated set before shipping the Play landing state.
 

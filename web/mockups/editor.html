@@ -43,32 +43,28 @@
     .col-marker  { display:flex; align-items:center; justify-content:center; font-size:11px; color:transparent; }
     .col-marker.warn { color:#ef4444; }
 
-    /* ── Tools + palette below board ── */
-    .tools-palette { display:flex; flex-direction:column; gap:8px; }
-    .tools-row { display:flex; gap:6px; align-items:center; }
+    /* ── Single-row toolbar below board ── */
+    .tool-bar { display:flex; gap:4px; align-items:center; }
     .tool-btn {
-      display:flex; align-items:center; gap:5px;
-      font-family:'Inter',sans-serif; font-size:12px; font-weight:500;
-      padding:7px 11px; border-radius:6px;
+      display:flex; align-items:center; justify-content:center;
+      width:32px; height:32px; border-radius:6px; flex-shrink:0;
       border:1.5px solid var(--border); background:var(--surface); color:var(--text);
       cursor:pointer; transition:background 0.1s, border-color 0.1s;
-      white-space:nowrap;
+      font-size:16px; line-height:1;
     }
     .tool-btn:hover { background:var(--bg); }
     .tool-btn.active { background:var(--accent); border-color:var(--accent); color:white; }
-    .tool-icon { font-size:15px; line-height:1; }
     .checker-icon {
       width:14px; height:14px; border-radius:2px; flex-shrink:0;
       background-image: linear-gradient(45deg,#aaa 25%,transparent 25%), linear-gradient(-45deg,#aaa 25%,transparent 25%), linear-gradient(45deg,transparent 75%,#aaa 75%), linear-gradient(-45deg,transparent 75%,#aaa 75%);
       background-size:7px 7px;
       background-position:0 0,0 3.5px,3.5px -3.5px,-3.5px 0;
     }
-
-    .palette-row { display:flex; gap:5px; align-items:center; }
-    .swatch { width:28px; height:28px; border-radius:5px; border:2.5px solid transparent; cursor:pointer; transition:transform 0.1s; flex-shrink:0; position:relative; }
+    .swatch { width:26px; height:26px; border-radius:5px; border:2.5px solid transparent; cursor:pointer; transition:transform 0.1s; flex-shrink:0; position:relative; }
     .swatch:hover { transform:scale(1.1); }
     .swatch.selected { border-color:var(--accent); box-shadow:0 0 0 2px white,0 0 0 4px var(--accent); transform:scale(1.1); }
-    .swatch-num { position:absolute; bottom:1px; right:2px; font-size:8px; font-weight:700; color:rgba(0,0,0,0.4); line-height:1; }
+    .swatch-num { position:absolute; bottom:1px; right:2px; font-size:7px; font-weight:700; color:rgba(0,0,0,0.4); line-height:1; }
+    .tool-divider { width:1px; height:22px; background:var(--border); margin:0 2px; flex-shrink:0; }
 
     /* Action rows */
     .actions-row { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
@@ -137,20 +133,14 @@
         <div class="col-markers" id="col-markers"></div>
       </div>
 
-      <!-- Tools + palette below board -->
-      <div class="tools-palette">
-        <div class="tools-row">
-          <button class="tool-btn active" title="Drag to paint (P)">
-            <span class="tool-icon">🪄</span> Paint
-          </button>
-          <button class="tool-btn" title="Click to reset a region">
-            <span class="checker-icon"></span> Reset region
-          </button>
-          <button class="tool-btn" title="Toggle queen position">
-            <span class="tool-icon" style="font-style:normal">♛</span> Toggle queen
-          </button>
-        </div>
-        <div class="palette-row" id="palette"></div>
+      <!-- Single-row toolbar: active tool | swatches | unset | toggle queen -->
+      <div class="tool-bar">
+        <button class="tool-btn active" title="Paint (drag to fill)">🪄</button>
+        <div class="tool-divider"></div>
+        <div id="palette" style="display:contents"></div>
+        <div class="tool-divider"></div>
+        <button class="tool-btn" title="Unset region (click any cell in region)"><span class="checker-icon"></span></button>
+        <button class="tool-btn" title="Toggle queen position">♛</button>
       </div>
 
       <!-- Action buttons -->
@@ -258,7 +248,11 @@
     sw.className='swatch'+(i===2?' selected':'');
     sw.style.background = color; sw.title=`${NAMES[i]} (${i+1})`;
     const num=document.createElement('span'); num.className='swatch-num'; num.textContent=i+1; sw.appendChild(num);
-    sw.addEventListener('click',()=>{ document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('selected')); sw.classList.add('selected'); });
+    sw.addEventListener('click',()=>{
+      document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('selected'));
+      document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+      sw.classList.add('selected');
+    });
     palRow.appendChild(sw);
   });
 </script>

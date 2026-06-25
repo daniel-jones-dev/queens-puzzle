@@ -35,6 +35,9 @@
     .queen { color:white; text-shadow:0 0 8px rgba(0,0,0,0.5),0 1px 4px rgba(0,0,0,0.4); user-select:none; line-height:1; }
     .xmark { font-weight:700; color:rgba(0,0,0,0.30); user-select:none; }
 
+    .puzzle-meta { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text2); }
+    .meta-name { font-weight:600; color:var(--text); font-size:13px; }
+    .diff-badge { font-size:11px; font-weight:600; padding:2px 7px; border-radius:20px; background:#fef3c7; color:#92400e; }
     .step-nav { display:flex; align-items:center; gap:10px; width:100%; }
     .step-label { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text2); flex:1; text-align:center; }
     .btn { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:7px 16px; border-radius:6px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background 0.1s; white-space:nowrap; }
@@ -99,6 +102,11 @@
 
     <div class="board-col">
       <div class="board" id="board"></div>
+      <div class="puzzle-meta">
+        <span class="meta-name">Wednesday's Puzzle</span>
+        <span style="opacity:0.35">·</span>
+        <span>Difficulty: <span class="diff-badge">Medium</span></span>
+      </div>
       <div class="step-nav">
         <button class="btn btn-sm" disabled>← Back</button>
         <span class="step-label">Step 3 of 14</span>
@@ -109,8 +117,8 @@
 
     <div class="rules-panel">
       <div class="rules-header">
-        <span class="rules-title">Solver steps</span>
-        <a href="#" class="rules-meta">All rules →</a>
+        <span class="rules-title">Solver rules</span>
+        <a href="#" class="rules-meta">All solver rules →</a>
       </div>
 
       <!-- Easy rules -->
