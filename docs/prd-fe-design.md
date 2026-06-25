@@ -197,3 +197,6 @@ Worker cards show:
 - ~~Tutorial/rules pages~~ — resolved: use SPA routes.
 - ~~Built-in puzzle list~~ — resolved: use a dummy puzzle list for now; generate real puzzles later.
 
+
+## Feedback notes
+- how queen overlay and shuffling should work: when shuffle queens is clicked, the queen overlay should have one queen assigned to each region. the existing regions can be cleared at this stage, later i will implement the change to allow shuffle to work with existing regions.
