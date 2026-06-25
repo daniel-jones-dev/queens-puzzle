@@ -184,7 +184,7 @@ export function App() {
         if (!inEdit) runPlayValidityCheck(puzzle.to_json());
         setReady(true);
       })
-      .catch((err) => setError(String(err)));
+      .catch((err: unknown) => setError(String(err)));
     return () => { cancelled = true; };
   }, [runPlayValidityCheck]);
 
