@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import styles from "./Grid.module.css";
+import styles from "./Board.module.css";
 
 interface Props {
   regions: (number | null)[][];
@@ -18,7 +18,7 @@ interface Props {
   onPaintEnd?: () => void;
 }
 
-const BORDER_THIN = "1px solid rgba(0,0,0,0.15)";
+const BORDER_THIN = "1px solid rgba(0,0,0,0.08)";
 
 const CHECKERBOARD_STYLE = {
   backgroundImage:
@@ -50,7 +50,7 @@ function regionBorderSegments(regions: (number | null)[][], cellSize: number): S
   return segs;
 }
 
-export function Grid({
+export function Board({
   regions,
   regionColors,
   cellStates,
@@ -89,6 +89,7 @@ export function Grid({
   return (
     <div
       ref={boardRef}
+      data-testid="board"
       className={styles.board}
       style={{
         gridTemplateColumns: `repeat(${n}, ${cellSize}px)`,
@@ -221,8 +222,8 @@ export function Grid({
           <line
             key={i}
             x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-            stroke="#333"
-            strokeWidth={3}
+            stroke="rgba(0,0,0,0.5)"
+            strokeWidth={2.5}
             strokeLinecap="square"
           />
         ))}

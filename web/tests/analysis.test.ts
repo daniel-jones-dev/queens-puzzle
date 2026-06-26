@@ -9,9 +9,8 @@ import { freshLoad, clickCell } from "./helpers";
 
 async function enterEditorNew(page: Parameters<typeof freshLoad>[0]) {
   await freshLoad(page);
-  await page.click("button[title='Settings']");
-  await page.waitForTimeout(300);
-  await page.locator("text=New puzzle (Editor)…").click();
+  await page.locator("a:has-text('Editor')").first().click();
+  await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
   await page.waitForTimeout(400);
 }
 
@@ -53,9 +52,8 @@ test.describe("Editor: live analysis indicator", () => {
   }) => {
     // freshLoad loads the default 7×7 puzzle which has a unique solution
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=Edit this puzzle").click();
+    await page.locator("button:has-text('Open in Editor')").click();
+    await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
     await page.waitForTimeout(400);
 
     // Wait for debounce + worker init + analysis on a fully-assigned board
@@ -83,7 +81,6 @@ test.describe("Editor: live analysis indicator", () => {
     await page.waitForTimeout(1500);
 
     // A single-region board cannot have valid queen placement → no solution or multiple
-    // (Actually a single-region board with 4 queens would need all in same region — no solution)
     const noSol = page.locator("text=✗ No solution");
     const multiSol = page.locator("text=/⚠.+solution/");
     const either = await Promise.race([
@@ -98,9 +95,8 @@ test.describe("Editor: live analysis indicator", () => {
   }) => {
     // Default 7×7 puzzle has a unique solution
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=Edit this puzzle").click();
+    await page.locator("button:has-text('Open in Editor')").click();
+    await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
     await page.waitForTimeout(400);
 
     await page.waitForTimeout(2000);
@@ -153,9 +149,8 @@ test.describe("Editor: Play button warning", () => {
   test("Play button shows no '!' for a unique puzzle", async ({ page }) => {
     // Default 7×7 puzzle has a unique solution
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=Edit this puzzle").click();
+    await page.locator("button:has-text('Open in Editor')").click();
+    await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
     await page.waitForTimeout(400);
 
     await page.waitForTimeout(2000);

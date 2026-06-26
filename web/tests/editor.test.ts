@@ -7,17 +7,26 @@
 import { test, expect } from "@playwright/test";
 import { freshLoad, clickCell, dragPaintFirstRow } from "./helpers";
 
+async function openInEditor(page: Parameters<typeof freshLoad>[0]) {
+  await page.locator("button:has-text('Open in Editor')").click();
+  await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
+  await page.waitForTimeout(400);
+}
+
+async function newEditorPuzzle(page: Parameters<typeof freshLoad>[0]) {
+  await page.locator("a:has-text('Editor')").first().click();
+  await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
+  await page.waitForTimeout(400);
+}
+
 test.describe("Editor: entry points", () => {
-  test("'Edit this puzzle' shows EDITOR badge with palette", async ({
+  test("'Open in Editor' shows EDITOR badge with palette", async ({
     page,
   }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=Edit this puzzle").click();
-    await page.waitForTimeout(400);
+    await openInEditor(page);
 
-    await expect(page.locator("text=EDITOR")).toBeVisible();
+    await expect(page.getByText('EDITOR', { exact: true })).toBeVisible();
     // Default puzzle is 7×7 → 7 colour swatches
     expect(await page.locator("button[title^='Region']").count()).toBe(7);
     await expect(
@@ -25,16 +34,13 @@ test.describe("Editor: entry points", () => {
     ).toBeVisible();
   });
 
-  test("'New puzzle (Editor)…' starts with an empty board", async ({
+  test("Editor tab starts with an empty board (no prior editor session)", async ({
     page,
   }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
-    await expect(page.locator("text=EDITOR")).toBeVisible();
+    await expect(page.getByText('EDITOR', { exact: true })).toBeVisible();
     // Shuffle is disabled until queens are scattered
     await expect(
       page.locator("button:has-text('Shuffle colours')"),
@@ -45,10 +51,7 @@ test.describe("Editor: entry points", () => {
 test.describe("Editor: undo / back", () => {
   test("paint then undo removes the stroke as one action", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=Edit this puzzle").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     const board = page.locator('[class*="board"]').first();
 
@@ -66,10 +69,7 @@ test.describe("Editor: undo / back", () => {
 
   test("drag-paint is a single undo entry", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     const board = page.locator('[class*="board"]').first();
     await page.locator("button[title='Region 1']").click();
@@ -82,7 +82,7 @@ test.describe("Editor: undo / back", () => {
     await expect(page.locator("button:has-text('↩ Undo')")).toBeDisabled();
   });
 
-  test("'Edit this puzzle' clears cell states on entry", async ({ page }) => {
+  test("'Open in Editor' clears cell states on entry", async ({ page }) => {
     await freshLoad(page);
 
     // Place a cross in play mode first
@@ -93,23 +93,17 @@ test.describe("Editor: undo / back", () => {
     await expect(board.locator("[class*='cross']").first()).toBeVisible();
 
     // Enter edit mode — crosses should be cleared
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=Edit this puzzle").click();
-    await page.waitForTimeout(400);
+    await openInEditor(page);
 
-    await expect(page.locator("text=EDITOR")).toBeVisible();
-    await expect(board.locator("[class*='cross']")).toHaveCount(0);
+    await expect(page.getByText('EDITOR', { exact: true })).toBeVisible();
+    await expect(page.locator("[class*='cross']")).toHaveCount(0);
   });
 });
 
 test.describe("Editor: scatter queens", () => {
   test("scatter on empty board needs no confirmation", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     await page.locator("button:has-text('Scatter queens')").click();
     await page.waitForTimeout(300);
@@ -123,10 +117,7 @@ test.describe("Editor: scatter queens", () => {
 
   test("scatter after user edit shows confirmation", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     // First scatter (no confirm — nothing changed yet)
     await page.locator("button:has-text('Scatter queens')").click();
@@ -151,10 +142,7 @@ test.describe("Editor: scatter queens", () => {
 
   test("scatter immediately after scatter needs no confirmation", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     // First scatter
     await page.locator("button:has-text('Scatter queens')").click();
@@ -171,10 +159,7 @@ test.describe("Editor: scatter queens", () => {
     page,
   }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=Edit this puzzle").click();
-    await page.waitForTimeout(400);
+    await openInEditor(page);
 
     // First scatter after entering edit: no confirm regardless of existing regions
     await page.locator("button:has-text('Scatter queens')").click();
@@ -192,10 +177,7 @@ test.describe("Editor: validation and play", () => {
     page,
   }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     // Paint only one row — board is incomplete
     await page.locator("button[title='Region 1']").click();
@@ -213,10 +195,7 @@ test.describe("Editor: validation and play", () => {
     page,
   }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     // Switch to 4×4 for ease
     await page.selectOption("select", "4");
@@ -243,19 +222,17 @@ test.describe("Editor: validation and play", () => {
     await expect(page.locator("text=Play this puzzle?")).toBeVisible();
 
     await page.getByRole("button", { name: "Play", exact: true }).click();
+    await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
     await page.waitForTimeout(600);
 
     // Now in play mode
-    await expect(page.locator("text=EDITOR")).not.toBeVisible();
+    await expect(page.getByText('EDITOR', { exact: true })).not.toBeVisible();
     await expect(page.locator("button:has-text('Hint')")).toBeVisible();
   });
 
   test("hints work on an editor-created 4×4 puzzle", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     await page.selectOption("select", "4");
     await page.waitForTimeout(300);
@@ -276,6 +253,7 @@ test.describe("Editor: validation and play", () => {
     await page.locator("button:has-text('Play ▶')").click();
     await page.waitForTimeout(400);
     await page.getByRole("button", { name: "Play", exact: true }).click();
+    await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
     await page.waitForTimeout(600);
 
     await page.locator("button:has-text('Hint')").click();
@@ -292,10 +270,7 @@ test.describe("Editor: size picker and export", () => {
     page,
   }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     await page.selectOption("select", "4");
     await page.waitForTimeout(300);
@@ -316,10 +291,7 @@ test.describe("Editor: size picker and export", () => {
     page,
   }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     // Paint a cell to make the board non-empty
     const board = page.locator('[class*="board"]').first();
@@ -347,10 +319,7 @@ test.describe("Editor: size picker and export", () => {
 
   test("Export JSON button is present and clickable", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await page.waitForTimeout(300);
-    await page.locator("text=New puzzle (Editor)…").click();
-    await page.waitForTimeout(400);
+    await newEditorPuzzle(page);
 
     await expect(
       page.locator("button:has-text('Export JSON')"),
