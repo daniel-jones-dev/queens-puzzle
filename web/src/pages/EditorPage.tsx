@@ -314,14 +314,8 @@ export function EditorPage() {
       }
 
       if (activeTool.kind === "unset") {
-        const region = puzzle.cell_region(r, c);
-        if (region === undefined) return;
-        // Clear entire region
-        const rn = puzzle.n();
-        for (let rr = 0; rr < rn; rr++)
-          for (let cc = 0; cc < rn; cc++)
-            if ((puzzle.cell_region(rr, cc) ?? -1) === region)
-              puzzle.set_cell_region(rr, cc, undefined);
+        if (puzzle.cell_region(r, c) === undefined) return;
+        puzzle.set_cell_region(r, c, undefined);
         setRegions(readRegions(puzzle));
         try { localStorage.setItem(EDITOR_KEY, puzzle.to_json()); } catch {}
         return;
