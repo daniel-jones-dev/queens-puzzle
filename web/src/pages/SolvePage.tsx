@@ -4,15 +4,31 @@ import { WasmPuzzle } from "queens-puzzle-wasm";
 import { Board } from "../components/Board";
 import { SolvedBanner } from "../components/SolvedBanner";
 import { initWasm } from "../initWasm";
+import type { HintState } from "../types";
 import {
   computeCellSize,
   readRegions,
   readStates,
   parsePuzzleMeta,
+  hintComplete,
   type PuzzleMeta,
 } from "../utils";
 import { STORAGE_KEY } from "./PlayPage";
 import styles from "./SolvePage.module.css";
+
+function computeNextHint(puzzle: WasmPuzzle): HintState | null {
+  const wasmHint = puzzle.next_hint();
+  if (!wasmHint) return null;
+  const changes = new Map<string, number>();
+  const rawChanges = wasmHint.changes();
+  for (let i = 0; i < rawChanges.length; i += 3)
+    changes.set(`${rawChanges[i]},${rawChanges[i + 1]}`, rawChanges[i + 2]);
+  const involved = new Set<string>();
+  const rawInvolved = wasmHint.involved();
+  for (let i = 0; i < rawInvolved.length; i += 2)
+    involved.add(`${rawInvolved[i]},${rawInvolved[i + 1]}`);
+  return { description: wasmHint.description(), changes, involved };
+}
 
 // ── Rule definitions ─────────────────────────────────────────────────────────
 
@@ -87,9 +103,10 @@ function EmptyState() {
 interface RulesPanelProps {
   hintDescription: string | null;
   solved: boolean;
+  onApply?: () => void;
 }
 
-function SolverRulesPanel({ hintDescription, solved }: RulesPanelProps) {
+function SolverRulesPanel({ hintDescription, solved, onApply }: RulesPanelProps) {
   const activeIndex = useMemo(() => {
     if (!hintDescription) return -1;
     return RULE_DEFS.findIndex((r) => r.match(hintDescription));
@@ -142,7 +159,14 @@ function SolverRulesPanel({ hintDescription, solved }: RulesPanelProps) {
                       </Link>
                     </div>
                     {status === "active" && hintDescription && (
-                      <p className={styles.ruleDesc}>{hintDescription}</p>
+                      <>
+                        <p className={styles.ruleDesc}>{hintDescription}</p>
+                        {onApply && (
+                          <button className={styles.applyBtn} onClick={onApply}>
+                            Apply step →
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -195,55 +219,62 @@ export function SolvePage() {
   const [past, setPast] = useState<number[][][]>([]);
   const [future, setFuture] = useState<number[][][]>([]);
   const [puzzleMeta, setPuzzleMeta] = useState<PuzzleMeta>({});
+  const [initialized, setInitialized] = useState(false);
+  const [frozenHint, setFrozenHint] = useState<HintState | null>(null);
+  const frozenHintRef = useRef<HintState | null>(null);
+
+  // Keep ref in sync so handlers can read current hint without stale closure
+  useEffect(() => { frozenHintRef.current = frozenHint; }, [frozenHint]);
 
   const regionColors = useMemo(
     () => (ready ? Array.from({ length: 12 }, (_, i) => WasmPuzzle.region_color_hex(i)) : []),
     [ready],
   );
 
-  // Active hint — recomputed after every board change
-  const activeHint = useMemo(() => {
-    const p = puzzleRef.current;
-    if (!p || !ready || solved) return null;
-    const wasmHint = p.next_hint();
-    if (!wasmHint) return null;
-    const changes = new Map<string, number>();
-    const rawChanges = wasmHint.changes();
-    for (let i = 0; i < rawChanges.length; i += 3)
-      changes.set(`${rawChanges[i]},${rawChanges[i + 1]}`, rawChanges[i + 2]);
-    const involved = new Set<string>();
-    const rawInvolved = wasmHint.involved();
-    for (let i = 0; i < rawInvolved.length; i += 2)
-      involved.add(`${rawInvolved[i]},${rawInvolved[i + 1]}`);
-    return { description: wasmHint.description(), changes, involved };
-  }, [playerStates, solved, ready]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Init ───────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!locState?.puzzleJson) return;
     let cancelled = false;
     initWasm()
       .then(() => {
         if (cancelled) return;
-        const puzzle = WasmPuzzle.from_json(locState.puzzleJson);
-        // Replay playerStates from Play
-        if (locState.playerStates) {
-          const n = puzzle.n();
-          for (let r = 0; r < n; r++)
-            for (let c = 0; c < n; c++)
-              puzzle.set_cell_state(r, c, locState.playerStates![r]?.[c] ?? 0);
+        // Prefer puzzle from navigation state; fall back to localStorage
+        let puzzle: WasmPuzzle | null = null;
+        let rawJson: string | null = null;
+        if (locState?.puzzleJson) {
+          rawJson = locState.puzzleJson;
+          puzzle = WasmPuzzle.from_json(rawJson);
+          if (locState.playerStates) {
+            const n = puzzle.n();
+            for (let r = 0; r < n; r++)
+              for (let c = 0; c < n; c++)
+                puzzle.set_cell_state(r, c, locState.playerStates![r]?.[c] ?? 0);
+          }
+        } else {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            try {
+              puzzle = WasmPuzzle.from_json(saved);
+              rawJson = saved;
+            } catch { /* ignore malformed save */ }
+          }
         }
+        setInitialized(true);
+        if (!puzzle || !rawJson) return; // nothing to load — show empty state
+        const isSolved = puzzle.is_solved();
         puzzleRef.current = puzzle;
         setRegions(readRegions(puzzle));
         setPlayerStates(readStates(puzzle));
         setCellSize(computeCellSize(puzzle.n()));
-        setSolved(puzzle.is_solved());
-        setPast(locState.past ?? []);
-        setPuzzleMeta(parsePuzzleMeta(locState.puzzleJson));
+        setSolved(isSolved);
+        setPast(locState?.past ?? []);
+        setPuzzleMeta(parsePuzzleMeta(rawJson));
+        const initialHint = isSolved ? null : computeNextHint(puzzle);
+        frozenHintRef.current = initialHint;
+        setFrozenHint(initialHint);
         setReady(true);
       })
-      .catch((err: unknown) => setError(String(err)));
+      .catch((err: unknown) => { setInitialized(true); setError(String(err)); });
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -258,6 +289,19 @@ export function SolvePage() {
 
   // ── Board interaction ─────────────────────────────────────────────────────
 
+  const advanceHintIfComplete = useCallback((puzzle: WasmPuzzle, nowSolved: boolean) => {
+    if (nowSolved) {
+      setFrozenHint(null);
+      return;
+    }
+    const fh = frozenHintRef.current;
+    if (fh && hintComplete(puzzle, fh.changes)) {
+      const next = computeNextHint(puzzle);
+      frozenHintRef.current = next;
+      setFrozenHint(next);
+    }
+  }, []);
+
   const handleCellCross = useCallback(
     (r: number, c: number) => {
       if (solved) return;
@@ -268,8 +312,9 @@ export function SolvePage() {
       setPlayerStates(readStates(puzzle));
       setPast((p) => [...p, snapshot]);
       setFuture([]);
+      advanceHintIfComplete(puzzle, false);
     },
-    [solved],
+    [solved, advanceHintIfComplete],
   );
 
   const handleCellClick = useCallback(
@@ -285,9 +330,29 @@ export function SolvePage() {
       setFuture([]);
       const nowSolved = puzzle.is_solved();
       setSolved(nowSolved);
+      advanceHintIfComplete(puzzle, nowSolved);
     },
-    [solved],
+    [solved, advanceHintIfComplete],
   );
+
+  const handleApply = useCallback(() => {
+    const puzzle = puzzleRef.current;
+    const fh = frozenHintRef.current;
+    if (!puzzle || !fh) return;
+    const snapshot = readStates(puzzle);
+    for (const [key, state] of fh.changes) {
+      const [r, c] = key.split(",").map(Number);
+      puzzle.set_cell_state(r, c, state);
+    }
+    setPlayerStates(readStates(puzzle));
+    setPast((p) => [...p, snapshot]);
+    setFuture([]);
+    const nowSolved = puzzle.is_solved();
+    setSolved(nowSolved);
+    const next = nowSolved ? null : computeNextHint(puzzle);
+    frozenHintRef.current = next;
+    setFrozenHint(next);
+  }, []);
 
   const handleUndo = useCallback(() => {
     if (past.length === 0) return;
@@ -301,7 +366,11 @@ export function SolvePage() {
     setPlayerStates(readStates(puzzle));
     setPast((p) => p.slice(0, -1));
     setFuture((f) => [current, ...f]);
-    setSolved(puzzle.is_solved());
+    const nowSolved = puzzle.is_solved();
+    setSolved(nowSolved);
+    const next = nowSolved ? null : computeNextHint(puzzle);
+    frozenHintRef.current = next;
+    setFrozenHint(next);
   }, [past]);
 
   const handleRedo = useCallback(() => {
@@ -316,7 +385,11 @@ export function SolvePage() {
     setPlayerStates(readStates(puzzle));
     setFuture((f) => f.slice(1));
     setPast((p) => [...p, current]);
-    setSolved(puzzle.is_solved());
+    const nowSolved = puzzle.is_solved();
+    setSolved(nowSolved);
+    const next = nowSolved ? null : computeNextHint(puzzle);
+    frozenHintRef.current = next;
+    setFrozenHint(next);
   }, [future]);
 
   const handleContinueInPlay = useCallback(() => {
@@ -328,13 +401,13 @@ export function SolvePage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  if (!locState?.puzzleJson) return <EmptyState />;
   if (error) return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
-  if (!ready) return <div className={styles.loading}>Loading…</div>;
+  if (!initialized) return <div className={styles.loading}>Loading…</div>;
+  if (!ready) return <EmptyState />;
 
   const difficulty = puzzleRef.current?.difficulty() ?? null;
-  const hintInvolvedSet = activeHint?.involved;
-  const hintChangesSet = activeHint ? new Set(activeHint.changes.keys()) : undefined;
+  const hintInvolvedSet = frozenHint?.involved;
+  const hintChangesSet = frozenHint ? new Set(frozenHint.changes.keys()) : undefined;
 
   return (
     <div className={styles.page}>
@@ -400,8 +473,9 @@ export function SolvePage() {
           {/* Mobile: rules panel below board */}
           <div className={styles.mobileRules}>
             <SolverRulesPanel
-              hintDescription={activeHint?.description ?? null}
+              hintDescription={frozenHint?.description ?? null}
               solved={solved}
+              onApply={frozenHint ? handleApply : undefined}
             />
           </div>
         </div>
@@ -409,7 +483,7 @@ export function SolvePage() {
         {/* ── Rules panel (desktop only) ── */}
         <div className={styles.desktopRules}>
           <SolverRulesPanel
-            hintDescription={activeHint?.description ?? null}
+            hintDescription={frozenHint?.description ?? null}
             solved={solved}
           />
         </div>
