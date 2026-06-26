@@ -22,7 +22,7 @@ import {
 } from "../utils";
 import styles from "./PlayPage.module.css";
 
-const STORAGE_KEY = "queens-puzzle-v1";
+export const STORAGE_KEY = "queens-puzzle-v1";
 const TIMER_KEY = "queens-puzzle-timer";
 export const EDITOR_KEY = "queens-puzzle-editor-v1";
 
