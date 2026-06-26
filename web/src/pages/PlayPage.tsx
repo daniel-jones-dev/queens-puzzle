@@ -6,8 +6,6 @@ import { PlayControls } from "../components/PlayControls";
 import { HintBar } from "../components/HintBar";
 import { SolvedBanner } from "../components/SolvedBanner";
 import { ConfirmModal } from "../components/ConfirmModal";
-import { ImportModal } from "../components/ImportModal";
-import { GenerateModal } from "../components/GenerateModal";
 import type { HintState } from "../types";
 import { useSettings } from "../contexts/SettingsContext";
 import { initWasm } from "../initWasm";
@@ -18,6 +16,9 @@ import {
   readRegions,
   readStates,
   hintComplete,
+  parsePuzzleMeta,
+  formatTime,
+  type PuzzleMeta,
 } from "../utils";
 import styles from "./PlayPage.module.css";
 
@@ -26,6 +27,8 @@ const TIMER_KEY = "queens-puzzle-timer";
 export const EDITOR_KEY = "queens-puzzle-editor-v1";
 
 const DEFAULT_JSON = JSON.stringify({
+  name: "Wednesday's Puzzle",
+  source: "Daniel Jones",
   regions: [
     [0, 0, 0, 0, 0, 0, 0],
     [1, 1, 1, 0, 0, 0, 2],
@@ -37,12 +40,12 @@ const DEFAULT_JSON = JSON.stringify({
   ],
 });
 
-function loadPuzzle(): WasmPuzzle {
+function loadPuzzle(): { puzzle: WasmPuzzle; rawJson: string } {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return WasmPuzzle.from_json(saved);
+    if (saved) return { puzzle: WasmPuzzle.from_json(saved), rawJson: saved };
   } catch {}
-  return WasmPuzzle.from_json(DEFAULT_JSON);
+  return { puzzle: WasmPuzzle.from_json(DEFAULT_JSON), rawJson: DEFAULT_JSON };
 }
 
 function WarningBanner({ msg, onDismiss }: { msg: string; onDismiss: () => void }) {
@@ -56,7 +59,7 @@ function WarningBanner({ msg, onDismiss }: { msg: string; onDismiss: () => void 
 
 export function PlayPage() {
   const navigate = useNavigate();
-  const { autoPlaceXs, autoCheck } = useSettings();
+  const { autoPlaceXs, autoCheck, showClock } = useSettings();
 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,17 +76,17 @@ export function PlayPage() {
   const [past, setPast] = useState<number[][][]>([]);
   const [hint, setHint] = useState<HintState | null>(null);
   const [noHintMsg, setNoHintMsg] = useState(false);
+  const [hintPulsing, setHintPulsing] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [playValidityWarning, setPlayValidityWarning] = useState<string | null>(null);
   const [puzzleUnique, setPuzzleUnique] = useState(false);
   const [resetPending, setResetPending] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [generateOpen, setGenerateOpen] = useState(false);
+  const [puzzleMeta, setPuzzleMeta] = useState<PuzzleMeta>({});
 
   const validityWorkerRef = useRef<Worker | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastInteractionRef = useRef<number>(0);
 
   const regionColors = useMemo(
     () => ready ? Array.from({ length: 12 }, (_, i) => WasmPuzzle.region_color_hex(i)) : [],
@@ -93,6 +96,7 @@ export function PlayPage() {
   const clashingSet = useMemo(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle || !autoCheck) return new Set<string>();
+    if (!playerStates.some((row) => row.includes(1))) return new Set<string>();
     const raw = puzzle.clashing_queens();
     const s = new Set<string>();
     for (let i = 0; i < raw.length; i += 2) s.add(`${raw[i]},${raw[i + 1]}`);
@@ -129,25 +133,33 @@ export function PlayPage() {
         if (cancelled) return;
 
         let puzzle: WasmPuzzle | null = null;
+        let rawJson: string | null = null;
         let fromShare = false;
         const hash = window.location.hash.slice(1);
         if (hash) {
           try {
-            puzzle = WasmPuzzle.from_json(fromBase64Url(hash));
+            rawJson = fromBase64Url(hash);
+            puzzle = WasmPuzzle.from_json(rawJson);
             fromShare = true;
             history.replaceState(null, "", window.location.pathname);
           } catch {
             setUrlError("Share link could not be decoded — loading your last saved puzzle.");
+            rawJson = null;
           }
         }
-        if (!puzzle) puzzle = loadPuzzle();
+        if (!puzzle) {
+          const loaded = loadPuzzle();
+          puzzle = loaded.puzzle;
+          rawJson = loaded.rawJson;
+        }
 
         const states = readStates(puzzle);
         const hasProgress = states.some((row) => row.some((s) => s !== 0));
         const isSolved = puzzle.is_solved();
         const savedTimer = fromShare ? 0 : parseInt(localStorage.getItem(TIMER_KEY) ?? "0", 10) || 0;
+        const finalJson = rawJson ?? puzzle.to_json();
         if (fromShare) {
-          try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
+          try { localStorage.setItem(STORAGE_KEY, finalJson); } catch {}
           try { localStorage.removeItem(TIMER_KEY); } catch {}
         }
         puzzleRef.current = puzzle;
@@ -158,8 +170,10 @@ export function PlayPage() {
         setTimerRunning(hasProgress && !isSolved);
         setSolved(isSolved);
         setShowBanner(isSolved);
+        setPuzzleMeta(parsePuzzleMeta(finalJson));
+        lastInteractionRef.current = Date.now();
         setReady(true);
-        runPlayValidityCheck(puzzle.to_json());
+        runPlayValidityCheck(finalJson);
       })
       .catch((err: unknown) => setError(String(err)));
     return () => { cancelled = true; };
@@ -188,33 +202,22 @@ export function PlayPage() {
   }, [timerRunning, solved]);
 
   useEffect(() => {
-    if (solved) { setShowBanner(true); setHint(null); setNoHintMsg(false); }
+    if (solved) { setShowBanner(true); setHint(null); setNoHintMsg(false); setHintPulsing(false); }
   }, [solved]);
 
-  const enterPlayWith = useCallback((puzzle: WasmPuzzle) => {
-    puzzleRef.current = puzzle;
-    if (timerIntervalRef.current !== null) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    const states = readStates(puzzle);
-    const isSolved = puzzle.is_solved();
-    const hasProgress = states.some((row) => row.some((s) => s !== 0));
-    setCellSize(computeCellSize(puzzle.n()));
-    setRegions(readRegions(puzzle));
-    setPlayerStates(states);
-    setPast([]);
-    setHint(null);
-    setNoHintMsg(false);
-    setSolved(isSolved);
-    setShowBanner(isSolved);
-    setTimerElapsed(0);
-    setTimerRunning(hasProgress && !isSolved);
-    const json = puzzle.to_json();
-    try { localStorage.setItem(STORAGE_KEY, json); } catch {}
-    try { localStorage.removeItem(TIMER_KEY); } catch {}
-    runPlayValidityCheck(json);
-  }, [runPlayValidityCheck]);
+  // Pulse the Hint button after 10 s of inactivity (only while actively playing)
+  useEffect(() => {
+    if (solved || hint) { setHintPulsing(false); return; }
+    const id = setInterval(() => {
+      setHintPulsing(Date.now() - lastInteractionRef.current >= 10_000);
+    }, 1_000);
+    return () => clearInterval(id);
+  }, [solved, hint]);
+
+  const touchInteraction = useCallback(() => {
+    lastInteractionRef.current = Date.now();
+    setHintPulsing(false);
+  }, []);
 
   // ── Play handlers ──────────────────────────────────────────────────────
 
@@ -230,6 +233,7 @@ export function PlayPage() {
       const markQueenHint = activeHint ? [...activeHint.changes.values()].some((s) => s === 1) : false;
       if (activeHint && !isInvolved && !markQueenHint) setHint(null);
 
+      touchInteraction();
       const snapshot = readStates(puzzle);
       try {
         setTimerRunning(true);
@@ -243,7 +247,7 @@ export function PlayPage() {
       }
       if (activeHint && isInvolved && hintComplete(puzzle, activeHint.changes)) setHint(null);
     },
-    [solved, hint],
+    [solved, hint, touchInteraction],
   );
 
   const handleCellClick = useCallback(
@@ -258,6 +262,7 @@ export function PlayPage() {
       const markQueenHint = activeHint ? [...activeHint.changes.values()].some((s) => s === 1) : false;
       if (activeHint && !isInvolved && !markQueenHint) setHint(null);
 
+      touchInteraction();
       const snapshot = readStates(puzzle);
       try {
         setTimerRunning(true);
@@ -268,6 +273,19 @@ export function PlayPage() {
           for (let i = 0; i < affected.length; i += 2)
             if (puzzle.cell_state(affected[i], affected[i + 1]) === 0)
               puzzle.set_cell_state(affected[i], affected[i + 1], 2);
+        }
+        if (next === 0 && visualState === 1 && autoPlaceXs) {
+          const affected = puzzle.cells_affected_by_queen(r, c);
+          for (let i = 0; i < affected.length; i += 2) {
+            const ar = affected[i], ac = affected[i + 1];
+            if (puzzle.cell_state(ar, ac) !== 2) continue;
+            const zone = puzzle.cells_affected_by_queen(ar, ac);
+            let justified = false;
+            for (let j = 0; j < zone.length; j += 2) {
+              if (puzzle.cell_state(zone[j], zone[j + 1]) === 1) { justified = true; break; }
+            }
+            if (!justified) puzzle.set_cell_state(ar, ac, 0);
+          }
         }
         setPlayerStates(readStates(puzzle));
         setPast((p) => [...p, snapshot]);
@@ -281,7 +299,7 @@ export function PlayPage() {
       }
       if (activeHint && isInvolved && hintComplete(puzzle, activeHint.changes)) setHint(null);
     },
-    [solved, autoPlaceXs, hint],
+    [solved, autoPlaceXs, hint, touchInteraction],
   );
 
   const doReset = useCallback(() => {
@@ -291,6 +309,7 @@ export function PlayPage() {
     for (let r = 0; r < n; r++)
       for (let c = 0; c < n; c++) puzzle.set_cell_state(r, c, 0);
     setPlayerStates(readStates(puzzle));
+    touchInteraction();
     if (solved) {
       if (timerIntervalRef.current !== null) {
         clearInterval(timerIntervalRef.current);
@@ -307,7 +326,7 @@ export function PlayPage() {
     setPast([]);
     setResetPending(false);
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
-  }, [solved]);
+  }, [solved, touchInteraction]);
 
   const handleHint = useCallback(() => {
     const puzzle = puzzleRef.current;
@@ -333,6 +352,7 @@ export function PlayPage() {
   const handleApply = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle || !hint) return;
+    touchInteraction();
     const snapshot = readStates(puzzle);
     setTimerRunning(true);
     for (const [key, state] of hint.changes) {
@@ -346,12 +366,13 @@ export function PlayPage() {
     if (nowSolved) setTimerRunning(false);
     try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
     setHint(null);
-  }, [hint]);
+  }, [hint, touchInteraction]);
 
   const handleUndo = useCallback(() => {
     if (past.length === 0) return;
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
+    touchInteraction();
     const snapshot = past[past.length - 1];
     const n = puzzle.n();
     for (let r = 0; r < n; r++)
@@ -366,7 +387,7 @@ export function PlayPage() {
     setHint(null);
     setNoHintMsg(false);
     try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
-  }, [past, solved]);
+  }, [past, solved, touchInteraction]);
 
   const handleShare = useCallback(() => {
     const puzzle = puzzleRef.current;
@@ -378,24 +399,11 @@ export function PlayPage() {
     setTimeout(() => setShareToast(false), 2000);
   }, []);
 
-  const handleImport = useCallback((json: string) => {
-    try {
-      enterPlayWith(WasmPuzzle.from_json(json));
-      setImportOpen(false);
-      setImportError(null);
-    } catch (e) {
-      setImportError(String(e).replace(/^.*?Error:\s*/, ""));
-    }
-  }, [enterPlayWith]);
-
-  const handleGenerateLoad = useCallback((json: string) => {
-    try {
-      enterPlayWith(WasmPuzzle.from_json(json));
-      setGenerateOpen(false);
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [enterPlayWith]);
+  const handleOpenInSolver = useCallback(() => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    navigate("/solve", { state: { puzzleJson: puzzle.to_json(), playerStates, past } });
+  }, [navigate, playerStates, past]);
 
   const handleOpenInEditor = useCallback(() => {
     const puzzle = puzzleRef.current;
@@ -421,17 +429,35 @@ export function PlayPage() {
   return (
     <div className={styles.page}>
       {/* Puzzle meta */}
-      {(difficulty || puzzleUnique) && (
+      {(puzzleMeta.name || puzzleMeta.source || difficulty || puzzleUnique || showClock) && (
         <div className={styles.puzzleMeta}>
+          {puzzleMeta.name && (
+            <span className={styles.metaName}>{puzzleMeta.name}</span>
+          )}
+          {puzzleMeta.name && puzzleMeta.source && <span className={styles.metaSep}>·</span>}
+          {puzzleMeta.source && (
+            <span>by {puzzleMeta.source}</span>
+          )}
+          {(puzzleMeta.name || puzzleMeta.source) && difficulty && (
+            <span className={styles.metaSep}>·</span>
+          )}
           {difficulty && (
             <>
-              <span className={styles.metaSep}>Difficulty:</span>
+              <span>Difficulty:</span>
               <span className={styles.diffBadge}>{difficulty}</span>
             </>
           )}
-          {difficulty && puzzleUnique && <span className={styles.metaSep}>·</span>}
+          {(puzzleMeta.name || puzzleMeta.source || difficulty) && puzzleUnique && (
+            <span className={styles.metaSep}>·</span>
+          )}
           {puzzleUnique && (
             <span className={styles.uniqueBadge}>Confirmed unique</span>
+          )}
+          {showClock && (puzzleMeta.name || puzzleMeta.source || difficulty || puzzleUnique) && (
+            <span className={styles.metaSep}>·</span>
+          )}
+          {showClock && (
+            <span className={styles.timer}>{formatTime(timerElapsed)}</span>
           )}
         </div>
       )}
@@ -465,11 +491,11 @@ export function PlayPage() {
         )}
 
         <PlayControls
-          timerElapsed={timerElapsed}
           solved={solved}
           canUndo={past.length > 0}
           hintActive={!!hint}
           noHintMsg={noHintMsg}
+          hintPulsing={hintPulsing}
           onHint={handleHint}
           onUndo={handleUndo}
           onReset={() => setResetPending(true)}
@@ -503,7 +529,7 @@ export function PlayPage() {
 
         {/* Actions */}
         <div className={styles.actionRow}>
-          <button className={styles.btn} onClick={() => navigate("/solve")}>
+          <button className={styles.btn} onClick={handleOpenInSolver}>
             Open in Solver
           </button>
           <button className={styles.btn} onClick={handleOpenInEditor}>
@@ -516,16 +542,6 @@ export function PlayPage() {
             {shareToast ? "✓ Copied!" : "Copy link"}
           </button>
         </div>
-
-        {/* Secondary actions */}
-        <div className={styles.actionRow}>
-          <button className={styles.btn} onClick={() => { setImportOpen(true); setImportError(null); }}>
-            Import puzzle…
-          </button>
-          <button className={styles.btn} onClick={() => setGenerateOpen(true)}>
-            Generate puzzle…
-          </button>
-        </div>
       </div>
 
       {resetPending && (
@@ -536,21 +552,6 @@ export function PlayPage() {
           confirmColor="#c0392b"
           onConfirm={doReset}
           onCancel={() => setResetPending(false)}
-        />
-      )}
-
-      {importOpen && (
-        <ImportModal
-          error={importError}
-          onImport={handleImport}
-          onCancel={() => { setImportOpen(false); setImportError(null); }}
-        />
-      )}
-
-      {generateOpen && (
-        <GenerateModal
-          onLoad={handleGenerateLoad}
-          onCancel={() => setGenerateOpen(false)}
         />
       )}
     </div>

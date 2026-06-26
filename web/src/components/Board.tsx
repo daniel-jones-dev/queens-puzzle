@@ -14,8 +14,12 @@ interface Props {
   hintChanges?: Set<string>;
   editMode?: boolean;
   onCellPaint?: (row: number, col: number) => void;
-  onPaintStart?: () => void;
+  onPaintStart?: (row: number, col: number) => void;
   onPaintEnd?: () => void;
+  /** Show queens as semi-transparent overlay even in editMode */
+  showQueenOverlay?: boolean;
+  /** Cells to highlight with a red inner border (multi-solution warning) */
+  multiSolutionCells?: Set<string>;
 }
 
 const BORDER_THIN = "1px solid rgba(0,0,0,0.08)";
@@ -65,6 +69,8 @@ export function Board({
   onCellPaint,
   onPaintStart,
   onPaintEnd,
+  showQueenOverlay,
+  multiSolutionCells,
 }: Props) {
   const n = regions.length;
   const boardRef = useRef<HTMLDivElement>(null);
@@ -105,7 +111,7 @@ export function Board({
         if (editMode && onCellPaint) {
           e.currentTarget.setPointerCapture(e.pointerId);
           draggingRef.current = true;
-          onPaintStart?.();
+          onPaintStart?.(r, c);
           onCellPaint(r, c);
           return;
         }
@@ -179,10 +185,15 @@ export function Board({
                 position: "relative",
               }}
             >
-              {!editMode && state === 1 && (
+              {(!editMode || showQueenOverlay) && state === 1 && (
                 <span
                   className={clashing ? styles.queenClash : styles.queen}
-                  style={{ fontSize: Math.round(cellSize * 0.54) }}
+                  style={{
+                    fontSize: Math.round(cellSize * 0.54),
+                    ...(showQueenOverlay && editMode
+                      ? { color: "rgba(0,0,0,0.32)", textShadow: "none" }
+                      : {}),
+                  }}
                 >
                   ♛
                 </span>
@@ -199,6 +210,17 @@ export function Board({
                     inset: 0,
                     border: "3px solid #27ae60",
                     boxSizing: "border-box",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
+              {multiSolutionCells?.has(cellKey) && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 2,
+                    border: "2px solid rgba(220,60,60,0.5)",
+                    borderRadius: 2,
                     pointerEvents: "none",
                   }}
                 />

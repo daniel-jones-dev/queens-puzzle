@@ -1,0 +1,528 @@
+/* ── Page shell ─────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 28px 28px 32px;
+}
+
+/* ── Two-column desktop layout ─────────────────────────────────────────────── */
+.layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 860px;
+}
+
+.boardCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Board + markers grid ──────────────────────────────────────────────────── */
+.boardArea {
+  display: grid;
+  grid-template-columns: auto 22px;
+  grid-template-rows: auto 22px;
+  gap: 4px;
+}
+
+.rowMarkers {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rowMarker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: transparent;
+  width: 22px;
+  line-height: 1;
+}
+
+.colMarkers {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+}
+
+.colMarker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: transparent;
+  height: 22px;
+  line-height: 1;
+}
+
+.markerWarn {
+  color: #ef4444;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────────────────── */
+.toolBar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.toolBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toolBtn:hover {
+  background: var(--bg);
+}
+
+.toolBtnActive {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: white !important;
+}
+
+.toolDivider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Colour swatches */
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s;
+  flex-shrink: 0;
+  position: relative;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.swatch:hover {
+  transform: scale(1.1);
+}
+
+.swatchSelected {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent);
+  transform: scale(1.1);
+}
+
+.swatchNum {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 7px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.4);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.checkerIcon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Action rows ─────────────────────────────────────────────────────────────── */
+.actionsRow {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 13px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+  line-height: 1.2;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: #C8C8C0;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btnPrimary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #233050;
+  border-color: #233050;
+}
+
+.btnToast {
+  color: #065f46;
+  border-color: #6ee7b7;
+  background: #d1fae5;
+}
+
+.dividerV {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Right panel (desktop) ──────────────────────────────────────────────────── */
+.panel {
+  flex: 1;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panelSection {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panelSection:last-child {
+  border-bottom: none;
+  flex: 1;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.fieldInput {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.1s;
+}
+
+.fieldInput:focus {
+  border-color: var(--accent);
+  background: white;
+}
+
+.fieldInput::placeholder {
+  color: var(--text2);
+  opacity: 0.6;
+}
+
+/* ── Analysis stats ─────────────────────────────────────────────────────────── */
+.statRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.statVal {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statVal2 {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.ok {
+  color: #16a34a;
+}
+
+.warn {
+  color: #d97706;
+}
+
+.err {
+  color: #c0392b;
+}
+
+.computing {
+  font-size: 11px;
+  color: var(--text2);
+  font-style: italic;
+  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.spinner {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.multiWarn {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #991b1b;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+/* ── Workflow guide ─────────────────────────────────────────────────────────── */
+.guideSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.guideStep {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+  padding-left: 20px;
+  position: relative;
+  margin: 0;
+}
+
+.guideStep::before {
+  content: attr(data-n);
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+/* ── Mobile analysis bar (hidden on desktop) ────────────────────────────────── */
+.analysisBar {
+  display: none;
+}
+
+/* ── Mobile breakpoint ────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .page {
+    padding: 12px 16px 80px;
+  }
+
+  .layout {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+
+  /* Hide desktop panel on mobile */
+  .panel {
+    display: none;
+  }
+
+  /* Show analysis bar on mobile */
+  .analysisBar {
+    display: block;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .analysisSummary {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+
+  .chipOk {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .chipWarn {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .chipErr {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .chipNeutral {
+    background: var(--bg);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  .expandIcon {
+    color: var(--text2);
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
+
+  .analysisBarOpen .expandIcon {
+    transform: rotate(180deg);
+  }
+
+  .drawer {
+    border-top: 1px solid var(--border);
+    padding: 12px 14px;
+  }
+
+  .drawerFields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .fieldRow {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .toolBar {
+    gap: 3px;
+    width: 100%;
+  }
+
+  .toolBtn {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  .swatch {
+    width: 24px;
+    height: 24px;
+  }
+
+  .actionsRow {
+    gap: 6px;
+    width: 100%;
+  }
+
+  .btn {
+    font-size: 12px;
+    padding: 9px 13px;
+    border-radius: 8px;
+  }
+}

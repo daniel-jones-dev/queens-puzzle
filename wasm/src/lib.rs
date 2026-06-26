@@ -156,6 +156,77 @@ impl WasmPuzzle {
         let c = region_color(region_index);
         format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)
     }
+
+    /// Returns flattened [row, col, ...] queen positions for the first solution.
+    /// Returns an empty Vec if no solution exists.
+    /// Ignores current player states — analyses the region layout only.
+    pub fn solve_one(&self) -> Vec<u32> {
+        let n = self.inner.n();
+        let mut clone = self.inner.clone();
+        for row in 0..n {
+            for col in 0..n {
+                clone.set_cell_state(Cell { row, col }, State::Unknown);
+            }
+        }
+        let mut solutions = Vec::new();
+        solver::brute_force::solve(&mut clone, &mut solutions);
+        if solutions.is_empty() {
+            return Vec::new();
+        }
+        solutions[0]
+            .queens()
+            .iter()
+            .flat_map(|cell| [cell.row as u32, cell.col as u32])
+            .collect()
+    }
+
+    /// Combined analysis: returns [count, row0_ambiguous, ..., rowN-1_ambiguous,
+    /// col0_ambiguous, ..., colN-1_ambiguous] where count is capped at 10 and
+    /// ambiguous values are 0/1 (meaningful only when count >= 2).
+    /// A row/col is ambiguous if queen placement differs between the first two solutions.
+    pub fn solution_analysis(&self) -> Vec<u32> {
+        use std::collections::HashMap;
+        let n = self.inner.n();
+        let mut clone = self.inner.clone();
+        for row in 0..n {
+            for col in 0..n {
+                clone.set_cell_state(Cell { row, col }, State::Unknown);
+            }
+        }
+        let mut solutions = Vec::new();
+        solver::brute_force::solve(&mut clone, &mut solutions);
+        let count = solutions.len() as u32;
+
+        let mut ambiguous = vec![0u32; 2 * n];
+        if solutions.len() >= 2 {
+            let queens0: HashMap<usize, usize> = solutions[0]
+                .queens()
+                .iter()
+                .map(|c| (c.row, c.col))
+                .collect();
+            let queens1: HashMap<usize, usize> = solutions[1]
+                .queens()
+                .iter()
+                .map(|c| (c.row, c.col))
+                .collect();
+            for row in 0..n {
+                if queens0.get(&row) != queens1.get(&row) {
+                    ambiguous[row] = 1;
+                }
+            }
+            for col in 0..n {
+                let r0 = queens0.iter().find(|(_, v)| **v == col).map(|(k, _)| *k);
+                let r1 = queens1.iter().find(|(_, v)| **v == col).map(|(k, _)| *k);
+                if r0 != r1 {
+                    ambiguous[n + col] = 1;
+                }
+            }
+        }
+
+        let mut result = vec![count];
+        result.extend(ambiguous);
+        result
+    }
 }
 
 #[wasm_bindgen]

@@ -6,5 +6,5 @@ export type HintState = {
 
 export type AnalysisResult =
   | { status: "no-solution" }
-  | { status: "multiple"; count: number }
+  | { status: "multiple"; count: number; ambiguousRows: boolean[]; ambiguousCols: boolean[] }
   | { status: "unique"; difficulty: string | null };
