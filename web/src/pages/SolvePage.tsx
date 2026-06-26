@@ -485,6 +485,7 @@ export function SolvePage() {
           <SolverRulesPanel
             hintDescription={frozenHint?.description ?? null}
             solved={solved}
+            onApply={frozenHint ? handleApply : undefined}
           />
         </div>
 

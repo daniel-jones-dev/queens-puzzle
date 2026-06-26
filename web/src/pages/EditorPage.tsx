@@ -107,8 +107,7 @@ function AnalysisStats({
       </div>
       {analysisResult?.status === "multiple" && (
         <div className={styles.multiWarn}>
-          <strong>Multiple solutions detected.</strong> Ambiguous rows and columns are
-          highlighted red on the board — finish painting those regions.
+          <strong>Multiple solutions detected.</strong> Cells at ambiguous row/column intersections are marked with diagonal lines — finish painting those regions.
         </div>
       )}
     </>
@@ -156,7 +155,6 @@ export function EditorPage() {
   const [clearPending, setClearPending] = useState(false);
   const [exportToast, setExportToast] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [shuffleNoSolution, setShuffleNoSolution] = useState(false);
 
   // For wand tool: the region being extended (captured from the mousedown cell)
   const wandRegionRef = useRef<number | null>(null);
@@ -189,13 +187,10 @@ export function EditorPage() {
     const s = new Set<string>();
     for (let r = 0; r < n; r++)
       for (let c = 0; c < n; c++)
-        if (regions[r]?.[c] === null && ambiguousRows[r] && ambiguousCols[c])
+        if (ambiguousRows[r] && ambiguousCols[c])
           s.add(`${r},${c}`);
     return s;
-  }, [analysisResult, regions, n]);
-
-  const ambiguousRows = analysisResult?.status === "multiple" ? analysisResult.ambiguousRows : [];
-  const ambiguousCols = analysisResult?.status === "multiple" ? analysisResult.ambiguousCols : [];
+  }, [analysisResult, n]);
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
@@ -388,19 +383,33 @@ export function EditorPage() {
   const handleShuffleQueens = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
-    const snap = takeSnapshot();
-    const queens = puzzle.solve_one();
-    if (queens.length === 0) {
-      setShuffleNoSolution(true);
-      setTimeout(() => setShuffleNoSolution(false), 3000);
-      return;
-    }
     const rn = puzzle.n();
+
+    // Build region → cells map from current layout
+    const regionCells = new Map<number, [number, number][]>();
+    for (let r = 0; r < rn; r++) {
+      for (let c = 0; c < rn; c++) {
+        const reg = puzzle.cell_region(r, c);
+        if (reg !== undefined) {
+          if (!regionCells.has(reg)) regionCells.set(reg, []);
+          regionCells.get(reg)!.push([r, c]);
+        }
+      }
+    }
+    if (regionCells.size === 0) return;
+
+    const snap = takeSnapshot();
+
+    // Clear all cell states, then place one random queen per region
     for (let r = 0; r < rn; r++)
       for (let c = 0; c < rn; c++)
         puzzle.set_cell_state(r, c, 0);
-    for (let i = 0; i < queens.length; i += 2)
-      puzzle.set_cell_state(queens[i], queens[i + 1], 1);
+
+    for (const cells of regionCells.values()) {
+      const [r, c] = cells[Math.floor(Math.random() * cells.length)];
+      puzzle.set_cell_state(r, c, 1);
+    }
+
     setPlayerStates(readStates(puzzle));
     pushUndo(snap);
     try { localStorage.setItem(EDITOR_KEY, puzzle.to_json()); } catch {}
@@ -522,50 +531,22 @@ export function EditorPage() {
       <div className={styles.layout}>
         {/* Left: board + toolbar + actions */}
         <div className={styles.boardCol}>
-          {/* Board with row/col markers */}
-          <div className={styles.boardArea}>
-            <Board
-              regions={regions}
-              regionColors={regionColors}
-              cellStates={playerStates}
-              clashingSet={new Set()}
-              onCellCross={() => {}}
-              onCellClick={() => {}}
-              cellSize={cellSize}
-              editMode={true}
-              onCellPaint={isQueenTool ? () => {} : handleCellPaint}
-              onPaintStart={isQueenTool ? handleQueenPaintStart : handlePaintStart}
-              onPaintEnd={isQueenTool ? undefined : handlePaintEnd}
-              showQueenOverlay={true}
-              multiSolutionCells={multiSolutionCells}
-            />
-
-            {/* Row markers */}
-            <div className={styles.rowMarkers}>
-              {Array.from({ length: n }, (_, r) => (
-                <div
-                  key={r}
-                  className={`${styles.rowMarker}${ambiguousRows[r] ? ` ${styles.markerWarn}` : ""}`}
-                  style={{ height: cellSize }}
-                >
-                  {ambiguousRows[r] ? "!" : ""}
-                </div>
-              ))}
-            </div>
-
-            {/* Col markers */}
-            <div className={styles.colMarkers}>
-              {Array.from({ length: n }, (_, c) => (
-                <div
-                  key={c}
-                  className={`${styles.colMarker}${ambiguousCols[c] ? ` ${styles.markerWarn}` : ""}`}
-                  style={{ width: cellSize }}
-                >
-                  {ambiguousCols[c] ? "!" : ""}
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Board */}
+          <Board
+            regions={regions}
+            regionColors={regionColors}
+            cellStates={playerStates}
+            clashingSet={new Set()}
+            onCellCross={() => {}}
+            onCellClick={() => {}}
+            cellSize={cellSize}
+            editMode={true}
+            onCellPaint={isQueenTool ? () => {} : handleCellPaint}
+            onPaintStart={isQueenTool ? handleQueenPaintStart : handlePaintStart}
+            onPaintEnd={isQueenTool ? undefined : handlePaintEnd}
+            showQueenOverlay={true}
+            multiSolutionCells={multiSolutionCells}
+          />
 
           {/* Single-row toolbar */}
           <div className={styles.toolBar}>
@@ -632,9 +613,9 @@ export function EditorPage() {
             <button
               className={`${styles.btn} ${styles.btnPrimary}`}
               onClick={handleShuffleQueens}
-              title="Place one queen per region using the solver"
+              title="Place one random queen per region"
             >
-              {shuffleNoSolution ? "No solution!" : "Shuffle queens"}
+              Shuffle queens
             </button>
             <button
               className={styles.btn}

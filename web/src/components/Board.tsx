@@ -215,15 +215,20 @@ export function Board({
                 />
               )}
               {multiSolutionCells?.has(cellKey) && (
-                <div
+                <svg
                   style={{
                     position: "absolute",
-                    inset: 2,
-                    border: "2px solid rgba(220,60,60,0.5)",
-                    borderRadius: 2,
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
                     pointerEvents: "none",
                   }}
-                />
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <line x1="10" y1="10" x2="90" y2="90" stroke="rgba(210,40,40,0.55)" strokeWidth="5" strokeLinecap="round" />
+                  <line x1="90" y1="10" x2="10" y2="90" stroke="rgba(210,40,40,0.55)" strokeWidth="5" strokeLinecap="round" />
+                </svg>
               )}
             </div>
           );
