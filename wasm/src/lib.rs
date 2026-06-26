@@ -137,8 +137,15 @@ impl WasmPuzzle {
     }
 
     /// Returns the difficulty string, or `undefined` if it cannot be determined.
+    /// Always rates from a clean board (all player states reset) so progress doesn't skew the result.
     pub fn difficulty(&self) -> Option<String> {
         let mut clone = self.inner.clone();
+        let n = clone.n();
+        for row in 0..n {
+            for col in 0..n {
+                clone.set_cell_state(Cell { row, col }, State::Unknown);
+            }
+        }
         solver::rate_puzzle(&mut clone).map(|d| format!("{}", d))
     }
 

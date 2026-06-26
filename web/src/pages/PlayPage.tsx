@@ -358,6 +358,12 @@ export function PlayPage() {
     for (const [key, state] of hint.changes) {
       const [r, c] = key.split(",").map(Number);
       puzzle.set_cell_state(r, c, state);
+      if (state === 1 && autoPlaceXs) {
+        const affected = puzzle.cells_affected_by_queen(r, c);
+        for (let i = 0; i < affected.length; i += 2)
+          if (puzzle.cell_state(affected[i], affected[i + 1]) === 0)
+            puzzle.set_cell_state(affected[i], affected[i + 1], 2);
+      }
     }
     setPlayerStates(readStates(puzzle));
     setPast((p) => [...p, snapshot]);
@@ -366,7 +372,7 @@ export function PlayPage() {
     if (nowSolved) setTimerRunning(false);
     try { localStorage.setItem(STORAGE_KEY, puzzle.to_json()); } catch {}
     setHint(null);
-  }, [hint, touchInteraction]);
+  }, [hint, autoPlaceXs, touchInteraction]);
 
   const handleUndo = useCallback(() => {
     if (past.length === 0) return;
@@ -431,33 +437,24 @@ export function PlayPage() {
       {/* Puzzle meta */}
       {(puzzleMeta.name || puzzleMeta.source || difficulty || puzzleUnique || showClock) && (
         <div className={styles.puzzleMeta}>
-          {puzzleMeta.name && (
-            <span className={styles.metaName}>{puzzleMeta.name}</span>
+          {(puzzleMeta.name || puzzleMeta.source) && (
+            <div className={styles.metaRow}>
+              {puzzleMeta.name && <span className={styles.metaName}>{puzzleMeta.name}</span>}
+              {puzzleMeta.name && puzzleMeta.source && <span className={styles.metaSep}>·</span>}
+              {puzzleMeta.source && <span>by {puzzleMeta.source}</span>}
+            </div>
           )}
-          {puzzleMeta.name && puzzleMeta.source && <span className={styles.metaSep}>·</span>}
-          {puzzleMeta.source && (
-            <span>by {puzzleMeta.source}</span>
-          )}
-          {(puzzleMeta.name || puzzleMeta.source) && difficulty && (
-            <span className={styles.metaSep}>·</span>
-          )}
-          {difficulty && (
-            <>
-              <span>Difficulty:</span>
-              <span className={styles.diffBadge}>{difficulty}</span>
-            </>
-          )}
-          {(puzzleMeta.name || puzzleMeta.source || difficulty) && puzzleUnique && (
-            <span className={styles.metaSep}>·</span>
-          )}
-          {puzzleUnique && (
-            <span className={styles.uniqueBadge}>Confirmed unique</span>
-          )}
-          {showClock && (puzzleMeta.name || puzzleMeta.source || difficulty || puzzleUnique) && (
-            <span className={styles.metaSep}>·</span>
-          )}
-          {showClock && (
-            <span className={styles.timer}>{formatTime(timerElapsed)}</span>
+          {(difficulty || puzzleUnique || showClock) && (
+            <div className={styles.metaRow}>
+              {difficulty && (
+                <>
+                  <span>Difficulty:</span>
+                  <span className={styles.diffBadge}>{difficulty}</span>
+                </>
+              )}
+              {puzzleUnique && <span className={styles.uniqueBadge}>✓ Unique</span>}
+              {showClock && <span className={styles.timer}>{formatTime(timerElapsed)}</span>}
+            </div>
           )}
         </div>
       )}

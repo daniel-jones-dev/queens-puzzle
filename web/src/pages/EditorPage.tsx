@@ -384,35 +384,19 @@ export function EditorPage() {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
     const rn = puzzle.n();
-
-    // Build region → cells map from current layout
-    const regionCells = new Map<number, [number, number][]>();
-    for (let r = 0; r < rn; r++) {
-      for (let c = 0; c < rn; c++) {
-        const reg = puzzle.cell_region(r, c);
-        if (reg !== undefined) {
-          if (!regionCells.has(reg)) regionCells.set(reg, []);
-          regionCells.get(reg)!.push([r, c]);
-        }
-      }
-    }
-    if (regionCells.size === 0) return;
-
     const snap = takeSnapshot();
-
-    // Clear all cell states, then place one random queen per region
+    const seed = Math.floor(Math.random() * 2 ** 32);
+    const newPuzzle = WasmPuzzle.scatter_queens(rn, seed);
+    // scatter_queens creates single-cell regions but leaves states unknown; place queens
     for (let r = 0; r < rn; r++)
       for (let c = 0; c < rn; c++)
-        puzzle.set_cell_state(r, c, 0);
-
-    for (const cells of regionCells.values()) {
-      const [r, c] = cells[Math.floor(Math.random() * cells.length)];
-      puzzle.set_cell_state(r, c, 1);
-    }
-
-    setPlayerStates(readStates(puzzle));
+        if (newPuzzle.cell_region(r, c) !== undefined)
+          newPuzzle.set_cell_state(r, c, 1);
+    puzzleRef.current = newPuzzle;
+    setRegions(readRegions(newPuzzle));
+    setPlayerStates(readStates(newPuzzle));
     pushUndo(snap);
-    try { localStorage.setItem(EDITOR_KEY, puzzle.to_json()); } catch {}
+    try { localStorage.setItem(EDITOR_KEY, newPuzzle.to_json()); } catch {}
   }, []);
 
   // ── Clear board ───────────────────────────────────────────────────────────
@@ -530,7 +514,7 @@ export function EditorPage() {
       {/* Desktop two-column layout */}
       <div className={styles.layout}>
         {/* Left: board + toolbar + actions */}
-        <div className={styles.boardCol}>
+        <div className={styles.boardCol} style={{ maxWidth: n * cellSize }}>
           {/* Board */}
           <Board
             regions={regions}

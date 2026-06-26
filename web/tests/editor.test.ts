@@ -99,25 +99,25 @@ test.describe("Editor: undo", () => {
 // ── Shuffle queens ────────────────────────────────────────────────────────────
 
 test.describe("Editor: shuffle queens", () => {
-  test("shuffle queens on an unpainted board places no queens", async ({
+  test("shuffle queens creates n single-cell regions with non-attacking queens", async ({
     page,
   }) => {
     await freshLoad(page);
     await newEditorPuzzle(page);
 
-    // Board is fully unassigned — shuffle has nothing to do
+    // Default 7×7 board — scatter_queens always creates n=7 queens
     await page.locator("button:has-text('Shuffle queens')").click();
     await page.waitForTimeout(200);
 
-    // No queens should appear
     const board = page.locator("[data-testid='board']").first();
-    const queenCount = await board.locator('[class*="queen"]').count();
-    expect(queenCount).toBe(0);
-    // Undo should also be disabled (no change was made)
-    await expect(page.locator("button:has-text('↩ Undo')")).toBeDisabled();
+    expect(await board.locator('[class*="queen"]').count()).toBe(7);
+    // Undo reverts all queens and regions
+    await page.locator("button:has-text('↩ Undo')").click();
+    await page.waitForTimeout(150);
+    expect(await board.locator('[class*="queen"]').count()).toBe(0);
   });
 
-  test("shuffle queens places exactly one queen per painted region", async ({
+  test("shuffle queens replaces existing regions with n single-cell regions", async ({
     page,
   }) => {
     await freshLoad(page);
@@ -131,24 +131,21 @@ test.describe("Editor: shuffle queens", () => {
     if (!bb) throw new Error("board not found");
     const cs = bb.width / 4;
 
-    // Paint two rows with two distinct colours → 2 regions
+    // Paint 2 painted regions
     await page.locator("button[title='Colour 1 (1)']").click();
     for (let col = 0; col < 4; col++) await clickCell(page, board, cs, 0, col);
     await page.locator("button[title='Colour 2 (2)']").click();
     for (let col = 0; col < 4; col++) await clickCell(page, board, cs, 1, col);
 
+    // Shuffle replaces with scatter_queens(4) → exactly 4 queens (not 2)
     await page.locator("button:has-text('Shuffle queens')").click();
     await page.waitForTimeout(200);
+    expect(await board.locator('[class*="queen"]').count()).toBe(4);
 
-    // Exactly 2 queens placed (one per region)
-    const queenCount = await board.locator('[class*="queen"]').count();
-    expect(queenCount).toBe(2);
-
-    // Undo reverts all queens
+    // Undo reverts to prior state (2 painted regions, no queens)
     await page.locator("button:has-text('↩ Undo')").click();
     await page.waitForTimeout(150);
-    const queenCountAfterUndo = await board.locator('[class*="queen"]').count();
-    expect(queenCountAfterUndo).toBe(0);
+    expect(await board.locator('[class*="queen"]').count()).toBe(0);
   });
 
   test("shuffle queens clears existing queens before placing new ones", async ({
@@ -158,25 +155,16 @@ test.describe("Editor: shuffle queens", () => {
     await newEditorPuzzle(page);
 
     const board = page.locator("[data-testid='board']").first();
-    const bb = await board.boundingBox();
-    if (!bb) throw new Error("board not found");
-    const cs = bb.width / 7;
 
-    // Paint two regions on the default 7×7 board
-    await page.locator("button[title='Colour 1 (1)']").click();
-    for (let col = 0; col < 7; col++) await clickCell(page, board, cs, 0, col);
-    await page.locator("button[title='Colour 2 (2)']").click();
-    for (let col = 0; col < 7; col++) await clickCell(page, board, cs, 1, col);
-
-    // Shuffle once → 2 queens
+    // Shuffle once → 7 queens
     await page.locator("button:has-text('Shuffle queens')").click();
     await page.waitForTimeout(200);
-    expect(await board.locator('[class*="queen"]').count()).toBe(2);
+    expect(await board.locator('[class*="queen"]').count()).toBe(7);
 
-    // Shuffle again → still exactly 2 queens (old queens cleared)
+    // Shuffle again → still exactly 7 queens (old queens and regions replaced)
     await page.locator("button:has-text('Shuffle queens')").click();
     await page.waitForTimeout(200);
-    expect(await board.locator('[class*="queen"]').count()).toBe(2);
+    expect(await board.locator('[class*="queen"]').count()).toBe(7);
   });
 });
 

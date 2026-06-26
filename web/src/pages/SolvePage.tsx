@@ -13,6 +13,7 @@ import {
   hintComplete,
   type PuzzleMeta,
 } from "../utils";
+import { useSettings } from "../contexts/SettingsContext";
 import { STORAGE_KEY } from "./PlayPage";
 import styles from "./SolvePage.module.css";
 
@@ -208,6 +209,7 @@ export function SolvePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const locState = (location.state as LocationState | null) ?? null;
+  const { autoPlaceXs, setAutoPlaceXs } = useSettings();
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [ready, setReady] = useState(false);
@@ -325,6 +327,26 @@ export function SolvePage() {
       const snapshot = readStates(puzzle);
       const next = visualState === 2 ? 1 : 0;
       puzzle.set_cell_state(r, c, next);
+      if (autoPlaceXs) {
+        if (next === 1) {
+          const affected = puzzle.cells_affected_by_queen(r, c);
+          for (let i = 0; i < affected.length; i += 2)
+            if (puzzle.cell_state(affected[i], affected[i + 1]) === 0)
+              puzzle.set_cell_state(affected[i], affected[i + 1], 2);
+        } else if (next === 0 && visualState === 1) {
+          const affected = puzzle.cells_affected_by_queen(r, c);
+          for (let i = 0; i < affected.length; i += 2) {
+            const ar = affected[i], ac = affected[i + 1];
+            if (puzzle.cell_state(ar, ac) !== 2) continue;
+            const zone = puzzle.cells_affected_by_queen(ar, ac);
+            let justified = false;
+            for (let j = 0; j < zone.length; j += 2) {
+              if (puzzle.cell_state(zone[j], zone[j + 1]) === 1) { justified = true; break; }
+            }
+            if (!justified) puzzle.set_cell_state(ar, ac, 0);
+          }
+        }
+      }
       setPlayerStates(readStates(puzzle));
       setPast((p) => [...p, snapshot]);
       setFuture([]);
@@ -332,7 +354,7 @@ export function SolvePage() {
       setSolved(nowSolved);
       advanceHintIfComplete(puzzle, nowSolved);
     },
-    [solved, advanceHintIfComplete],
+    [solved, autoPlaceXs, advanceHintIfComplete],
   );
 
   const handleApply = useCallback(() => {
@@ -343,6 +365,12 @@ export function SolvePage() {
     for (const [key, state] of fh.changes) {
       const [r, c] = key.split(",").map(Number);
       puzzle.set_cell_state(r, c, state);
+      if (state === 1 && autoPlaceXs) {
+        const affected = puzzle.cells_affected_by_queen(r, c);
+        for (let i = 0; i < affected.length; i += 2)
+          if (puzzle.cell_state(affected[i], affected[i + 1]) === 0)
+            puzzle.set_cell_state(affected[i], affected[i + 1], 2);
+      }
     }
     setPlayerStates(readStates(puzzle));
     setPast((p) => [...p, snapshot]);
@@ -352,7 +380,7 @@ export function SolvePage() {
     const next = nowSolved ? null : computeNextHint(puzzle);
     frozenHintRef.current = next;
     setFrozenHint(next);
-  }, []);
+  }, [autoPlaceXs]);
 
   const handleUndo = useCallback(() => {
     if (past.length === 0) return;
@@ -463,6 +491,18 @@ export function SolvePage() {
             <button className={styles.btn} onClick={handleRedo} disabled={future.length === 0}>
               ↪ Redo
             </button>
+          </div>
+
+          {/* Settings */}
+          <div className={styles.settingsRow}>
+            <label className={styles.settingLabel}>
+              <input
+                type="checkbox"
+                checked={autoPlaceXs}
+                onChange={(e) => setAutoPlaceXs(e.target.checked)}
+              />
+              Auto-place ✕
+            </label>
           </div>
 
           {/* Continue in Play */}

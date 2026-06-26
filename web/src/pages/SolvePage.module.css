@@ -101,6 +101,21 @@
   gap: 8px;
 }
 
+.settingsRow {
+  display: flex;
+  align-items: center;
+}
+
+.settingLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+}
+
 .btn {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
