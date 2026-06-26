@@ -31,6 +31,14 @@
   opacity: 0.35;
 }
 
+.timer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  letter-spacing: 1px;
+}
+
 .diffBadge {
   font-size: 11px;
   font-weight: 600;

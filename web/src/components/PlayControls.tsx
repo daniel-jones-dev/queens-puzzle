@@ -1,31 +1,28 @@
 import { useState } from "react";
-import { useSettings } from "../contexts/SettingsContext";
 import { SettingsPanel } from "./SettingsPanel";
-import { formatTime } from "../utils";
 import styles from "./PlayControls.module.css";
 
 interface Props {
-  timerElapsed: number;
   solved: boolean;
   canUndo: boolean;
   hintActive: boolean;
   noHintMsg: boolean;
+  hintPulsing: boolean;
   onHint: () => void;
   onUndo: () => void;
   onReset: () => void;
 }
 
 export function PlayControls({
-  timerElapsed,
   solved,
   canUndo,
   hintActive,
   noHintMsg,
+  hintPulsing,
   onHint,
   onUndo,
   onReset,
 }: Props) {
-  const { showClock } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -34,20 +31,13 @@ export function PlayControls({
       <div>
         {!solved && (
           <button
-            className={styles.btnHint}
+            className={`${styles.btn} ${styles.btnHint}${hintPulsing ? ` ${styles.btnHintPulsing}` : ""}`}
             onClick={onHint}
             disabled={hintActive || noHintMsg}
             title="Hint"
           >
             Hint
           </button>
-        )}
-      </div>
-
-      {/* Centre: timer (absolute, non-interactive) */}
-      <div className={styles.ctrlCenter}>
-        {showClock && (
-          <span className={styles.timer}>{formatTime(timerElapsed)}</span>
         )}
       </div>
 
@@ -60,7 +50,7 @@ export function PlayControls({
           aria-label="Undo"
           title="Undo"
         >
-          ↩ Undo
+          Undo
         </button>
 
         <div className={styles.settingsAnchor}>
@@ -82,7 +72,7 @@ export function PlayControls({
           aria-label="Reset"
           title="Reset puzzle"
         >
-          🗑 Reset
+          Reset
         </button>
       </div>
     </div>

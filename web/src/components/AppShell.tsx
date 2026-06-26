@@ -19,7 +19,7 @@ export function AppShell() {
               to="/solve"
               className={({ isActive }) => `${styles.navLink}${isActive ? ` ${styles.navLinkActive}` : ""}`}
             >
-              Solve
+              Solver
             </NavLink>
             <NavLink
               to="/editor"
@@ -73,7 +73,7 @@ export function AppShell() {
             className={({ isActive }) => `${styles.tab}${isActive ? ` ${styles.tabActive}` : ""}`}
           >
             <span className={styles.tabIcon}>→</span>
-            <span>Solve</span>
+            <span>Solver</span>
           </NavLink>
           <NavLink
             to="/editor"
