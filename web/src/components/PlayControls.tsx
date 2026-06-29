@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { SettingsPanel } from "./SettingsPanel";
 import styles from "./PlayControls.module.css";
 
 interface Props {
@@ -10,7 +8,6 @@ interface Props {
   hintPulsing: boolean;
   onHint: () => void;
   onUndo: () => void;
-  onReset: () => void;
 }
 
 export function PlayControls({
@@ -21,13 +18,9 @@ export function PlayControls({
   hintPulsing,
   onHint,
   onUndo,
-  onReset,
 }: Props) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
   return (
     <div className={styles.controls}>
-      {/* Left: Hint */}
       <div>
         {!solved && (
           <button
@@ -41,40 +34,15 @@ export function PlayControls({
         )}
       </div>
 
-      {/* Right: Undo · Settings · Reset */}
-      <div className={styles.ctrlRight}>
-        <button
-          className={styles.btn}
-          onClick={onUndo}
-          disabled={!canUndo}
-          aria-label="Undo"
-          title="Undo"
-        >
-          Undo
-        </button>
-
-        <div className={styles.settingsAnchor}>
-          <button
-            className={styles.btn}
-            style={{ padding: "8px 11px", fontSize: "16px" }}
-            onClick={() => setSettingsOpen((v) => !v)}
-            aria-label="Settings"
-            title="Settings"
-          >
-            ⚙
-          </button>
-          {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
-        </div>
-
-        <button
-          className={styles.btn}
-          onClick={onReset}
-          aria-label="Reset"
-          title="Reset puzzle"
-        >
-          Reset
-        </button>
-      </div>
+      <button
+        className={styles.btn}
+        onClick={onUndo}
+        disabled={!canUndo}
+        aria-label="Undo"
+        title="Undo"
+      >
+        ↩ Undo
+      </button>
     </div>
   );
 }

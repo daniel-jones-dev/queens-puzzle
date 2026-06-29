@@ -11,14 +11,52 @@
   color: var(--text2);
 }
 
+.aboveBoard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .puzzleMeta {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
   font-size: 13px;
   color: var(--text2);
-  margin-bottom: 14px;
+  min-height: 20px;
+}
+
+.topControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.settingsAnchor {
+  position: relative;
+}
+
+.iconBtn {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.iconBtn:hover {
+  background: var(--bg);
+  border-color: #C8C8C0;
 }
 
 .metaRow {
