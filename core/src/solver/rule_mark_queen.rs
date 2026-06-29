@@ -35,6 +35,7 @@ impl Rule for MarkQueen {
                 self.check_block_has_single_unknown_and_no_queen(puzzle, &block_cells)
             {
                 return Some(RuleResult {
+                    code_name: "mark_queen",
                     changes: vec![(single_unknown_cell, State::Queen)],
                     involved: block_cells
                         .iter()

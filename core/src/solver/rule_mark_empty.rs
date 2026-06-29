@@ -15,6 +15,7 @@ impl Rule for MarkEmpty {
                 .collect::<Vec<_>>();
             if !connected_cells_unknown.is_empty() {
                 return Some(RuleResult {
+                    code_name: "mark_empty",
                     changes: connected_cells_unknown
                         .into_iter()
                         .map(|cell: Cell| (cell, State::Empty))

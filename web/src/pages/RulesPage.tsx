@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { RULES } from "../data/rules";
 
 const ruleStyles: React.CSSProperties = {
   fontSize: "14px",
@@ -8,7 +9,7 @@ const ruleStyles: React.CSSProperties = {
   position: "relative",
 };
 
-function Rule({ children }: { children: React.ReactNode }) {
+function Rule({ name, description }: { name: string; description: string }) {
   return (
     <p style={ruleStyles}>
       <span
@@ -21,7 +22,7 @@ function Rule({ children }: { children: React.ReactNode }) {
       >
         ·
       </span>
-      {children}
+      <strong>{name}:</strong> {description}
     </p>
   );
 }
@@ -58,6 +59,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
+
 export function RulesPage() {
   return (
     <div
@@ -93,41 +96,17 @@ export function RulesPage() {
         Solver rules
       </h1>
 
-      <Section title="Easy">
-        <Rule>
-          <strong>Single cell in row:</strong> If a colour region has only one cell in a row, that
-          cell must contain the queen for that row.
-        </Rule>
-        <Rule>
-          <strong>Single cell in column:</strong> If a colour region has only one cell in a column,
-          that cell must contain the queen for that column.
-        </Rule>
-        <Rule>
-          <strong>Single cell in region:</strong> If a colour region contains only one cell, that
-          cell must be the queen for that region.
-        </Rule>
-      </Section>
-
-      <Section title="Medium">
-        <Rule>
-          <strong>Region spans one row:</strong> If all cells of a colour region lie in the same
-          row, the queen for that region must be placed in that row — allowing all other cells in
-          the row to be eliminated from other regions.
-        </Rule>
-        <Rule>
-          <strong>Region spans one column:</strong> If all cells of a colour region lie in the same
-          column, the queen for that region must be placed in that column — allowing all other cells
-          in the column to be eliminated from other regions.
-        </Rule>
-      </Section>
-
-      <Section title="Hard">
-        <Rule>
-          <strong>Exclusion chain:</strong> A set of regions whose combined cells span exactly the
-          same set of rows (or columns) forces those queens to occupy those rows (or columns),
-          eliminating the same rows/columns from all other regions.
-        </Rule>
-      </Section>
+      {DIFFICULTIES.map((difficulty) => {
+        const rules = RULES.filter((r) => r.difficulty === difficulty);
+        if (rules.length === 0) return null;
+        return (
+          <Section key={difficulty} title={difficulty}>
+            {rules.map((rule) => (
+              <Rule key={rule.codeName} name={rule.name} description={rule.description} />
+            ))}
+          </Section>
+        );
+      })}
     </div>
   );
 }

@@ -84,6 +84,7 @@ impl WasmPuzzle {
     /// Returns the next logical hint without mutating the puzzle.
     pub fn next_hint(&self) -> Option<WasmHint> {
         solver::next_hint(&self.inner).map(|result| WasmHint {
+            code_name: result.code_name.to_owned(),
             description: result.description,
             changes: result
                 .changes
@@ -238,6 +239,7 @@ impl WasmPuzzle {
 
 #[wasm_bindgen]
 pub struct WasmHint {
+    code_name: String,
     description: String,
     /// Flattened [row, col, state, ...] triples; state values 0/1/2
     changes: Vec<u32>,
@@ -247,6 +249,12 @@ pub struct WasmHint {
 
 #[wasm_bindgen]
 impl WasmHint {
+    /// Stable rule identifier (e.g. `"mark_queen"`) — used by the web UI to look up
+    /// rule metadata in rules.ts without depending on the human-readable description text.
+    pub fn name(&self) -> String {
+        self.code_name.clone()
+    }
+
     pub fn description(&self) -> String {
         self.description.clone()
     }

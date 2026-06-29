@@ -1,4 +1,5 @@
 export type HintState = {
+  codeName: string;
   description: string;
   changes: Map<string, number>;
   involved: Set<string>;

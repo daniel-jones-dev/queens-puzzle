@@ -103,6 +103,7 @@ impl Rule for HiddenSet {
                     );
 
                     return Some(RuleResult {
+                        code_name: "hidden_set",
                         changes: unknowns_cells
                             .into_iter()
                             .map(|cell| (cell, State::Empty))

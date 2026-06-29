@@ -4,6 +4,7 @@ import { WasmPuzzle } from "queens-puzzle-wasm";
 import { Board } from "../components/Board";
 import { SolvedBanner } from "../components/SolvedBanner";
 import { initWasm } from "../initWasm";
+import { RULES } from "../data/rules";
 import type { HintState } from "../types";
 import {
   computeCellSize,
@@ -28,60 +29,10 @@ function computeNextHint(puzzle: WasmPuzzle): HintState | null {
   const rawInvolved = wasmHint.involved();
   for (let i = 0; i < rawInvolved.length; i += 2)
     involved.add(`${rawInvolved[i]},${rawInvolved[i + 1]}`);
-  return { description: wasmHint.description(), changes, involved };
+  return { codeName: wasmHint.name(), description: wasmHint.description(), changes, involved };
 }
 
-// ── Rule definitions ─────────────────────────────────────────────────────────
-
-type RuleCategory = "Basic" | "Easy" | "Medium" | "Hard";
-
-interface RuleDef {
-  id: string;
-  name: string;
-  category: RuleCategory;
-  match: (description: string) => boolean;
-}
-
-const RULE_DEFS: RuleDef[] = [
-  {
-    id: "force-queen",
-    name: "Only candidate",
-    category: "Basic",
-    match: (d) => d.includes("must be a queen"),
-  },
-  {
-    id: "eliminate",
-    name: "Eliminate by queen",
-    category: "Basic",
-    match: (d) => d.includes("same row, column, region"),
-  },
-  {
-    id: "region-row",
-    name: "Region spans one row",
-    category: "Easy",
-    match: (d) => d.includes("are in Row"),
-  },
-  {
-    id: "region-col",
-    name: "Region spans one column",
-    category: "Easy",
-    match: (d) => d.includes("are in Column"),
-  },
-  {
-    id: "naked-set",
-    name: "Naked set",
-    category: "Medium",
-    match: (d) => d.includes("One of these cells"),
-  },
-  {
-    id: "confined",
-    name: "Confined regions",
-    category: "Hard",
-    match: (d) => d.includes("confined to"),
-  },
-];
-
-const CATEGORIES: RuleCategory[] = ["Basic", "Easy", "Medium", "Hard"];
+const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
@@ -102,16 +53,17 @@ function EmptyState() {
 // ── SolverRulesPanel ──────────────────────────────────────────────────────────
 
 interface RulesPanelProps {
-  hintDescription: string | null;
+  hint: HintState | null;
   solved: boolean;
   onApply?: () => void;
 }
 
-function SolverRulesPanel({ hintDescription, solved, onApply }: RulesPanelProps) {
-  const activeIndex = useMemo(() => {
-    if (!hintDescription) return -1;
-    return RULE_DEFS.findIndex((r) => r.match(hintDescription));
-  }, [hintDescription]);
+function SolverRulesPanel({ hint, solved, onApply }: RulesPanelProps) {
+  const activeCodeName = hint?.codeName ?? null;
+  const activeIndex = useMemo(
+    () => (activeCodeName ? RULES.findIndex((r) => r.codeName === activeCodeName) : -1),
+    [activeCodeName],
+  );
 
   return (
     <div className={styles.rulesPanel}>
@@ -120,14 +72,14 @@ function SolverRulesPanel({ hintDescription, solved, onApply }: RulesPanelProps)
         <Link to="/solve/rules" className={styles.rulesAllLink}>All solver rules →</Link>
       </div>
 
-      {CATEGORIES.map((cat) => {
-        const rules = RULE_DEFS.filter((r) => r.category === cat);
+      {DIFFICULTIES.map((difficulty) => {
+        const rules = RULES.filter((r) => r.difficulty === difficulty);
         return (
-          <div key={cat}>
-            <div className={styles.ruleCategory}>{cat}</div>
+          <div key={difficulty}>
+            <div className={styles.ruleCategory}>{difficulty}</div>
             <div className={styles.ruleCategoryLine} />
             {rules.map((rule) => {
-              const idx = RULE_DEFS.indexOf(rule);
+              const idx = RULES.indexOf(rule);
               const status = solved
                 ? "done"
                 : activeIndex === -1
@@ -140,7 +92,7 @@ function SolverRulesPanel({ hintDescription, solved, onApply }: RulesPanelProps)
 
               return (
                 <div
-                  key={rule.id}
+                  key={rule.codeName}
                   className={`${styles.ruleItem} ${
                     status === "done"
                       ? styles.ruleItemDone
@@ -159,9 +111,9 @@ function SolverRulesPanel({ hintDescription, solved, onApply }: RulesPanelProps)
                         explain →
                       </Link>
                     </div>
-                    {status === "active" && hintDescription && (
+                    {status === "active" && hint && (
                       <>
-                        <p className={styles.ruleDesc}>{hintDescription}</p>
+                        <p className={styles.ruleDesc}>{hint.description}</p>
                         {onApply && (
                           <button className={styles.applyBtn} onClick={onApply}>
                             Apply step →
@@ -513,7 +465,7 @@ export function SolvePage() {
           {/* Mobile: rules panel below board */}
           <div className={styles.mobileRules}>
             <SolverRulesPanel
-              hintDescription={frozenHint?.description ?? null}
+              hint={frozenHint}
               solved={solved}
               onApply={frozenHint ? handleApply : undefined}
             />
@@ -523,7 +475,7 @@ export function SolvePage() {
         {/* ── Rules panel (desktop only) ── */}
         <div className={styles.desktopRules}>
           <SolverRulesPanel
-            hintDescription={frozenHint?.description ?? null}
+            hint={frozenHint}
             solved={solved}
             onApply={frozenHint ? handleApply : undefined}
           />
