@@ -8,6 +8,7 @@
     "wasm": "wasm-pack build ../wasm --target web --out-dir ../web/wasm-pkg",
     "dev": "npm run wasm && vite",
     "build": "npm run wasm && tsc && vite build",
+    "postbuild": "cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
