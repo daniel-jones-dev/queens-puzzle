@@ -46,6 +46,7 @@ export function ConfirmModal({
         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
           <button onClick={onCancel}>Cancel</button>
           <button
+            data-testid="confirm-btn"
             onClick={onConfirm}
             style={{
               background: confirmColor,

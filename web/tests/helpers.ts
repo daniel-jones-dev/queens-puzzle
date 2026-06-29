@@ -2,10 +2,10 @@ import { Page, Locator } from "@playwright/test";
 
 /** Clear localStorage, reload, and wait for the app to be ready. */
 export async function freshLoad(page: Page) {
-  await page.goto("/");
+  await page.goto("play");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.waitForSelector("h1", { timeout: 10_000 });
+  await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
   await page.waitForTimeout(1500);
 }
 

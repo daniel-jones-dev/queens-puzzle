@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import styles from "./Grid.module.css";
+import styles from "./Board.module.css";
 
 interface Props {
   regions: (number | null)[][];
@@ -14,11 +14,15 @@ interface Props {
   hintChanges?: Set<string>;
   editMode?: boolean;
   onCellPaint?: (row: number, col: number) => void;
-  onPaintStart?: () => void;
+  onPaintStart?: (row: number, col: number) => void;
   onPaintEnd?: () => void;
+  /** Show queens as semi-transparent overlay even in editMode */
+  showQueenOverlay?: boolean;
+  /** Cells to highlight with a red inner border (multi-solution warning) */
+  multiSolutionCells?: Set<string>;
 }
 
-const BORDER_THIN = "1px solid rgba(0,0,0,0.15)";
+const BORDER_THIN = "1px solid rgba(0,0,0,0.08)";
 
 const CHECKERBOARD_STYLE = {
   backgroundImage:
@@ -50,7 +54,7 @@ function regionBorderSegments(regions: (number | null)[][], cellSize: number): S
   return segs;
 }
 
-export function Grid({
+export function Board({
   regions,
   regionColors,
   cellStates,
@@ -65,6 +69,8 @@ export function Grid({
   onCellPaint,
   onPaintStart,
   onPaintEnd,
+  showQueenOverlay,
+  multiSolutionCells,
 }: Props) {
   const n = regions.length;
   const boardRef = useRef<HTMLDivElement>(null);
@@ -89,6 +95,7 @@ export function Grid({
   return (
     <div
       ref={boardRef}
+      data-testid="board"
       className={styles.board}
       style={{
         gridTemplateColumns: `repeat(${n}, ${cellSize}px)`,
@@ -104,7 +111,7 @@ export function Grid({
         if (editMode && onCellPaint) {
           e.currentTarget.setPointerCapture(e.pointerId);
           draggingRef.current = true;
-          onPaintStart?.();
+          onPaintStart?.(r, c);
           onCellPaint(r, c);
           return;
         }
@@ -178,10 +185,15 @@ export function Grid({
                 position: "relative",
               }}
             >
-              {!editMode && state === 1 && (
+              {(!editMode || showQueenOverlay) && state === 1 && (
                 <span
                   className={clashing ? styles.queenClash : styles.queen}
-                  style={{ fontSize: Math.round(cellSize * 0.54) }}
+                  style={{
+                    fontSize: Math.round(cellSize * 0.54),
+                    ...(showQueenOverlay && editMode
+                      ? { color: "rgba(0,0,0,0.32)", textShadow: "none" }
+                      : {}),
+                  }}
                 >
                   ♛
                 </span>
@@ -202,6 +214,22 @@ export function Grid({
                   }}
                 />
               )}
+              {multiSolutionCells?.has(cellKey) && (
+                <svg
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                  }}
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <line x1="10" y1="10" x2="90" y2="90" stroke="rgba(210,40,40,0.55)" strokeWidth="5" strokeLinecap="round" />
+                  <line x1="90" y1="10" x2="10" y2="90" stroke="rgba(210,40,40,0.55)" strokeWidth="5" strokeLinecap="round" />
+                </svg>
+              )}
             </div>
           );
         })
@@ -221,8 +249,8 @@ export function Grid({
           <line
             key={i}
             x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-            stroke="#333"
-            strokeWidth={3}
+            stroke="rgba(0,0,0,0.5)"
+            strokeWidth={2.5}
             strokeLinecap="square"
           />
         ))}

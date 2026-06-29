@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queens — Play</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#F8F8F5; --surface:#fff; --text:#1A1A18; --text2:#6B6B62; --accent:#2B3A5E; --border:#E2E2DC; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; font-size:14px; min-height:100vh; display:flex; flex-direction:column; }
+
+    /* ── Header: 3-column grid keeps nav centred, settings flush-right ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: 56px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 28px;
+      flex-shrink: 0;
+    }
+    .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:22px; color:var(--accent); text-decoration:none; }
+    nav { display:flex; justify-content:center; }
+    nav a { font-size:14px; font-weight:500; padding:0 18px; height:56px; display:flex; align-items:center; text-decoration:none; color:var(--text2); border-bottom:2.5px solid transparent; transition:color 0.12s; }
+    nav a:hover { color:var(--text); }
+    nav a.active { color:var(--text); border-bottom-color:var(--accent); }
+
+    /* Settings panel (anchored inside controls row) */
+    .settings-anchor { position:relative; }
+    .settings-panel {
+      position:absolute; bottom:calc(100% + 8px); right:0;
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.10); width:220px; z-index:50;
+      padding:6px 0;
+    }
+    .settings-item { display:flex; align-items:center; gap:10px; padding:9px 16px; font-size:13px; color:var(--text); cursor:pointer; transition:background 0.1s; }
+    .settings-item:hover { background:var(--bg); }
+    .settings-item-icon { width:16px; text-align:center; font-size:14px; flex-shrink:0; }
+    .settings-sep { border:none; border-top:1px solid var(--border); margin:4px 0; }
+    .settings-toggle { justify-content:space-between; }
+    .toggle { width:28px; height:16px; border-radius:8px; background:var(--border); flex-shrink:0; position:relative; }
+    .toggle.on { background:var(--accent); }
+    .toggle::after { content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:white; transition:left 0.1s; }
+    .toggle.on::after { left:14px; }
+
+    /* ── Main ── */
+    main { flex:1; display:flex; flex-direction:column; align-items:center; padding:28px 24px 32px; gap:0; }
+
+    .puzzle-meta { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2); margin-bottom:14px; }
+    .meta-name { font-weight:600; color:var(--text); }
+    .meta-sep  { opacity:0.35; }
+    .diff-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; background:#fef3c7; color:#92400e; }
+    .unique-badge { font-size:11px; font-weight:500; padding:2px 8px; border-radius:20px; background:#d1fae5; color:#065f46; }
+
+    .board { display:grid; border:2.5px solid rgba(0,0,0,0.22); border-radius:3px; overflow:hidden; }
+    .cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); cursor:pointer; transition:filter 0.1s; }
+    .cell:hover { filter:brightness(0.90); }
+    .cell.rbr { border-right:2.5px solid rgba(0,0,0,0.24); }
+    .cell.rbb { border-bottom:2.5px solid rgba(0,0,0,0.24); }
+    .queen { color:white; text-shadow:0 0 8px rgba(0,0,0,0.5),0 1px 4px rgba(0,0,0,0.4); user-select:none; line-height:1; }
+    .xmark { font-weight:700; color:rgba(0,0,0,0.30); user-select:none; }
+
+    /* ── Below-board area ── */
+    .below-board { display:flex; flex-direction:column; gap:10px; margin-top:14px; width:389px; }
+
+    /* Controls row */
+    .controls { display:flex; align-items:center; position:relative; width:100%; }
+    .ctrl-center { position:absolute; left:0; right:0; display:flex; justify-content:center; pointer-events:none; }
+    .ctrl-right { margin-left:auto; display:flex; gap:8px; }
+    .timer { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:500; color:var(--text2); letter-spacing:1px; }
+    .ctrl-left { position:relative; }
+
+    .btn { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:8px 16px; border-radius:6px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background 0.1s; white-space:nowrap; }
+    .btn:hover { background:var(--bg); border-color:#C8C8C0; }
+    .btn-hint { background:var(--accent); border-color:var(--accent); color:white; animation:hint-pulse 1.8s ease-in-out infinite; }
+    .btn-hint:hover { background:#233050; animation:none; }
+    @keyframes hint-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(43,58,94,0.5)}50%{box-shadow:0 0 0 7px rgba(43,58,94,0)} }
+
+    /* Collapsible How to Play */
+    .how-to-play { border:1px solid var(--border); border-radius:8px; background:var(--surface); overflow:hidden; }
+    .how-to-play summary { list-style:none; padding:10px 14px; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text2); user-select:none; }
+    .how-to-play summary::-webkit-details-marker { display:none; }
+    .how-to-play summary::before { content:'▸'; font-size:10px; transition:transform 0.15s; display:inline-block; }
+    .how-to-play[open] summary::before { transform:rotate(90deg); }
+    .how-to-play summary:hover { color:var(--text); }
+    .htp-body { padding:4px 14px 12px; border-top:1px solid var(--border); }
+    .htp-rules { display:flex; flex-direction:column; gap:5px; padding-top:8px; }
+    .htp-rule { font-size:12px; color:var(--text2); line-height:1.5; padding-left:14px; position:relative; }
+    .htp-rule::before { content:'·'; position:absolute; left:4px; color:var(--accent); font-weight:700; }
+
+    /* Action row */
+    .action-row { display:flex; gap:8px; align-items:center; }
+    .action-row .btn { flex:1; text-align:center; }
+
+    footer { border-top:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:center; gap:14px; font-size:12px; color:var(--text2); flex-shrink:0; }
+    footer a { color:var(--text2); text-decoration:none; }
+    footer a:hover { color:var(--text); }
+    .sep { opacity:0.35; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="play.html">♛ Queens</a>
+  <nav>
+    <a href="play.html" class="active">Play</a>
+    <a href="solve.html">Solve</a>
+    <a href="editor.html">Editor</a>
+    <a href="generator.html">Generator</a>
+  </nav>
+</header>
+
+<main>
+  <div class="puzzle-meta">
+    <span class="meta-name">Wednesday's Puzzle</span>
+    <span class="meta-sep">·</span>
+    <span>by Daniel Jones</span>
+    <span class="meta-sep">·</span>
+    <span>Difficulty: <span class="diff-badge">Medium</span></span>
+    <span class="meta-sep">·</span>
+    <span class="unique-badge">Confirmed unique</span>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="below-board">
+
+    <!-- Row 1: game controls -->
+    <div class="controls">
+      <div class="ctrl-left">
+        <button class="btn btn-hint">Hint</button>
+      </div>
+      <div class="ctrl-center"><span class="timer">02:34</span></div>
+      <div class="ctrl-right">
+        <button class="btn">↩ Undo</button>
+        <div class="settings-anchor">
+          <button class="btn" id="settings-btn" style="padding:8px 11px;font-size:16px;line-height:1">⚙</button>
+          <!-- Settings panel shown open for mockup -->
+          <div class="settings-panel" id="settings-panel">
+            <div class="settings-item settings-toggle">
+              <span class="settings-item-icon">🕐</span>
+              <span style="flex:1">Show clock</span>
+              <span class="toggle on"></span>
+            </div>
+            <div class="settings-item settings-toggle">
+              <span class="settings-item-icon">✓</span>
+              <span style="flex:1">Auto-check</span>
+              <span class="toggle on"></span>
+            </div>
+            <div class="settings-item settings-toggle">
+              <span class="settings-item-icon">✕</span>
+              <span style="flex:1">Auto-place X's</span>
+              <span class="toggle on"></span>
+            </div>
+          </div>
+        </div>
+        <button class="btn">🗑 Reset</button>
+      </div>
+    </div>
+
+    <!-- Row 2: collapsible how-to-play -->
+    <details class="how-to-play">
+      <summary>How to play</summary>
+      <div class="htp-body">
+        <div class="htp-rules">
+          <div class="htp-rule">Place exactly one queen in each row, column, and coloured region.</div>
+          <div class="htp-rule">Queens may not touch each other — including diagonally.</div>
+          <div class="htp-rule">Click a cell to cycle: empty → ✕ (eliminated) → ♛ (queen) → empty.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Row 3: navigation actions -->
+    <div class="action-row">
+      <button class="btn">Open in Solver</button>
+      <button class="btn">Open in Editor</button>
+      <button class="btn">Copy link</button>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <span>Made by <a href="https://github.com/daniel-jones-dev">Daniel Jones</a></span>
+  <span class="sep">·</span>
+  <a href="https://github.com/daniel-jones-dev/queens-puzzle">GitHub</a>
+  <span class="sep">·</span>
+  <span>Inspired by <a href="https://www.linkedin.com/games/queens/">LinkedIn Queens</a></span>
+</footer>
+
+<script>
+  const REGIONS = [
+    [0,0,0,1,1,1,2,2],[0,0,3,1,1,2,2,2],[0,3,3,3,4,4,2,5],
+    [6,3,3,4,4,4,5,5],[6,6,3,4,7,4,5,5],[6,6,6,7,7,7,5,5],
+    [6,6,7,7,7,7,7,5],[6,7,7,7,7,7,7,7],
+  ];
+  const STATES = [
+    [2,0,0,0,0,0,0,0],[2,0,0,0,0,0,0,0],[2,2,0,0,0,0,0,0],
+    [1,2,2,2,2,2,2,2],[2,2,0,0,0,0,0,0],[2,2,2,0,0,0,0,0],
+    [2,2,0,0,0,0,0,0],[2,0,0,0,0,0,0,0],
+  ];
+  const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
+  const N = 8, SZ = 48;
+  const board = document.getElementById('board');
+  board.style.gridTemplateColumns = `repeat(${N},${SZ}px)`;
+  board.style.gridTemplateRows    = `repeat(${N},${SZ}px)`;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const rg = REGIONS[r][c], st = STATES[r][c];
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.style.cssText = `background:${PALETTE[rg]};width:${SZ}px;height:${SZ}px`;
+    if (c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
+    if (r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
+    if (st === 1) { const q=document.createElement('span'); q.className='queen'; q.style.fontSize='26px'; q.textContent='♛'; el.appendChild(q); }
+    else if (st === 2) { const x=document.createElement('span'); x.className='xmark'; x.style.fontSize='14px'; x.textContent='✕'; el.appendChild(x); }
+    board.appendChild(el);
+  }
+
+  // Settings toggle
+  const btn   = document.getElementById('settings-btn');
+  const panel = document.getElementById('settings-panel');
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    btn.classList.toggle('open', !open);
+  });
+  document.addEventListener('click', () => { panel.style.display='none'; btn.classList.remove('open'); });
+</script>
+</body>
+</html>

@@ -16,16 +16,26 @@ export function useAnalysisWorker(
       return;
     }
 
+    // Immediately clear result so UI shows "Calculating…" before the debounce fires
+    setResult(null);
+
     const timerId = setTimeout(() => {
       const puzzle = puzzleRef.current;
       if (!puzzle) return;
       const worker = new Worker(new URL("../analysisWorker.ts", import.meta.url), { type: "module" });
       workerRef.current = worker;
-      worker.onmessage = (e: MessageEvent<{ count: number; difficulty: string | null }>) => {
-        const { count, difficulty } = e.data;
+      worker.onmessage = (
+        e: MessageEvent<{
+          count: number;
+          difficulty: string | null;
+          ambiguousRows: boolean[];
+          ambiguousCols: boolean[];
+        }>
+      ) => {
+        const { count, difficulty, ambiguousRows, ambiguousCols } = e.data;
         if (count === 0) setResult({ status: "no-solution" });
         else if (count === 1) setResult({ status: "unique", difficulty });
-        else setResult({ status: "multiple", count });
+        else setResult({ status: "multiple", count, ambiguousRows, ambiguousCols });
         worker.terminate();
         if (workerRef.current === worker) workerRef.current = null;
       };

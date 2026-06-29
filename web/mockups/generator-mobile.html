@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queens — Generator (mobile)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#F8F8F5; --surface:#fff; --text:#1A1A18; --text2:#6B6B62; --accent:#2B3A5E; --border:#E2E2DC; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; font-size:14px; min-height:100vh; display:flex; flex-direction:column; max-width:390px; margin:0 auto; }
+
+    header { background:var(--surface); border-bottom:1px solid var(--border); height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+    .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:20px; color:var(--accent); text-decoration:none; }
+
+
+    main { flex:1; display:flex; flex-direction:column; padding:16px 16px 80px; gap:20px; }
+
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
+    .section-title { font-weight:600; font-size:14px; }
+    .section-meta { font-size:12px; color:var(--text2); }
+
+    /* Worker cards */
+    .worker-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; }
+    .worker-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .worker-name { font-size:13px; font-weight:600; }
+    .badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; }
+    .badge-running { background:#dcfce7; color:#166534; }
+    .badge-stopped { background:#fee2e2; color:#991b1b; }
+    .worker-stats { display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; margin-bottom:10px; }
+    .worker-stat { display:flex; flex-direction:column; gap:1px; }
+    .ws-label { font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
+    .ws-val   { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text); font-weight:500; }
+    .ws-val.auto { color:var(--text2); font-style:italic; }
+    .progress-bar { height:4px; background:var(--border); border-radius:2px; overflow:hidden; margin-bottom:10px; }
+    .progress-fill { height:100%; background:var(--accent); border-radius:2px; animation:prog 2.5s ease-in-out infinite alternate; }
+    @keyframes prog { from{width:28%} to{width:80%} }
+    .progress-fill.stopped { animation:none; width:62%; background:#b9b29e; }
+    .worker-actions { display:flex; gap:8px; }
+    .btn { font-family:'Inter',sans-serif; font-size:12px; font-weight:500; padding:9px 14px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .btn:active { background:var(--bg); }
+    .btn-danger  { border-color:#fca5a5; color:#b91c1c; }
+    .btn-danger:active  { background:#fef2f2; }
+    .btn-delete  { border-color:#fca5a5; color:#b91c1c; background:#fef2f2; }
+    .btn-primary { background:var(--accent); border-color:var(--accent); color:white; }
+    .btn-primary:active { background:#233050; }
+    .add-worker-btn { text-align:center; padding:14px; border:1.5px dashed var(--border); border-radius:10px; font-size:13px; color:var(--text2); cursor:pointer; background:none; width:100%; font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
+    .add-worker-btn:active { border-color:var(--accent); color:var(--accent); }
+
+    /* Results */
+    .results-controls { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+    .found-tag { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:var(--accent); background:#EEF1F8; border-radius:6px; padding:3px 10px; }
+    .filter-select { font-family:'Inter',sans-serif; font-size:12px; padding:6px 10px; border:1.5px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); outline:none; }
+
+    .results-list { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+    .result-row { display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); gap:12px; }
+    .result-row:last-child { border-bottom:none; }
+    .result-preview { width:36px; height:36px; border-radius:4px; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); flex-shrink:0; }
+    .mini-board { display:grid; width:100%; height:100%; }
+    .result-info { flex:1; min-width:0; }
+    .result-title { font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; }
+    .result-sub { font-size:11px; color:var(--text2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .size-tag { font-family:'JetBrains Mono',monospace; font-size:10px; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:1px 5px; color:var(--text2); flex-shrink:0; }
+    .diff-badge { font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; flex-shrink:0; }
+    .diff-easy   { background:#dcfce7; color:#166534; }
+    .diff-medium { background:#fef3c7; color:#92400e; }
+    .diff-hard   { background:#fee2e2; color:#991b1b; }
+    .result-actions { display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
+    .result-actions .btn { padding:6px 10px; }
+
+    /* Add worker modal */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:flex-end; justify-content:center; z-index:100; }
+    .modal { background:var(--surface); border-radius:16px 16px 0 0; width:100%; max-width:390px; box-shadow:0 -8px 32px rgba(0,0,0,0.15); }
+    .modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:12px auto 0; }
+    .modal-header { padding:16px 20px 12px; display:flex; align-items:center; justify-content:space-between; }
+    .modal-title { font-weight:600; font-size:15px; }
+    .modal-close { background:none; border:none; font-size:18px; color:var(--text2); cursor:pointer; padding:4px 8px; border-radius:4px; }
+    .modal-body { padding:0 20px 16px; display:flex; flex-direction:column; gap:14px; }
+    .modal-field { display:flex; flex-direction:column; gap:5px; }
+    .modal-field label { font-size:12px; font-weight:600; color:var(--text2); }
+    .modal-hint { font-size:11px; color:var(--text2); opacity:0.7; }
+    .modal-input { font-family:'Inter',sans-serif; font-size:14px; padding:12px 14px; border:1.5px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); outline:none; width:100%; }
+    .modal-footer { padding:12px 20px 28px; display:flex; gap:10px; }
+    .modal-footer .btn { flex:1; font-size:14px; padding:12px; text-align:center; }
+
+    .tab-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:390px; height:56px; background:var(--surface); border-top:1px solid var(--border); display:flex; z-index:40; }
+    .tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-decoration:none; color:var(--text2); font-size:10px; font-weight:500; -webkit-tap-highlight-color:transparent; }
+    .tab.active { color:var(--accent); }
+    .tab-icon { font-size:20px; line-height:1; }
+    .tab-icon.text-icon { font-family:'DM Serif Display',serif; font-style:italic; font-size:16px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="play-mobile.html">♛ Queens</a>
+</header>
+
+<main>
+  <!-- Workers -->
+  <div>
+    <div class="section-head">
+      <span class="section-title">Workers</span>
+      <span class="section-meta">1 running · 1 stopped</span>
+    </div>
+
+    <div class="worker-card">
+      <div class="worker-header">
+        <span class="worker-name">Worker 1</span>
+        <span class="badge badge-running">Running</span>
+      </div>
+      <div class="worker-stats">
+        <div class="worker-stat"><span class="ws-label">Size</span><span class="ws-val">8×8</span></div>
+        <div class="worker-stat"><span class="ws-label">Seed</span><span class="ws-val">42</span></div>
+        <div class="worker-stat"><span class="ws-label">Candidates</span><span class="ws-val">12,847</span></div>
+        <div class="worker-stat"><span class="ws-label">Found</span><span class="ws-val">2</span></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+      <div class="worker-actions"><button class="btn btn-danger">Stop</button></div>
+    </div>
+
+    <div class="worker-card">
+      <div class="worker-header">
+        <span class="worker-name">Worker 2</span>
+        <span class="badge badge-stopped">Stopped</span>
+      </div>
+      <div class="worker-stats">
+        <div class="worker-stat"><span class="ws-label">Size</span><span class="ws-val">9×9</span></div>
+        <div class="worker-stat"><span class="ws-label">Seed</span><span class="ws-val auto">7,834,920 (auto)</span></div>
+        <div class="worker-stat"><span class="ws-label">Candidates</span><span class="ws-val">8,203</span></div>
+        <div class="worker-stat"><span class="ws-label">Found</span><span class="ws-val">1</span></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill stopped"></div></div>
+      <div class="worker-actions">
+        <button class="btn btn-primary">Restart</button>
+        <button class="btn btn-delete">Delete</button>
+      </div>
+    </div>
+
+    <button class="add-worker-btn" id="add-worker-btn">+ Add worker</button>
+  </div>
+
+  <!-- Results -->
+  <div>
+    <div class="section-head">
+      <span class="section-title">Found puzzles</span>
+      <span class="found-tag">3 found</span>
+    </div>
+    <div class="results-controls">
+      <select class="filter-select"><option>All sizes</option><option>8×8</option><option>9×9</option></select>
+      <select class="filter-select"><option>All difficulties</option><option>Easy</option><option>Medium</option><option>Hard</option></select>
+    </div>
+    <div class="results-list" id="results"></div>
+  </div>
+</main>
+
+<nav class="tab-bar">
+  <a class="tab" href="play-mobile.html">
+    <span class="tab-icon text-icon">♛</span>
+    <span>Play</span>
+  </a>
+  <a class="tab" href="solve-mobile.html">
+    <span class="tab-icon">→</span>
+    <span>Solve</span>
+  </a>
+  <a class="tab" href="editor-mobile.html">
+    <span class="tab-icon">✏</span>
+    <span>Editor</span>
+  </a>
+  <a class="tab active" href="generator-mobile.html">
+    <span class="tab-icon">⚡</span>
+    <span>Generator</span>
+  </a>
+</nav>
+
+<!-- Bottom-sheet modal -->
+<div class="modal-backdrop" id="modal" style="display:none">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">Add worker</span>
+      <button class="modal-close" id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Board size</label>
+        <select class="modal-input" style="appearance:none">
+          <option>7×7</option><option selected>8×8</option><option>9×9</option><option>10×10</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Seed</label>
+        <input class="modal-input" type="number" placeholder="Leave blank for random">
+        <span class="modal-hint">Blank = random (actual seed shown after start)</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary">Start worker</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
+  const RESULTS_DATA = [
+    { size:8, diff:'Easy',   diffClass:'diff-easy',   sub:'Worker 1 · seed 42 · 2 min ago',
+      regions:[[0,0,0,1,1,1,2,2],[0,0,3,1,1,2,2,2],[0,3,3,3,4,4,2,5],[6,3,3,4,4,4,5,5],[6,6,3,4,7,4,5,5],[6,6,6,7,7,7,5,5],[6,6,7,7,7,7,7,5],[6,7,7,7,7,7,7,7]] },
+    { size:8, diff:'Medium', diffClass:'diff-medium', sub:'Worker 1 · seed 42 · 5 min ago',
+      regions:[[0,0,1,1,1,2,2,2],[0,0,1,3,2,2,2,4],[0,3,3,3,3,2,4,4],[5,5,3,3,6,4,4,4],[5,5,5,6,6,6,4,7],[5,5,6,6,6,7,7,7],[5,5,5,6,7,7,7,7],[5,5,5,5,7,7,7,7]] },
+    { size:9, diff:'Hard',   diffClass:'diff-hard',   sub:'Worker 2 · seed 7,834,920 · 1 min ago', regions:null },
+  ];
+
+  function buildMini(container, regions, n) {
+    const b=document.createElement('div'); b.className='mini-board';
+    b.style.gridTemplateColumns=`repeat(${n},1fr)`; b.style.gridTemplateRows=`repeat(${n},1fr)`;
+    if (!regions) { for(let i=0;i<n*n;i++){const c=document.createElement('div');c.style.background=PALETTE[i%PALETTE.length];b.appendChild(c);} }
+    else { for(let r=0;r<n;r++) for(let c=0;c<n;c++){const el=document.createElement('div');el.style.background=PALETTE[regions[r][c]];b.appendChild(el);} }
+    container.appendChild(b);
+  }
+
+  const list = document.getElementById('results');
+  RESULTS_DATA.forEach((p,i) => {
+    const row=document.createElement('div'); row.className='result-row';
+    const preview=document.createElement('div'); preview.className='result-preview'; buildMini(preview,p.regions,p.size);
+    const info=document.createElement('div'); info.className='result-info';
+    info.innerHTML=`<div class="result-title">Puzzle ${i+1} <span class="size-tag">${p.size}×${p.size}</span><span class="diff-badge ${p.diffClass}">${p.diff}</span></div><div class="result-sub">${p.sub}</div>`;
+    const actions=document.createElement('div'); actions.className='result-actions';
+    actions.innerHTML=`<button class="btn">Edit ↗</button><button class="btn btn-primary">Play ↗</button>`;
+    row.appendChild(preview); row.appendChild(info); row.appendChild(actions); list.appendChild(row);
+  });
+
+  const modal=document.getElementById('modal');
+  document.getElementById('add-worker-btn').addEventListener('click',()=>modal.style.display='flex');
+  document.getElementById('modal-close').addEventListener('click',()=>modal.style.display='none');
+  document.getElementById('modal-cancel').addEventListener('click',()=>modal.style.display='none');
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
+</script>
+</body>
+</html>

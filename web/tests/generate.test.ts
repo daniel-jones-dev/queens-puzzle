@@ -1,122 +1,164 @@
+/**
+ * Integration tests for the puzzle generator.
+ *
+ * Requires the dev server to be running on http://localhost:5173.
+ * Run with: npx playwright test tests/generate.test.ts
+ */
 import { test, expect } from "@playwright/test";
-import { freshLoad } from "./helpers";
+import { freshLoad, clickCell } from "./helpers";
 
-async function openGenerateModal(page: Parameters<typeof freshLoad>[0]) {
-  await page.click("button[title='Settings']");
-  await expect(page.locator("text=Generate puzzle…")).toBeVisible();
-  await page.click("text=Generate puzzle…");
-  await expect(page.locator("text=Generate puzzle")).toBeVisible();
-}
+// ── Play page: New puzzle ─────────────────────────────────────────────────────
 
-test.describe("Generator", () => {
-  test("settings menu has 'Generate puzzle…' entry", async ({ page }) => {
+test.describe("Play: new puzzle", () => {
+  test("'New puzzle' button opens the generate modal", async ({ page }) => {
     await freshLoad(page);
-    await page.click("button[title='Settings']");
-    await expect(page.locator("text=Generate puzzle…")).toBeVisible();
+    await page.locator("button:has-text('New puzzle')").click();
+    await expect(page.locator("text=New random puzzle")).toBeVisible();
+    await expect(page.locator("select")).toBeVisible();
   });
 
-  test("modal opens with correct defaults", async ({ page }) => {
+  test("modal cancel leaves the current puzzle intact", async ({ page }) => {
     await freshLoad(page);
-    await openGenerateModal(page);
 
-    // Default size 8×8
-    await expect(page.locator("select")).toHaveValue("8");
-    // Seed input is empty (placeholder "random")
-    await expect(page.locator("input[placeholder='random']")).toHaveValue("");
-    // Generate button visible, Play ▶ not yet visible
-    await expect(page.locator("button:has-text('Generate')")).toBeVisible();
-    await expect(page.locator("button:has-text('Play ▶')")).not.toBeVisible();
+    // Place a cross so we can detect the puzzle hasn't changed
+    const board = page.locator("[data-testid='board']").first();
+    const bb = await board.boundingBox();
+    if (!bb) throw new Error("board not found");
+    await clickCell(page, board, bb.width / 7, 3, 3);
+    await expect(board.locator("[class*='cross']").first()).toBeVisible();
+
+    await page.locator("button:has-text('New puzzle')").click();
+    await expect(page.locator("text=New random puzzle")).toBeVisible();
+    await page.locator("button:has-text('Cancel')").click();
+    await page.waitForTimeout(150);
+
+    // Cross is still there — puzzle unchanged
+    await expect(page.locator("text=New random puzzle")).not.toBeVisible();
+    await expect(board.locator("[class*='cross']").first()).toBeVisible();
   });
 
-  test("generate shows loading then difficulty, Play ▶ loads puzzle", async ({ page }) => {
+  test("generating a 5×5 puzzle replaces the board with no player marks", async ({
+    page,
+  }) => {
     await freshLoad(page);
-    await openGenerateModal(page);
 
-    // Use 4×4 for speed
-    await page.selectOption("select", "4");
-    await page.click("button:has-text('Generate')");
+    await page.locator("button:has-text('New puzzle')").click();
+    await expect(page.locator("text=New random puzzle")).toBeVisible();
 
-    // Loading state: button shows "Generating…"
-    await expect(page.locator("button:has-text('Generating…')")).toBeVisible();
+    await page.selectOption("select", "5");
+    await page.locator("[role='dialog'] button:has-text('Generate'), div button:has-text('Generate')").last().click();
+    await page.waitForTimeout(600);
 
-    // Wait for completion
-    await expect(page.locator("button:has-text('Play ▶')")).toBeVisible({ timeout: 30_000 });
+    const board = page.locator("[data-testid='board']").first();
+    await expect(board).toBeVisible();
+    // Fresh board — no queens or crosses placed yet
+    expect(await board.locator("[class*='queen']").count()).toBe(0);
+    expect(await board.locator("[class*='cross']").count()).toBe(0);
+  });
+});
 
-    // Difficulty shown in green
-    const diffText = page.locator("p").filter({ hasText: "✓" });
-    await expect(diffText).toBeVisible();
+// ── Editor: Generate ──────────────────────────────────────────────────────────
 
-    // Click Play ▶ → closes modal, loads puzzle
-    await page.click("button:has-text('Play ▶')");
-    await expect(page.locator("text=Generate puzzle")).not.toBeVisible();
-    await expect(page.locator("h1:has-text('Queens Puzzle')")).toBeVisible();
+test.describe("Editor: generate", () => {
+  async function openEditor(page: Parameters<typeof freshLoad>[0]) {
+    await freshLoad(page);
+    // Clear editor localStorage so each test starts with a blank board
+    await page.evaluate(() => localStorage.removeItem("queens-puzzle-editor-v1"));
+    await page.locator("a:has-text('Editor')").first().click();
+    await page.waitForSelector("[data-testid='board']", { timeout: 10_000 });
+    await page.waitForTimeout(400);
+    // Use 5×5 so generation completes fast on any seed / CPU load
+    await page.selectOption('[aria-label="Board size"]', '5');
+    await page.waitForTimeout(150);
+  }
 
-    // Stored puzzle has 4 rows (4×4 board)
-    const stored = await page.evaluate(() => localStorage.getItem("queens-puzzle-v1"));
-    const parsed = JSON.parse(stored ?? "{}");
-    expect(parsed.regions).toHaveLength(4);
+  test("Generate on an empty board immediately creates a puzzle (undo enabled)", async ({
+    page,
+  }) => {
+    await openEditor(page);
+
+    // Before generate, undo is disabled
+    await expect(page.locator("button:has-text('↩ Undo')")).toBeDisabled();
+
+    await page.locator("button[title='Generate a random unique puzzle']").click();
+
+    // 5×5 generation completes in < 3 s on any seed
+    await expect(page.locator("button:has-text('↩ Undo')")).toBeEnabled({ timeout: 8_000 });
   });
 
-  test("re-generate button resets to idle", async ({ page }) => {
-    await freshLoad(page);
-    await openGenerateModal(page);
+  test("Generated puzzle has a unique solution (analysis shows '1 (unique)')", async ({
+    page,
+  }) => {
+    await openEditor(page);
 
-    await page.selectOption("select", "4");
-    await page.click("button:has-text('Generate')");
-    await expect(page.locator("button:has-text('Play ▶')")).toBeVisible({ timeout: 30_000 });
-
-    // Click Re-generate → back to idle (Generate button, no Play ▶)
-    await page.click("button:has-text('Re-generate')");
-    await expect(page.locator("button:has-text('Generate')")).toBeVisible();
-    await expect(page.locator("button:has-text('Play ▶')")).not.toBeVisible();
-    await expect(page.locator("p").filter({ hasText: "✓" })).not.toBeVisible();
+    await page.locator("button[title='Generate a random unique puzzle']").click();
+    // Wait for generation then debounce + analysis
+    await expect(page.locator("button:has-text('↩ Undo')")).toBeEnabled({ timeout: 8_000 });
+    await expect(page.locator("text=1 (unique)")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("same seed produces the same puzzle", async ({ page }) => {
-    await freshLoad(page);
+  test("Undo after Generate reverts to the prior empty board", async ({
+    page,
+  }) => {
+    await openEditor(page);
 
-    // Generate with seed 42, size 4
-    await openGenerateModal(page);
-    await page.selectOption("select", "4");
-    await page.fill("input[placeholder='random']", "42");
-    await page.click("button:has-text('Generate')");
-    await expect(page.locator("button:has-text('Play ▶')")).toBeVisible({ timeout: 30_000 });
-    await page.click("button:has-text('Play ▶')");
-    const json1 = await page.evaluate(() => localStorage.getItem("queens-puzzle-v1"));
+    await page.locator("button[title='Generate a random unique puzzle']").click();
+    await expect(page.locator("button:has-text('↩ Undo')")).toBeEnabled({ timeout: 8_000 });
 
-    // Generate again with same seed
-    await openGenerateModal(page);
-    await page.selectOption("select", "4");
-    await page.fill("input[placeholder='random']", "42");
-    await page.click("button:has-text('Generate')");
-    await expect(page.locator("button:has-text('Play ▶')")).toBeVisible({ timeout: 30_000 });
-    await page.click("button:has-text('Play ▶')");
-    const json2 = await page.evaluate(() => localStorage.getItem("queens-puzzle-v1"));
+    await page.locator("button:has-text('↩ Undo')").click();
+    await page.waitForTimeout(150);
 
-    expect(json1).toBeTruthy();
-    expect(json1).toBe(json2);
+    // Board is empty again — undo is disabled
+    await expect(page.locator("button:has-text('↩ Undo')")).toBeDisabled();
   });
 
-  test("invalid seed shows validation error", async ({ page }) => {
-    await freshLoad(page);
-    await openGenerateModal(page);
+  test("Generate on a non-empty board shows a confirm dialog", async ({
+    page,
+  }) => {
+    await openEditor(page);
 
-    await page.fill("input[placeholder='random']", "9999999999");
-    await page.click("button:has-text('Generate')");
-    await expect(page.locator("text=Must be an integer")).toBeVisible();
-    // No worker started — still in idle, no loading
-    await expect(page.locator("button:has-text('Generating…')")).not.toBeVisible();
+    // Paint a cell
+    const board = page.locator('[class*="board"]').first();
+    await page.locator("button[title='Colour 1 (1)']").click();
+    await clickCell(page, board, (await board.boundingBox())!.width / 7, 0, 0);
+
+    await page.locator("button[title='Generate a random unique puzzle']").click();
+    await expect(page.locator("text=Generate a random puzzle?")).toBeVisible();
   });
 
-  test("cancel closes modal without loading a puzzle", async ({ page }) => {
-    await freshLoad(page);
-    const initialJson = await page.evaluate(() => localStorage.getItem("queens-puzzle-v1"));
+  test("Cancelling the generate confirm keeps the existing board", async ({
+    page,
+  }) => {
+    await openEditor(page);
 
-    await openGenerateModal(page);
-    await page.click("button:has-text('Cancel')");
-    await expect(page.locator("text=Generate puzzle")).not.toBeVisible();
+    const board = page.locator('[class*="board"]').first();
+    await page.locator("button[title='Colour 1 (1)']").click();
+    await clickCell(page, board, (await board.boundingBox())!.width / 7, 0, 0);
 
-    const afterJson = await page.evaluate(() => localStorage.getItem("queens-puzzle-v1"));
-    expect(afterJson).toBe(initialJson);
+    await page.locator("button[title='Generate a random unique puzzle']").click();
+    await expect(page.locator("text=Generate a random puzzle?")).toBeVisible();
+    await page.locator("button:has-text('Cancel')").last().click();
+    await page.waitForTimeout(150);
+
+    // Confirm gone, board still has painted cells (undo enabled)
+    await expect(page.locator("text=Generate a random puzzle?")).not.toBeVisible();
+    await expect(page.locator("button:has-text('↩ Undo')")).toBeEnabled();
+  });
+
+  test("Confirming generate on non-empty board replaces it", async ({
+    page,
+  }) => {
+    await openEditor(page);
+
+    const board = page.locator('[class*="board"]').first();
+    await page.locator("button[title='Colour 1 (1)']").click();
+    await clickCell(page, board, (await board.boundingBox())!.width / 7, 0, 0);
+
+    await page.locator("button[title='Generate a random unique puzzle']").click();
+    await expect(page.locator("text=Generate a random puzzle?")).toBeVisible();
+    await page.locator("[data-testid='confirm-btn']").click();
+
+    // Board replaced — undo is enabled (can undo the generate)
+    await expect(page.locator("button:has-text('↩ Undo')")).toBeEnabled({ timeout: 8_000 });
   });
 });

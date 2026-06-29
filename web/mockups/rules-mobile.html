@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queens — Solver rules (mobile)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#F8F8F5; --surface:#fff; --text:#1A1A18; --text2:#6B6B62; --accent:#2B3A5E; --border:#E2E2DC; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; font-size:14px; min-height:100vh; display:flex; flex-direction:column; max-width:390px; margin:0 auto; }
+
+    /* ── Header ── */
+    header { background:var(--surface); border-bottom:1px solid var(--border); height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+    .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:20px; color:var(--accent); text-decoration:none; }
+
+    /* ── Main ── */
+    main { flex:1; padding:16px 16px 80px; }
+
+    .back-link { display:inline-flex; align-items:center; gap:5px; text-decoration:none; color:var(--text2); font-size:13px; font-weight:500; margin-bottom:20px; -webkit-tap-highlight-color:transparent; }
+    .back-link:active { color:var(--text); }
+
+    .page-title { font-family:'DM Serif Display',serif; font-style:italic; font-size:26px; color:var(--accent); line-height:1.1; margin-bottom:6px; }
+    .page-subtitle { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:28px; }
+
+    /* ── Difficulty sections ── */
+    .difficulty-section { margin-bottom:28px; }
+    .section-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:8px; border-bottom:1.5px solid var(--border); }
+    .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--text2); }
+    .diff-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+    .diff-badge.easy   { background:#d1fae5; color:#065f46; }
+    .diff-badge.medium { background:#fef3c7; color:#92400e; }
+    .diff-badge.hard   { background:#fee2e2; color:#991b1b; }
+
+    /* ── Rule cards ── */
+    .rule-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:8px; }
+    .rule-card:target { border-color:var(--accent); box-shadow:0 0 0 3px rgba(43,58,94,0.08); }
+    .rule-name { font-size:14px; font-weight:600; color:var(--text); margin-bottom:6px; }
+    .rule-desc { font-size:13px; color:var(--text2); line-height:1.65; margin-bottom:12px; }
+    .rule-desc strong { color:var(--text); font-weight:600; }
+
+    /* ── Mini board inside card ── */
+    .rule-example { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+    .rule-example-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:var(--text2); }
+    .mini-board { display:grid; border:2px solid rgba(0,0,0,0.20); border-radius:3px; overflow:hidden; }
+    .mc { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); position:relative; }
+    .mc.rbr { border-right:2px solid rgba(0,0,0,0.20); }
+    .mc.rbb { border-bottom:2px solid rgba(0,0,0,0.20); }
+    .mc.dim { opacity:0.28; }
+    .mc.forced { outline:3px solid #16a34a; outline-offset:-3px; z-index:1; }
+    .mc.forced::after { content:'♛'; position:absolute; font-size:13px; color:rgba(0,0,0,0.65); }
+    .mc.elim { outline:2px solid rgba(180,30,30,0.35); outline-offset:-2px; }
+    .mc.hilight { outline:2.5px solid rgba(43,58,94,0.60); outline-offset:-2.5px; }
+    .mc-x { font-size:10px; font-weight:700; color:rgba(0,0,0,0.35); user-select:none; }
+    .mc-q { font-size:13px; color:rgba(0,0,0,0.65); user-select:none; }
+    .board-caption { font-size:11px; color:var(--text2); line-height:1.4; font-style:italic; }
+
+    /* ── Tab bar ── */
+    .tab-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:390px; height:56px; background:var(--surface); border-top:1px solid var(--border); display:flex; z-index:40; }
+    .tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-decoration:none; color:var(--text2); font-size:10px; font-weight:500; -webkit-tap-highlight-color:transparent; }
+    .tab.active { color:var(--accent); }
+    .tab-icon { font-size:20px; line-height:1; }
+    .tab-icon.text-icon { font-family:'DM Serif Display',serif; font-style:italic; font-size:16px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="play-mobile.html">♛ Queens</a>
+</header>
+
+<main>
+  <a class="back-link" href="solve-mobile.html">← Solve</a>
+
+  <h1 class="page-title">Solver rules</h1>
+  <p class="page-subtitle">Every deduction the solver can make, easiest first. If no rule applies, the puzzle requires guessing.</p>
+
+  <!-- Easy ─────────────────────────────────────────────────── -->
+  <div class="difficulty-section">
+    <div class="section-header">
+      <span class="diff-badge easy">Easy</span>
+      <span class="section-title">Forced single-cell placements</span>
+    </div>
+
+    <div class="rule-card" id="rule-single-cell-in-row">
+      <div class="rule-name">Single cell in row</div>
+      <div class="rule-desc">
+        Every row must contain exactly one queen.
+        If all but one cell in a row has been eliminated, the remaining cell
+        <strong>must</strong> be the queen for that row.
+      </div>
+      <div class="rule-example">
+        <div class="rule-example-label">Example</div>
+        <div class="mini-board" id="ex-row"></div>
+        <div class="board-caption">Row 3 has one cell left — place the queen.</div>
+      </div>
+    </div>
+
+    <div class="rule-card" id="rule-single-cell-in-column">
+      <div class="rule-name">Single cell in column</div>
+      <div class="rule-desc">
+        Every column must contain exactly one queen.
+        If only one cell in a column remains available,
+        it <strong>must</strong> be the queen for that column.
+      </div>
+      <div class="rule-example">
+        <div class="rule-example-label">Example</div>
+        <div class="mini-board" id="ex-col"></div>
+        <div class="board-caption">Column 1 has one cell left — place the queen.</div>
+      </div>
+    </div>
+
+    <div class="rule-card" id="rule-single-cell-in-region">
+      <div class="rule-name">Single cell in region</div>
+      <div class="rule-desc">
+        Every colour region must contain exactly one queen.
+        If a region has only one uneliminated candidate left,
+        that cell <strong>must</strong> be the queen.
+      </div>
+      <div class="rule-example">
+        <div class="rule-example-label">Example</div>
+        <div class="mini-board" id="ex-region"></div>
+        <div class="board-caption">The orange region has one cell left — place the queen.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Medium ───────────────────────────────────────────────── -->
+  <div class="difficulty-section">
+    <div class="section-header">
+      <span class="diff-badge medium">Medium</span>
+      <span class="section-title">Region confinement propagation</span>
+    </div>
+
+    <div class="rule-card" id="rule-region-spans-one-row">
+      <div class="rule-name">Region spans one row</div>
+      <div class="rule-desc">
+        If all remaining candidates for a colour region lie in the
+        <strong>same row</strong>, the region's queen must be in that row.
+        All other regions' cells in that row are eliminated.
+      </div>
+      <div class="rule-example">
+        <div class="rule-example-label">Example</div>
+        <div class="mini-board" id="ex-span-row"></div>
+        <div class="board-caption">Blue's candidates are all in row 2 — eliminate non-blue cells in that row.</div>
+      </div>
+    </div>
+
+    <div class="rule-card" id="rule-region-spans-one-column">
+      <div class="rule-name">Region spans one column</div>
+      <div class="rule-desc">
+        If all remaining candidates for a colour region are in one
+        <strong>column</strong>, all other cells in that column from other
+        regions are eliminated.
+      </div>
+      <div class="rule-example">
+        <div class="rule-example-label">Example</div>
+        <div class="mini-board" id="ex-span-col"></div>
+        <div class="board-caption">Green's candidates are all in col 3 — eliminate non-green cells in that column.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hard ─────────────────────────────────────────────────── -->
+  <div class="difficulty-section">
+    <div class="section-header">
+      <span class="diff-badge hard">Hard</span>
+      <span class="section-title">Multi-region exclusion</span>
+    </div>
+
+    <div class="rule-card" id="rule-exclusion-chain">
+      <div class="rule-name">Exclusion chain</div>
+      <div class="rule-desc">
+        When <em>N</em> colour regions together have all their candidates in the
+        same <em>N</em> rows (or columns), those rows are fully claimed by those
+        regions. <strong>All other regions' cells in those rows are eliminated.</strong>
+        <br><br>
+        The two-region case is the most common: two regions whose candidates
+        only appear in two rows together force both queens into those rows.
+      </div>
+      <div class="rule-example">
+        <div class="rule-example-label">Example</div>
+        <div class="mini-board" id="ex-excl"></div>
+        <div class="board-caption">Green + orange only span rows 0–1 together. Blue cells in those rows are eliminated.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<nav class="tab-bar">
+  <a class="tab" href="play-mobile.html">
+    <span class="tab-icon text-icon">♛</span>
+    <span>Play</span>
+  </a>
+  <a class="tab" href="solve-mobile.html">
+    <span class="tab-icon">→</span>
+    <span>Solve</span>
+  </a>
+  <a class="tab" href="editor-mobile.html">
+    <span class="tab-icon">✏</span>
+    <span>Editor</span>
+  </a>
+  <a class="tab" href="generator-mobile.html">
+    <span class="tab-icon">⚡</span>
+    <span>Generator</span>
+  </a>
+</nav>
+
+<script>
+  const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
+  const SZ = 22;
+
+  function buildMini(id, n, regions, states, opts = {}) {
+    const { forced = [], elim = [], hilight = [], dimCells = [] } = opts;
+    const isDim    = ([r,c]) => dimCells.some(([dr,dc]) => dr === r && dc === c);
+    const isForced = ([r,c]) => forced.some(([fr,fc]) => fr === r && fc === c);
+    const isElim   = ([r,c]) => elim.some(([er,ec]) => er === r && ec === c);
+    const isHi     = ([r,c]) => hilight.some(([hr,hc]) => hr === r && hc === c);
+
+    const board = document.getElementById(id);
+    board.style.gridTemplateColumns = `repeat(${n},${SZ}px)`;
+    board.style.gridTemplateRows    = `repeat(${n},${SZ}px)`;
+
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const rg = regions[r][c];
+        const st = states[r][c];
+        const el = document.createElement('div');
+        el.className = 'mc';
+        el.style.cssText = `background:${PALETTE[rg]};width:${SZ}px;height:${SZ}px;font-size:${SZ*0.44}px`;
+        if (c < n-1 && regions[r][c+1] !== rg) el.classList.add('rbr');
+        if (r < n-1 && regions[r+1][c] !== rg) el.classList.add('rbb');
+        if (isDim([r,c]))    el.classList.add('dim');
+        if (isForced([r,c])) el.classList.add('forced');
+        if (isElim([r,c]))   el.classList.add('elim');
+        if (isHi([r,c]))     el.classList.add('hilight');
+        if (!isForced([r,c])) {
+          if (st === 1) { const q=document.createElement('span'); q.className='mc-q'; q.textContent='♛'; el.appendChild(q); }
+          if (st === 2) { const x=document.createElement('span'); x.className='mc-x'; x.textContent='✕'; el.appendChild(x); }
+        }
+        board.appendChild(el);
+      }
+    }
+  }
+
+  // ── Ex 1: Single cell in row ──
+  buildMini('ex-row', 4,
+    [[0,0,1,1],[0,0,1,1],[2,2,3,3],[2,2,3,3]],
+    [[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,2,2,0]],
+    {
+      forced: [[3,3]],
+      dimCells: [
+        [0,0],[0,1],[0,2],[0,3],
+        [1,0],[1,1],[1,2],[1,3],
+        [2,0],[2,1],[2,2],[2,3],
+      ],
+    }
+  );
+
+  // ── Ex 2: Single cell in column ──
+  buildMini('ex-col', 4,
+    [[0,0,1,1],[0,0,1,1],[2,2,3,3],[2,2,3,3]],
+    [[0,2,0,0],[0,2,0,0],[0,2,0,0],[0,0,0,0]],
+    {
+      forced: [[3,1]],
+      dimCells: [
+        [0,0],[0,2],[0,3],
+        [1,0],[1,2],[1,3],
+        [2,0],[2,2],[2,3],
+        [3,0],[3,2],[3,3],
+      ],
+    }
+  );
+
+  // ── Ex 3: Single cell in region ──
+  buildMini('ex-region', 4,
+    [[0,0,1,1],[0,0,1,1],[2,2,3,3],[2,2,3,3]],
+    [[0,0,2,2],[0,0,2,0],[0,0,0,0],[0,0,0,0]],
+    {
+      forced: [[1,3]],
+      dimCells: [
+        [0,0],[0,1],[1,0],[1,1],
+        [2,0],[2,1],[2,2],[2,3],
+        [3,0],[3,1],[3,2],[3,3],
+      ],
+    }
+  );
+
+  // ── Ex 4: Region spans one row ──
+  buildMini('ex-span-row', 5,
+    [
+      [0,0,0,3,3],
+      [0,0,3,3,3],
+      [0,2,2,2,4],
+      [0,0,4,4,4],
+      [0,0,0,4,4],
+    ],
+    [
+      [0,0,0,0,0],
+      [0,0,0,0,0],
+      [2,0,0,0,2],
+      [0,0,0,0,0],
+      [0,0,0,0,0],
+    ],
+    {
+      hilight: [[2,1],[2,2],[2,3]],
+      elim:    [[2,0],[2,4]],
+      dimCells: [
+        [0,0],[0,1],[0,2],[0,3],[0,4],
+        [1,0],[1,1],[1,2],[1,3],[1,4],
+        [3,0],[3,1],[3,2],[3,3],[3,4],
+        [4,0],[4,1],[4,2],[4,3],[4,4],
+      ],
+    }
+  );
+
+  // ── Ex 5: Region spans one column ──
+  buildMini('ex-span-col', 5,
+    [
+      [0,0,0,3,1],
+      [0,2,0,3,1],
+      [0,2,2,3,1],
+      [4,4,2,5,1],
+      [4,4,4,5,5],
+    ],
+    [
+      [0,0,0,0,0],
+      [0,0,0,0,0],
+      [0,0,0,0,0],
+      [0,0,0,2,0],
+      [0,0,0,2,0],
+    ],
+    {
+      hilight: [[0,3],[1,3],[2,3]],
+      elim:    [[3,3],[4,3]],
+      dimCells: [
+        [0,0],[0,1],[0,2],[0,4],
+        [1,0],[1,1],[1,2],[1,4],
+        [2,0],[2,1],[2,2],[2,4],
+        [3,0],[3,1],[3,2],[3,4],
+        [4,0],[4,1],[4,2],[4,4],
+      ],
+    }
+  );
+
+  // ── Ex 6: Exclusion chain ──
+  buildMini('ex-excl', 5,
+    [
+      [3,3,2,1,1],
+      [3,2,2,1,1],
+      [4,4,2,4,4],
+      [4,4,0,0,4],
+      [0,0,0,0,0],
+    ],
+    [
+      [0,0,2,0,0],
+      [0,2,2,0,0],
+      [0,0,0,0,0],
+      [0,0,0,0,0],
+      [0,0,0,0,0],
+    ],
+    {
+      hilight: [[0,0],[0,1],[1,0],[0,3],[0,4],[1,3],[1,4]],
+      elim:    [[0,2],[1,1],[1,2]],
+      dimCells: [
+        [2,0],[2,1],[2,2],[2,3],[2,4],
+        [3,0],[3,1],[3,2],[3,3],[3,4],
+        [4,0],[4,1],[4,2],[4,3],[4,4],
+      ],
+    }
+  );
+</script>
+</body>
+</html>

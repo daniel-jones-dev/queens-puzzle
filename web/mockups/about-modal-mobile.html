@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queens — About (mobile)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#F8F8F5; --surface:#fff; --text:#1A1A18; --text2:#6B6B62; --accent:#2B3A5E; --border:#E2E2DC; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; font-size:14px; min-height:100vh; display:flex; flex-direction:column; max-width:390px; margin:0 auto; }
+
+    /* ── Header ── */
+    header { background:var(--surface); border-bottom:1px solid var(--border); height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+    .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:20px; color:var(--accent); text-decoration:none; }
+
+
+    /* ── Main ── */
+    main { flex:1; display:flex; flex-direction:column; align-items:center; padding:16px 16px 80px; }
+    .puzzle-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--text2); margin-bottom:12px; width:100%; justify-content:center; }
+    .meta-name { font-weight:600; color:var(--text); }
+    .diff-badge { font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; background:#fef3c7; color:#92400e; }
+    .unique-badge { font-size:10px; font-weight:500; padding:2px 7px; border-radius:20px; background:#d1fae5; color:#065f46; }
+    .board { display:grid; border:2.5px solid rgba(0,0,0,0.22); border-radius:3px; overflow:hidden; }
+    .cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); cursor:pointer; }
+    .cell.rbr { border-right:2.5px solid rgba(0,0,0,0.24); }
+    .cell.rbb { border-bottom:2.5px solid rgba(0,0,0,0.24); }
+    .queen { color:white; text-shadow:0 0 8px rgba(0,0,0,0.5),0 1px 4px rgba(0,0,0,0.4); user-select:none; line-height:1; }
+    .xmark { font-weight:700; color:rgba(0,0,0,0.30); user-select:none; }
+    .below-board { display:flex; flex-direction:column; gap:10px; margin-top:12px; width:100%; }
+    .controls { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; }
+    .ctrl-center { display:flex; justify-content:center; }
+    .ctrl-right { display:flex; gap:6px; }
+    .timer { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:500; color:var(--text2); letter-spacing:1px; }
+    .btn { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:10px 16px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .btn-hint { background:var(--accent); border-color:var(--accent); color:white; }
+    .how-to-play { border:1px solid var(--border); border-radius:8px; background:var(--surface); overflow:hidden; }
+    .how-to-play summary { list-style:none; padding:12px 14px; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text2); user-select:none; }
+    .how-to-play summary::-webkit-details-marker { display:none; }
+    .how-to-play summary::before { content:'▸'; font-size:10px; display:inline-block; }
+    .action-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+    .action-row .btn { text-align:center; font-size:12px; padding:10px 6px; }
+
+    /* ── Footer ── */
+    footer { border-top:1px solid var(--border); padding:12px 16px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--text2); }
+    footer a { color:var(--text2); text-decoration:none; -webkit-tap-highlight-color:transparent; }
+    .sep { opacity:0.35; }
+    #about-link { color:var(--accent); font-weight:500; }
+
+    /* ── Backdrop ── */
+    .modal-backdrop {
+      position:fixed; inset:0; background:rgba(10,12,18,0.45);
+      display:flex; align-items:center; justify-content:center;
+      z-index:100; padding:20px;
+      backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+    }
+
+    /* ── Modal ── */
+    .modal {
+      background:var(--surface); border-radius:14px;
+      box-shadow:0 20px 50px rgba(0,0,0,0.25);
+      width:100%; max-width:360px;
+      position:relative; overflow:hidden;
+    }
+    .modal-header {
+      display:flex; align-items:flex-start; justify-content:space-between;
+      padding:24px 20px 0;
+    }
+    .modal-identity { display:flex; align-items:center; gap:14px; }
+    .modal-logo {
+      font-family:'DM Serif Display',serif; font-style:italic;
+      font-size:26px; color:var(--accent); line-height:1;
+    }
+    .modal-miniboard { display:grid; border:2px solid rgba(0,0,0,0.16); border-radius:3px; overflow:hidden; flex-shrink:0; }
+    .mc { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); }
+    .mc.rbr { border-right:2px solid rgba(0,0,0,0.16); }
+    .mc.rbb { border-bottom:2px solid rgba(0,0,0,0.16); }
+    .mc-q { color:rgba(0,0,0,0.65); user-select:none; line-height:1; }
+    .modal-close {
+      background:none; border:none; cursor:pointer;
+      width:28px; height:28px; border-radius:6px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; color:var(--text2); flex-shrink:0;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .modal-close:active { background:var(--bg); }
+    .modal-body { padding:16px 20px 24px; }
+    .modal-tagline { font-size:13px; color:var(--text2); line-height:1.65; margin-bottom:16px; }
+    .modal-section { padding:14px 0; border-top:1px solid var(--border); }
+    .modal-section-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--text2); margin-bottom:6px; }
+    .modal-author { font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
+    .modal-link-row { display:flex; align-items:center; gap:12px; }
+    .modal-link { display:inline-flex; align-items:center; gap:4px; font-size:13px; color:var(--accent); text-decoration:none; font-weight:500; -webkit-tap-highlight-color:transparent; }
+    .modal-link-ext { font-size:11px; opacity:0.6; }
+    .modal-version { font-size:12px; color:var(--text2); }
+
+    /* ── Tab bar ── */
+    .tab-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:390px; height:56px; background:var(--surface); border-top:1px solid var(--border); display:flex; z-index:40; }
+    .tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-decoration:none; color:var(--text2); font-size:10px; font-weight:500; -webkit-tap-highlight-color:transparent; }
+    .tab.active { color:var(--accent); }
+    .tab-icon { font-size:20px; line-height:1; }
+    .tab-icon.text-icon { font-family:'DM Serif Display',serif; font-style:italic; font-size:16px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="play-mobile.html">♛ Queens</a>
+</header>
+
+<main>
+  <div class="puzzle-meta">
+    <span class="meta-name">Wednesday's Puzzle</span>
+    <span style="opacity:0.35">·</span>
+    <span>Difficulty: <span class="diff-badge">Medium</span></span>
+    <span style="opacity:0.35">·</span>
+    <span class="unique-badge">Confirmed unique</span>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="below-board">
+    <div class="controls">
+      <button class="btn btn-hint">Hint</button>
+      <div class="ctrl-center"><span class="timer">02:34</span></div>
+      <div class="ctrl-right">
+        <button class="btn">Undo</button>
+        <button class="btn">Reset</button>
+      </div>
+    </div>
+    <details class="how-to-play">
+      <summary>How to play</summary>
+    </details>
+    <div class="action-row">
+      <button class="btn">Open in Solver</button>
+      <button class="btn">Open in Editor</button>
+      <button class="btn">Copy link</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Made by <a href="#">Daniel Jones</a></span>
+  <span class="sep">·</span>
+  <a href="#">GitHub</a>
+  <span class="sep">·</span>
+  <a id="about-link" href="#" onclick="return false;">About</a>
+</footer>
+
+<!-- ── About modal ── -->
+<div class="modal-backdrop" id="backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="About Queens">
+
+    <div class="modal-header">
+      <div class="modal-identity">
+        <span class="modal-logo">♛ Queens</span>
+        <div class="modal-miniboard" id="miniboard"></div>
+      </div>
+      <button class="modal-close" id="close-btn" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-tagline">
+        A constraint puzzle: place one queen in every row, column, and colour
+        region — no two queens may touch, even diagonally.
+      </p>
+
+      <div class="modal-section">
+        <div class="modal-section-label">Created by</div>
+        <div class="modal-author">Daniel Jones</div>
+        <div class="modal-link-row">
+          <a class="modal-link" href="#">daniel-jones.dev <span class="modal-link-ext">↗</span></a>
+          <a class="modal-link" href="#">GitHub <span class="modal-link-ext">↗</span></a>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-label">Inspiration</div>
+        <a class="modal-link" href="#">LinkedIn Queens <span class="modal-link-ext">↗</span></a>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-version">Open source · MIT License</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<nav class="tab-bar">
+  <a class="tab active" href="play-mobile.html">
+    <span class="tab-icon text-icon">♛</span>
+    <span>Play</span>
+  </a>
+  <a class="tab" href="solve-mobile.html">
+    <span class="tab-icon">→</span>
+    <span>Solve</span>
+  </a>
+  <a class="tab" href="editor-mobile.html">
+    <span class="tab-icon">✏</span>
+    <span>Editor</span>
+  </a>
+  <a class="tab" href="generator-mobile.html">
+    <span class="tab-icon">⚡</span>
+    <span>Generator</span>
+  </a>
+</nav>
+
+<script>
+  // ── Main board ──
+  const REGIONS = [
+    [0,0,0,1,1,1,2,2],[0,0,3,1,1,2,2,2],[0,3,3,3,4,4,2,5],
+    [6,3,3,4,4,4,5,5],[6,6,3,4,7,4,5,5],[6,6,6,7,7,7,5,5],
+    [6,6,7,7,7,7,7,5],[6,7,7,7,7,7,7,7],
+  ];
+  const STATES = [
+    [2,0,0,0,0,0,0,0],[2,0,0,0,0,0,0,0],[2,2,0,0,0,0,0,0],
+    [1,2,2,2,2,2,2,2],[2,2,0,0,0,0,0,0],[2,2,2,0,0,0,0,0],
+    [2,2,0,0,0,0,0,0],[2,0,0,0,0,0,0,0],
+  ];
+  const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
+  const N = 8;
+  const SZ = Math.min(44, Math.max(32, Math.floor((Math.min(window.innerWidth, 390) - 32) / N)));
+  const board = document.getElementById('board');
+  board.style.gridTemplateColumns = `repeat(${N},${SZ}px)`;
+  board.style.gridTemplateRows    = `repeat(${N},${SZ}px)`;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const rg = REGIONS[r][c], st = STATES[r][c];
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.style.cssText = `background:${PALETTE[rg]};width:${SZ}px;height:${SZ}px`;
+    if (c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
+    if (r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
+    if (st === 1) { const q=document.createElement('span'); q.className='queen'; q.style.fontSize=Math.round(SZ*0.55)+'px'; q.textContent='♛'; el.appendChild(q); }
+    else if (st === 2) { const x=document.createElement('span'); x.className='xmark'; x.style.fontSize=Math.round(SZ*0.3)+'px'; x.textContent='✕'; el.appendChild(x); }
+    board.appendChild(el);
+  }
+
+  // ── Mini board (4×4 solved) ──
+  const MR = [[0,0,1,1],[0,0,1,1],[2,2,3,3],[2,2,3,3]];
+  const MS = [[0,1,0,0],[0,0,0,1],[1,0,0,0],[0,0,1,0]];
+  const MSZ = 18;
+  const mb = document.getElementById('miniboard');
+  mb.style.gridTemplateColumns = `repeat(4,${MSZ}px)`;
+  mb.style.gridTemplateRows    = `repeat(4,${MSZ}px)`;
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    const rg = MR[r][c], st = MS[r][c];
+    const el = document.createElement('div');
+    el.className = 'mc';
+    el.style.cssText = `background:${PALETTE[rg]};width:${MSZ}px;height:${MSZ}px`;
+    if (c < 3 && MR[r][c+1] !== rg) el.classList.add('rbr');
+    if (r < 3 && MR[r+1][c] !== rg) el.classList.add('rbb');
+    if (st === 1) { const q=document.createElement('span'); q.className='mc-q'; q.style.fontSize='10px'; q.textContent='♛'; el.appendChild(q); }
+    mb.appendChild(el);
+  }
+
+  // ── Modal toggle ──
+  const backdrop = document.getElementById('backdrop');
+  const closeBtn = document.getElementById('close-btn');
+  const aboutLink = document.getElementById('about-link');
+  closeBtn.addEventListener('click', () => backdrop.style.display = 'none');
+  aboutLink.addEventListener('click', () => backdrop.style.display = 'flex');
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.style.display = 'none'; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') backdrop.style.display = 'none'; });
+</script>
+</body>
+</html>

@@ -59,3 +59,20 @@ export function hintComplete(puzzle: WasmPuzzle, changes: Map<string, number>): 
   }
   return true;
 }
+
+export interface PuzzleMeta {
+  name?: string;
+  source?: string;
+}
+
+export function parsePuzzleMeta(json: string): PuzzleMeta {
+  try {
+    const obj = JSON.parse(json);
+    return {
+      name: typeof obj.name === "string" ? obj.name : undefined,
+      source: typeof obj.source === "string" ? obj.source : undefined,
+    };
+  } catch {
+    return {};
+  }
+}

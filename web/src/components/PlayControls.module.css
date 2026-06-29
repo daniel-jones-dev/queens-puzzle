@@ -1,0 +1,65 @@
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.ctrlRight {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: #C8C8C0;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btnHint {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.btnHint:hover:not(:disabled) {
+  background: #233050;
+  border-color: #233050;
+}
+
+.btnHintPulsing {
+  animation: hintPulse 1.8s ease-in-out infinite;
+}
+
+.btnHintPulsing:hover {
+  animation: none;
+}
+
+.settingsAnchor {
+  position: relative;
+}
+
+@keyframes hintPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(43, 58, 94, 0.5); }
+  50% { box-shadow: 0 0 0 7px rgba(43, 58, 94, 0); }
+}

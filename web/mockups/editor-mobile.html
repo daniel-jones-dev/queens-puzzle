@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queens — Editor (mobile)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#F8F8F5; --surface:#fff; --text:#1A1A18; --text2:#6B6B62; --accent:#2B3A5E; --border:#E2E2DC; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; font-size:14px; min-height:100vh; display:flex; flex-direction:column; max-width:390px; margin:0 auto; }
+
+    header { background:var(--surface); border-bottom:1px solid var(--border); height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+    .logo { font-family:'DM Serif Display',serif; font-style:italic; font-size:20px; color:var(--accent); text-decoration:none; }
+
+
+    main { flex:1; display:flex; flex-direction:column; align-items:center; padding:12px 16px 80px; }
+
+    /* ── Analysis summary bar (collapsed) ── */
+    .analysis-bar { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .analysis-summary { display:flex; align-items:center; padding:10px 14px; gap:8px; }
+    .analysis-chips { display:flex; align-items:center; gap:6px; flex:1; flex-wrap:wrap; }
+    .achip { font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px; }
+    .achip-ok  { background:#d1fae5; color:#065f46; }
+    .achip-warn { background:#fef3c7; color:#92400e; }
+    .achip-neutral { background:var(--bg); color:var(--text2); border:1px solid var(--border); }
+    .expand-icon { color:var(--text2); font-size:12px; flex-shrink:0; transition:transform 0.15s; }
+    .analysis-bar.open .expand-icon { transform:rotate(180deg); }
+
+    /* Analysis drawer (expanded) */
+    .analysis-drawer { border-top:1px solid var(--border); padding:12px 14px; display:none; }
+    .analysis-bar.open .analysis-drawer { display:block; }
+    .drawer-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; }
+    .drawer-label { font-size:12px; color:var(--text2); }
+    .drawer-val { font-size:12px; font-weight:600; }
+    .ok   { color:#16a34a; }
+    .warn { color:#d97706; }
+    .mono { font-family:'JetBrains Mono',monospace; font-size:11px; }
+    .computing { font-size:11px; color:var(--text2); font-style:italic; display:flex; align-items:center; gap:5px; }
+    .spinner { width:10px; height:10px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--accent); animation:spin 0.7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .multi-warn { background:#fef2f2; border:1px solid #fca5a5; border-radius:6px; padding:8px 10px; font-size:11px; color:#991b1b; line-height:1.5; margin-top:8px; }
+    .drawer-fields { display:flex; flex-direction:column; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+    .field-row { display:flex; flex-direction:column; gap:3px; }
+    .field-label { font-size:11px; font-weight:600; color:var(--text2); }
+    .field-input { font-family:'Inter',sans-serif; font-size:13px; padding:8px 10px; border:1.5px solid var(--border); border-radius:6px; color:var(--text); background:var(--bg); }
+
+    /* Board + markers */
+    .board-area { display:grid; grid-template-columns:auto 20px; grid-template-rows:auto 20px; gap:3px; }
+    .board { display:grid; border:2.5px solid rgba(0,0,0,0.22); border-radius:3px; overflow:hidden; cursor:crosshair; }
+    .cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(0,0,0,0.08); border-bottom:1px solid rgba(0,0,0,0.08); position:relative; -webkit-tap-highlight-color:transparent; }
+    .cell.rbr { border-right:2.5px solid rgba(0,0,0,0.24); }
+    .cell.rbb { border-bottom:2.5px solid rgba(0,0,0,0.24); }
+    .cell.multi::after { content:''; position:absolute; inset:2px; border:2px solid rgba(220,60,60,0.5); border-radius:2px; pointer-events:none; }
+    .queen { color:rgba(0,0,0,0.32); user-select:none; line-height:1; }
+    .row-markers { grid-column:2; grid-row:1; display:flex; flex-direction:column; }
+    .row-marker { display:flex; align-items:center; justify-content:center; font-size:10px; color:transparent; }
+    .row-marker.warn { color:#ef4444; }
+    .col-markers { grid-column:1; grid-row:2; display:flex; }
+    .col-marker { display:flex; align-items:center; justify-content:center; font-size:10px; color:transparent; }
+    .col-marker.warn { color:#ef4444; }
+
+    /* ── Single-row toolbar ── */
+    .tool-bar { display:flex; gap:3px; align-items:center; margin-top:10px; width:100%; }
+    .tool-btn { display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; flex-shrink:0; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; font-size:15px; line-height:1; -webkit-tap-highlight-color:transparent; }
+    .tool-btn:active { background:var(--bg); }
+    .tool-btn.active { background:var(--accent); border-color:var(--accent); color:white; }
+    .checker-icon { width:13px; height:13px; border-radius:2px; flex-shrink:0; background-image:linear-gradient(45deg,#aaa 25%,transparent 25%),linear-gradient(-45deg,#aaa 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#aaa 75%),linear-gradient(-45deg,transparent 75%,#aaa 75%); background-size:6px 6px; background-position:0 0,0 3px,3px -3px,-3px 0; }
+    .swatch { width:24px; height:24px; border-radius:4px; border:2px solid transparent; cursor:pointer; flex-shrink:0; position:relative; -webkit-tap-highlight-color:transparent; }
+    .swatch.selected { border-color:var(--accent); box-shadow:0 0 0 1.5px white,0 0 0 3px var(--accent); }
+    .swatch-num { position:absolute; bottom:1px; right:1px; font-size:7px; font-weight:700; color:rgba(0,0,0,0.4); line-height:1; }
+    .tool-divider { width:1px; height:20px; background:var(--border); margin:0 1px; flex-shrink:0; }
+
+    /* Action rows */
+    .actions-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:8px; width:100%; }
+    .btn { font-family:'Inter',sans-serif; font-size:12px; font-weight:500; padding:9px 13px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .btn:active { background:var(--bg); }
+    .btn-primary { background:var(--accent); border-color:var(--accent); color:white; }
+    .btn-primary:active { background:#233050; }
+    .divider-v { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+
+    .tab-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:390px; height:56px; background:var(--surface); border-top:1px solid var(--border); display:flex; z-index:40; }
+    .tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-decoration:none; color:var(--text2); font-size:10px; font-weight:500; -webkit-tap-highlight-color:transparent; }
+    .tab.active { color:var(--accent); }
+    .tab-icon { font-size:20px; line-height:1; }
+    .tab-icon.text-icon { font-family:'DM Serif Display',serif; font-style:italic; font-size:16px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="play-mobile.html">♛ Queens</a>
+</header>
+
+<main>
+  <!-- Analysis summary bar (shown expanded) -->
+  <div class="analysis-bar open" id="analysis-bar">
+    <div class="analysis-summary" onclick="document.getElementById('analysis-bar').classList.toggle('open')">
+      <div class="analysis-chips">
+        <span class="achip achip-ok">✓ Valid</span>
+        <span class="achip achip-warn">Multiple solutions</span>
+        <span class="achip achip-neutral">6/8 regions</span>
+      </div>
+      <span class="expand-icon">▾</span>
+    </div>
+    <div class="analysis-drawer">
+      <div class="drawer-row"><span class="drawer-label">Valid layout</span><span class="drawer-val ok">✓ Yes</span></div>
+      <div class="drawer-row"><span class="drawer-label">Regions complete</span><span class="drawer-val mono">6 / 8</span></div>
+      <div class="drawer-row"><span class="drawer-label">Queens placed</span><span class="drawer-val mono">6 / 8</span></div>
+      <div class="drawer-row"><span class="drawer-label">Difficulty</span><span class="drawer-val warn">Calculating…</span></div>
+      <div class="drawer-row"><span class="drawer-label">Solutions</span><span class="computing"><span class="spinner"></span>Calculating…</span></div>
+      <div class="multi-warn"><strong>Multiple solutions.</strong> Rows 6–7, columns 5–7 have ambiguity — highlighted red on board.</div>
+      <div class="drawer-fields">
+        <div class="field-row"><label class="field-label">Puzzle name</label><input class="field-input" type="text" value="Wednesday's Puzzle"></div>
+        <div class="field-row"><label class="field-label">Author</label><input class="field-input" type="text" value="Daniel Jones"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Board + markers -->
+  <div class="board-area">
+    <div class="board" id="board"></div>
+    <div class="row-markers" id="row-markers"></div>
+    <div class="col-markers" id="col-markers"></div>
+  </div>
+
+  <!-- Single-row toolbar -->
+  <div class="tool-bar">
+    <button class="tool-btn active" title="Extend colour">🪄</button>
+    <div class="tool-divider"></div>
+    <div id="palette" style="display:contents"></div>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" title="Unset region"><span class="checker-icon"></span></button>
+    <button class="tool-btn" title="Toggle queen">♛</button>
+  </div>
+
+  <!-- Action rows -->
+  <div class="actions-row">
+    <button class="btn">↩ Undo</button>
+    <button class="btn" style="opacity:0.4">↪ Redo</button>
+    <div class="divider-v"></div>
+    <button class="btn btn-primary">Shuffle queens</button>
+    <button class="btn">Clear</button>
+  </div>
+  <div class="actions-row">
+    <button class="btn">Size: 8×8 ▾</button>
+    <div class="divider-v"></div>
+    <button class="btn">Export</button>
+    <button class="btn btn-primary">Play ↗</button>
+  </div>
+</main>
+
+<nav class="tab-bar">
+  <a class="tab" href="play-mobile.html">
+    <span class="tab-icon text-icon">♛</span>
+    <span>Play</span>
+  </a>
+  <a class="tab" href="solve-mobile.html">
+    <span class="tab-icon">→</span>
+    <span>Solve</span>
+  </a>
+  <a class="tab active" href="editor-mobile.html">
+    <span class="tab-icon">✏</span>
+    <span>Editor</span>
+  </a>
+  <a class="tab" href="generator-mobile.html">
+    <span class="tab-icon">⚡</span>
+    <span>Generator</span>
+  </a>
+</nav>
+
+<script>
+  const PALETTE = ["#bba3e2","#ffc992","#96beff","#b3dfa0","#dfdfdf","#ff7b60","#e6f388","#b9b29e"];
+  const NAMES   = ["Purple","Orange","Blue","Green","White","Red","Yellow","Grey"];
+  const REGIONS = [
+    [ 0, 0, 0, 1, 1, 1, 2, 2],[ 0, 0, 3, 1, 1, 2, 2, 2],
+    [ 0, 3, 3, 3, 4, 4, 2, 5],[ 6, 3, 3, 4, 4, 4, 5, 5],
+    [ 6, 6, 3, 4,-1, 4, 5, 5],[ 6, 6, 6,-1,-1,-1, 5, 5],
+    [ 6, 6,-1,-1,-1,-1,-1, 5],[ 6,-1,-1,-1,-1,-1,-1,-1],
+  ];
+  const QUEENS = new Set(['1,1','0,4','2,6','3,0','4,3','2,7']);
+  const WARN_ROWS = new Set([5,6,7]);
+  const WARN_COLS = new Set([5,6,7]);
+  const isMulti = (r,c) => REGIONS[r][c] === -1 && WARN_ROWS.has(r) && WARN_COLS.has(c);
+  const UNASSIGNED = "#ECEAE6";
+  const N = 8;
+  const SZ = Math.min(40, Math.max(30, Math.floor((Math.min(window.innerWidth, 390) - 32 - 23) / N)));
+
+  const board = document.getElementById('board');
+  board.style.gridTemplateColumns = `repeat(${N},${SZ}px)`;
+  board.style.gridTemplateRows    = `repeat(${N},${SZ}px)`;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const rg = REGIONS[r][c];
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.style.cssText = `background:${rg===-1?UNASSIGNED:PALETTE[rg]};width:${SZ}px;height:${SZ}px`;
+    if (rg !== -1 && c < N-1 && REGIONS[r][c+1] !== rg) el.classList.add('rbr');
+    if (rg !== -1 && r < N-1 && REGIONS[r+1][c] !== rg) el.classList.add('rbb');
+    if (isMulti(r,c)) el.classList.add('multi');
+    if (QUEENS.has(`${r},${c}`)) { const q=document.createElement('span'); q.className='queen'; q.style.fontSize=Math.round(SZ*0.45)+'px'; q.textContent='♛'; el.appendChild(q); }
+    board.appendChild(el);
+  }
+
+  const rm = document.getElementById('row-markers');
+  const cm = document.getElementById('col-markers');
+  for (let r = 0; r < N; r++) {
+    const m = document.createElement('div');
+    m.className='row-marker'+(WARN_ROWS.has(r)?' warn':'');
+    m.style.cssText=`width:20px;height:${SZ}px`; m.textContent='!'; rm.appendChild(m);
+  }
+  for (let c = 0; c < N; c++) {
+    const m = document.createElement('div');
+    m.className='col-marker'+(WARN_COLS.has(c)?' warn':'');
+    m.style.cssText=`width:${SZ}px;height:20px`; m.textContent='!'; cm.appendChild(m);
+  }
+
+  const palRow = document.getElementById('palette');
+  PALETTE.forEach((color, i) => {
+    const sw = document.createElement('div');
+    sw.className='swatch'+(i===2?' selected':'');
+    sw.style.background = color; sw.title=`${NAMES[i]} (${i+1})`;
+    const num=document.createElement('span'); num.className='swatch-num'; num.textContent=i+1; sw.appendChild(num);
+    sw.addEventListener('click',()=>{
+      document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('selected'));
+      document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+      sw.classList.add('selected');
+    });
+    palRow.appendChild(sw);
+  });
+</script>
+</body>
+</html>

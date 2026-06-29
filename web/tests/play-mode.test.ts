@@ -82,11 +82,11 @@ test.describe("Play mode", () => {
   test("settings panel opens and closes via overlay click", async ({ page }) => {
     await freshLoad(page);
     await page.click("button[title='Settings']");
-    await expect(page.locator("text=Share puzzle")).toBeVisible();
+    await expect(page.locator("text=Show clock")).toBeVisible();
 
     // Click the backdrop overlay (top-left corner, away from the panel)
     await page.mouse.click(10, 10);
     await page.waitForTimeout(200);
-    await expect(page.locator("text=Share puzzle")).not.toBeVisible();
+    await expect(page.locator("text=Show clock")).not.toBeVisible();
   });
 });
