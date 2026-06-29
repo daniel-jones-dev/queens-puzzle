@@ -280,8 +280,9 @@ export function GeneratorPage() {
 
   // Terminate all workers on unmount
   useEffect(() => {
+    const instances = workerInstancesRef.current;
     return () => {
-      for (const w of workerInstancesRef.current.values()) w.terminate();
+      for (const w of instances.values()) w.terminate();
     };
   }, []);
 
