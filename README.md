@@ -29,9 +29,9 @@ In Queens, an *n×n* board is divided into *n* coloured regions. The goal is to 
   - **Generator** — run parallel background workers to generate and collect new puzzles
 - **Logical solver** that applies human-style techniques in order of increasing difficulty and
   rates the puzzle (Trivial / Easy / Medium / Hard) by the hardest technique it needed.
-- **Brute-force fallback** that finds the solution(s) for puzzles the logical solver can't crack.
-- **Generator** that builds new puzzles with a guaranteed unique solution from a random seed.
-- **CLI** with colourful terminal output, step-by-step explanations, and batch generation.
+- **Brute-force fallback** that finds all solutions for puzzles the logical solver can't crack.
+- **CLI** with colourful terminal output, step-by-step explanations, and batch generation of
+  puzzles guaranteed to have a unique solution.
 - Reads puzzles from a simple **text format** or from the **archived JSON** of past LinkedIn puzzles.
 
 > Terminal boards are rendered with true-colour region backgrounds; a terminal with 24-bit colour support gives the best results.
