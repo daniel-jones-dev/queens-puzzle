@@ -22,7 +22,11 @@ In Queens, an *n×n* board is divided into *n* coloured regions. The goal is to 
 
 ## Features
 
-- **Web UI** — play, edit, and generate puzzles in the browser; step through solver hints; import/export/share puzzles via URL.
+- **Web UI** with four pages:
+  - **Play** — solve puzzles with hints, undo, timer, and share-by-URL
+  - **Solve** — step through the solver's deduction chain with rule explanations
+  - **Editor** — paint custom region layouts with live uniqueness analysis and export
+  - **Generator** — run parallel background workers to generate and collect new puzzles
 - **Logical solver** that applies human-style techniques in order of increasing difficulty and
   rates the puzzle (Trivial / Easy / Medium / Hard) by the hardest technique it needed.
 - **Brute-force fallback** that finds the solution(s) for puzzles the logical solver can't crack.
@@ -163,6 +167,10 @@ Ideas for future work, roughly in priority order:
 - **Performance**: memoise `queens()` rather than rescanning the board.
 - **Refactor** the core puzzle representation (grid, cell state, IO, change list) into its own module/crate.
 - **Fetch command** to download puzzles directly from the archive API.
+- **Built-in puzzle library** for the Play page (curated set shown on first load / "New puzzle").
+- **Generator progress reporting** for large boards (n≥9): a step-based `WasmGenerator` WASM type
+  would allow the UI to show real progress and support cancellation mid-search.
+- **Screenshot importer**: recognise a pasted image of a Queens board and extract the region layout.
 
 ## License
 

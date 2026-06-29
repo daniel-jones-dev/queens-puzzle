@@ -5,6 +5,7 @@ import { ConfirmModal } from "../components/ConfirmModal";
 import { useAnalysisWorker } from "../hooks/useAnalysisWorker";
 import { initWasm } from "../initWasm";
 import { computeCellSize, readRegions, readStates, toBase64Url } from "../utils";
+import type { GeneratorWorkerOut } from "../generatorWorker";
 import styles from "./EditorPage.module.css";
 
 const EDITOR_KEY = "queens-puzzle-editor-v1";
@@ -153,7 +154,11 @@ export function EditorPage() {
 
   const [sizeChangePending, setSizeChangePending] = useState<number | null>(null);
   const [clearPending, setClearPending] = useState(false);
+  const [generatePending, setGeneratePending] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [exportToast, setExportToast] = useState(false);
+
+  const generateWorkerRef = useRef<Worker | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // For wand tool: the region being extended (captured from the mousedown cell)
@@ -393,6 +398,59 @@ export function EditorPage() {
     try { localStorage.setItem(EDITOR_KEY, newPuzzle.to_json()); } catch {}
   }, []);
 
+  // ── Generate (async via Web Worker to avoid blocking the main thread) ────────
+
+  // Terminate any in-progress generation on unmount
+  useEffect(() => {
+    return () => {
+      if (generateWorkerRef.current) generateWorkerRef.current.terminate();
+    };
+  }, []);
+
+  const doGenerate = useCallback(() => {
+    if (generateWorkerRef.current) {
+      generateWorkerRef.current.terminate();
+      generateWorkerRef.current = null;
+    }
+    const rn = puzzleRef.current?.n() ?? 7;
+    const snap = takeSnapshot();
+    const seed = Math.floor(Math.random() * 2 ** 32) >>> 0;
+
+    setGenerating(true);
+    setGeneratePending(false);
+
+    const worker = new Worker(
+      new URL("../generatorWorker.ts", import.meta.url),
+      { type: "module" },
+    );
+    generateWorkerRef.current = worker;
+
+    worker.onmessage = (e: MessageEvent<GeneratorWorkerOut>) => {
+      if (generateWorkerRef.current !== worker) return;
+      worker.terminate();
+      generateWorkerRef.current = null;
+      try {
+        const newPuzzle = WasmPuzzle.from_json(e.data.json);
+        puzzleRef.current = newPuzzle;
+        setRegions(readRegions(newPuzzle));
+        setPlayerStates(readStates(newPuzzle));
+        pushUndo(snap);
+        setGenerating(false);
+        try { localStorage.setItem(EDITOR_KEY, newPuzzle.to_json()); } catch {}
+      } catch {
+        setGenerating(false);
+      }
+    };
+    worker.onerror = () => {
+      if (generateWorkerRef.current === worker) {
+        worker.terminate();
+        generateWorkerRef.current = null;
+        setGenerating(false);
+      }
+    };
+    worker.postMessage({ n: rn, seed });
+  }, []);
+
   // ── Clear board ───────────────────────────────────────────────────────────
 
   const doClearBoard = useCallback(() => {
@@ -590,8 +648,20 @@ export function EditorPage() {
             <div className={styles.dividerV} />
             <button
               className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={() => {
+                const hasWork = regions.some((row) => row.some((c) => c !== null));
+                if (hasWork) setGeneratePending(true);
+                else doGenerate();
+              }}
+              title="Generate a random unique puzzle"
+              disabled={generating}
+            >
+              {generating ? "Generating…" : "Generate"}
+            </button>
+            <button
+              className={`${styles.btn} ${styles.btnPrimary}`}
               onClick={handleShuffleQueens}
-              title="Place one random queen per region"
+              title="Scatter non-attacking queens as single-cell regions"
             >
               Shuffle queens
             </button>
@@ -700,6 +770,16 @@ export function EditorPage() {
           confirmColor="#c0392b"
           onConfirm={doClearBoard}
           onCancel={() => setClearPending(false)}
+        />
+      )}
+      {generatePending && (
+        <ConfirmModal
+          title="Generate a random puzzle?"
+          detail="Your current board will be replaced."
+          confirmLabel="Generate"
+          confirmColor="#2b3a5e"
+          onConfirm={doGenerate}
+          onCancel={() => setGeneratePending(false)}
         />
       )}
     </div>

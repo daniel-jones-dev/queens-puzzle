@@ -22,6 +22,55 @@ import {
 } from "../utils";
 import styles from "./PlayPage.module.css";
 
+// ── GenerateModal ─────────────────────────────────────────────────────────────
+
+function GenerateModal({
+  currentN,
+  onConfirm,
+  onCancel,
+}: {
+  currentN: number;
+  onConfirm: (n: number) => void;
+  onCancel: () => void;
+}) {
+  const [size, setSize] = React.useState(currentN);
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
+      onClick={onCancel}
+    >
+      <div
+        style={{ background: "white", padding: "1.5rem 2rem", borderRadius: "10px", boxShadow: "0 8px 32px rgba(0,0,0,0.2)", maxWidth: 320, width: "calc(100vw - 4rem)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p style={{ margin: "0 0 0.25rem", fontWeight: "bold", fontSize: "1.05rem" }}>New random puzzle</p>
+        <p style={{ margin: "0 0 1.25rem", color: "#555", fontSize: "0.9rem" }}>Generate a unique puzzle to play.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
+          <label style={{ fontSize: "0.9rem", color: "#555", flexShrink: 0 }}>Size</label>
+          <select
+            value={size}
+            onChange={(e) => setSize(Number(e.target.value))}
+            style={{ padding: "5px 8px", borderRadius: "6px", border: "1.5px solid #d1d5db", fontSize: "0.9rem", flex: 1 }}
+          >
+            {Array.from({ length: 9 }, (_, i) => i + 4).map((sz) => (
+              <option key={sz} value={sz}>{sz}×{sz}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+          <button onClick={onCancel} style={{ padding: "0.35rem 0.9rem", cursor: "pointer" }}>Cancel</button>
+          <button
+            onClick={() => onConfirm(size)}
+            style={{ background: "#2b3a5e", color: "white", border: "none", borderRadius: "4px", padding: "0.35rem 0.9rem", cursor: "pointer", fontWeight: "bold" }}
+          >
+            Generate
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const STORAGE_KEY = "queens-puzzle-v1";
 const TIMER_KEY = "queens-puzzle-timer";
 export const EDITOR_KEY = "queens-puzzle-editor-v1";
@@ -82,6 +131,7 @@ export function PlayPage() {
   const [playValidityWarning, setPlayValidityWarning] = useState<string | null>(null);
   const [puzzleUnique, setPuzzleUnique] = useState(false);
   const [resetPending, setResetPending] = useState(false);
+  const [generatePending, setGeneratePending] = useState(false);
   const [puzzleMeta, setPuzzleMeta] = useState<PuzzleMeta>({});
 
   const validityWorkerRef = useRef<Worker | null>(null);
@@ -421,6 +471,35 @@ export function PlayPage() {
     navigate("/editor");
   }, [navigate]);
 
+  const handleGenerate = useCallback(
+    (newN: number) => {
+      const seed = Math.floor(Math.random() * 2 ** 32);
+      const newPuzzle = WasmPuzzle.generate(newN, seed);
+      const rawJson = newPuzzle.to_json();
+      if (timerIntervalRef.current !== null) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      puzzleRef.current = newPuzzle;
+      setRegions(readRegions(newPuzzle));
+      setPlayerStates(readStates(newPuzzle));
+      setCellSize(computeCellSize(newN));
+      setTimerElapsed(0);
+      setTimerRunning(false);
+      setSolved(false);
+      setShowBanner(false);
+      setHint(null);
+      setNoHintMsg(false);
+      setPast([]);
+      setGeneratePending(false);
+      setPuzzleMeta(parsePuzzleMeta(rawJson));
+      try { localStorage.setItem(STORAGE_KEY, rawJson); } catch {}
+      try { localStorage.removeItem(TIMER_KEY); } catch {}
+      runPlayValidityCheck(rawJson);
+    },
+    [runPlayValidityCheck],
+  );
+
   // ── Render ────────────────────────────────────────────────────────────
 
   if (error) return <p style={{ color: "red", padding: "1rem" }}>Error: {error}</p>;
@@ -526,6 +605,9 @@ export function PlayPage() {
 
         {/* Actions */}
         <div className={styles.actionRow}>
+          <button className={styles.btn} onClick={() => setGeneratePending(true)}>
+            New puzzle
+          </button>
           <button className={styles.btn} onClick={handleOpenInSolver}>
             Open in Solver
           </button>
@@ -549,6 +631,13 @@ export function PlayPage() {
           confirmColor="#c0392b"
           onConfirm={doReset}
           onCancel={() => setResetPending(false)}
+        />
+      )}
+      {generatePending && (
+        <GenerateModal
+          currentN={n}
+          onConfirm={handleGenerate}
+          onCancel={() => setGeneratePending(false)}
         />
       )}
     </div>
