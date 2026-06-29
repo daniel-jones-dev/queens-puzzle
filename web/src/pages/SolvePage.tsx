@@ -435,7 +435,7 @@ export function SolvePage() {
 
   const difficulty = puzzleRef.current?.difficulty() ?? null;
   const hintInvolvedSet = frozenHint?.involved;
-  const hintChangesSet = frozenHint ? new Set(frozenHint.changes.keys()) : undefined;
+  const hintChangesSet = frozenHint?.changes;
 
   return (
     <div className={styles.page}>

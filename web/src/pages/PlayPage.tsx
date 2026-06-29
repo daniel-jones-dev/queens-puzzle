@@ -508,7 +508,7 @@ export function PlayPage() {
   const n = regions.length;
   const boardPx = cellSize * n;
   const hintInvolvedSet = hint?.involved;
-  const hintChangesSet = hint ? new Set(hint.changes.keys()) : undefined;
+  const hintChangesSet = hint?.changes;
   const difficulty = puzzleRef.current?.difficulty() ?? null;
 
   return (

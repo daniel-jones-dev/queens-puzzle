@@ -11,7 +11,7 @@ interface Props {
   locked?: boolean;
   cellSize?: number;
   hintInvolved?: Set<string>;
-  hintChanges?: Set<string>;
+  hintChanges?: Map<string, number>;
   editMode?: boolean;
   onCellPaint?: (row: number, col: number) => void;
   onPaintStart?: (row: number, col: number) => void;
@@ -162,7 +162,8 @@ export function Board({
           const state = cellStates[r]?.[c] ?? 0;
           const clashing = state === 1 && clashingSet.has(cellKey);
           const inHintMode = !!hintInvolved;
-          const hasHintChange = !!hintChanges?.has(cellKey);
+          const hintChangeState = hintChanges?.get(cellKey); // undefined | 1 (queen) | 2 (cross)
+          const hasHintChange = hintChangeState !== undefined;
           const isDimmed = inHintMode && !hintInvolved!.has(cellKey) && !hasHintChange;
 
           const isNull = region === null;
@@ -181,7 +182,6 @@ export function Board({
                 cursor: locked ? "default" : editMode ? "crosshair" : "pointer",
                 borderRight: c === n - 1 ? "none" : BORDER_THIN,
                 borderBottom: r === n - 1 ? "none" : BORDER_THIN,
-                opacity: isDimmed ? 0.35 : 1,
                 position: "relative",
               }}
             >
@@ -203,13 +203,22 @@ export function Board({
                   ✕
                 </span>
               )}
-              {hasHintChange && (
+              {isDimmed && (
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
-                    border: "3px solid #27ae60",
-                    boxSizing: "border-box",
+                    background: "rgba(0,0,0,0.42)",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
+              {hintChangeState === 2 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "repeating-linear-gradient(-45deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 2px, transparent 2px, transparent 8px)",
                     pointerEvents: "none",
                   }}
                 />
