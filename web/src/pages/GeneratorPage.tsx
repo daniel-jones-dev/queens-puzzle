@@ -384,15 +384,27 @@ export function GeneratorPage() {
 
   // ── Open results ────────────────────────────────────────────────────────────
 
-  const handleOpenInPlay = useCallback((json: string) => {
-    const encoded = toBase64Url(json);
+  function enrichResultJson(item: ResultItem): string {
+    try {
+      const obj = JSON.parse(item.json) as Record<string, unknown>;
+      obj.name = `Generated ${item.n}×${item.n} from seed ${item.seed}`;
+      obj.source = "daniel-jones-dev/queens-puzzle generator";
+      obj.date = new Date().toISOString().slice(0, 10);
+      return JSON.stringify(obj);
+    } catch {
+      return item.json;
+    }
+  }
+
+  const handleOpenInPlay = useCallback((item: ResultItem) => {
+    const encoded = toBase64Url(enrichResultJson(item));
     const playPath = window.location.pathname.replace(/\/generator\/?$/, "/play");
     window.open(`${window.location.origin}${playPath}#${encoded}`, "_blank");
   }, []);
 
-  const handleOpenInEdit = useCallback((json: string) => {
+  const handleOpenInEdit = useCallback((item: ResultItem) => {
     try {
-      const base = JSON.parse(json) as Record<string, unknown>;
+      const base = JSON.parse(enrichResultJson(item)) as Record<string, unknown>;
       if (base.states) delete base.states;
       localStorage.setItem(EDITOR_KEY, JSON.stringify(base));
     } catch {}
@@ -502,8 +514,8 @@ export function GeneratorPage() {
                 key={r.id}
                 item={r}
                 regionColors={regionColors}
-                onPlay={() => handleOpenInPlay(r.json)}
-                onEdit={() => handleOpenInEdit(r.json)}
+                onPlay={() => handleOpenInPlay(r)}
+                onEdit={() => handleOpenInEdit(r)}
               />
             ))}
           </div>
