@@ -6,6 +6,7 @@ import { PlayControls } from "../components/PlayControls";
 import { HintBar } from "../components/HintBar";
 import { SolvedBanner } from "../components/SolvedBanner";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { SettingsPanel } from "../components/SettingsPanel";
 import type { HintState } from "../types";
 import { useSettings } from "../contexts/SettingsContext";
 import { initWasm } from "../initWasm";
@@ -133,6 +134,7 @@ export function PlayPage() {
   const [resetPending, setResetPending] = useState(false);
   const [generatePending, setGeneratePending] = useState(false);
   const [puzzleMeta, setPuzzleMeta] = useState<PuzzleMeta>({});
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const validityWorkerRef = useRef<Worker | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -507,14 +509,15 @@ export function PlayPage() {
 
   const n = regions.length;
   const boardPx = cellSize * n;
+  const minWidth = Math.max(boardPx, 280);
   const hintInvolvedSet = hint?.involved;
   const hintChangesSet = hint ? new Set(hint.changes.keys()) : undefined;
   const difficulty = puzzleRef.current?.difficulty() ?? null;
 
   return (
     <div className={styles.page}>
-      {/* Puzzle meta */}
-      {(puzzleMeta.name || puzzleMeta.source || difficulty || puzzleUnique || showClock) && (
+      {/* Above-board: puzzle meta (left) + settings/reset cluster (right) */}
+      <div className={styles.aboveBoard} style={{ width: minWidth, maxWidth: "100%" }}>
         <div className={styles.puzzleMeta}>
           {(puzzleMeta.name || puzzleMeta.source) && (
             <div className={styles.metaRow}>
@@ -536,7 +539,29 @@ export function PlayPage() {
             </div>
           )}
         </div>
-      )}
+
+        <div className={styles.topControls}>
+          <div className={styles.settingsAnchor}>
+            <button
+              className={styles.iconBtn}
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-label="Settings"
+              title="Settings"
+            >
+              ⚙
+            </button>
+            {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+          </div>
+          <button
+            className={styles.iconBtn}
+            onClick={() => setResetPending(true)}
+            aria-label="Reset"
+            title="Reset puzzle"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
 
       {/* Board */}
       <div style={{ position: "relative" }}>
@@ -555,7 +580,7 @@ export function PlayPage() {
       </div>
 
       {/* Below-board area */}
-      <div className={styles.belowBoard} style={{ width: boardPx, maxWidth: "100%" }}>
+      <div className={styles.belowBoard} style={{ width: minWidth, maxWidth: "100%" }}>
         <SolvedBanner solved={showBanner} />
 
         {urlError && <WarningBanner msg={urlError} onDismiss={() => setUrlError(null)} />}
@@ -574,7 +599,6 @@ export function PlayPage() {
           hintPulsing={hintPulsing}
           onHint={handleHint}
           onUndo={handleUndo}
-          onReset={() => setResetPending(true)}
         />
 
         <HintBar
