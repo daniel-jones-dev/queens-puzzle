@@ -6,7 +6,7 @@ import { PlayControls } from "../components/PlayControls";
 import { HintBar } from "../components/HintBar";
 import { SolvedBanner } from "../components/SolvedBanner";
 import { ConfirmModal } from "../components/ConfirmModal";
-import { SettingsPanel } from "../components/SettingsPanel";
+import { AboveBoard } from "../components/AboveBoard";
 import type { HintState } from "../types";
 import { useSettings } from "../contexts/SettingsContext";
 import { initWasm } from "../initWasm";
@@ -134,7 +134,6 @@ export function PlayPage() {
   const [resetPending, setResetPending] = useState(false);
   const [generatePending, setGeneratePending] = useState(false);
   const [puzzleMeta, setPuzzleMeta] = useState<PuzzleMeta>({});
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const validityWorkerRef = useRef<Worker | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -516,52 +515,14 @@ export function PlayPage() {
 
   return (
     <div className={styles.page}>
-      {/* Above-board: puzzle meta (left) + settings/reset cluster (right) */}
-      <div className={styles.aboveBoard} style={{ width: minWidth, maxWidth: "100%" }}>
-        <div className={styles.puzzleMeta}>
-          {(puzzleMeta.name || puzzleMeta.source) && (
-            <div className={styles.metaRow}>
-              {puzzleMeta.name && <span className={styles.metaName}>{puzzleMeta.name}</span>}
-              {puzzleMeta.name && puzzleMeta.source && <span className={styles.metaSep}>·</span>}
-              {puzzleMeta.source && <span>by {puzzleMeta.source}</span>}
-            </div>
-          )}
-          {(difficulty || puzzleUnique || showClock) && (
-            <div className={styles.metaRow}>
-              {difficulty && (
-                <>
-                  <span>Difficulty:</span>
-                  <span className={styles.diffBadge}>{difficulty}</span>
-                </>
-              )}
-              {puzzleUnique && <span className={styles.uniqueBadge}>✓ Unique</span>}
-              {showClock && <span className={styles.timer}>{formatTime(timerElapsed)}</span>}
-            </div>
-          )}
-        </div>
-
-        <div className={styles.topControls}>
-          <div className={styles.settingsAnchor}>
-            <button
-              className={styles.iconBtn}
-              onClick={() => setSettingsOpen((v) => !v)}
-              aria-label="Settings"
-              title="Settings"
-            >
-              ⚙
-            </button>
-            {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
-          </div>
-          <button
-            className={styles.iconBtn}
-            onClick={() => setResetPending(true)}
-            aria-label="Reset"
-            title="Reset puzzle"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
+      <AboveBoard
+        width={minWidth}
+        meta={puzzleMeta}
+        difficulty={difficulty}
+        puzzleUnique={puzzleUnique}
+        timer={showClock ? formatTime(timerElapsed) : undefined}
+        onReset={() => setResetPending(true)}
+      />
 
       {/* Board */}
       <div style={{ position: "relative" }}>

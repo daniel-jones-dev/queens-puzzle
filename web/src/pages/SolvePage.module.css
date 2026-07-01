@@ -67,53 +67,10 @@
   text-decoration: underline;
 }
 
-/* ── Puzzle meta ─────────────────────────────────────────────────────────── */
-.puzzleMeta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text2);
-  flex-wrap: wrap;
-}
-
-.metaName {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.metaSep {
-  opacity: 0.35;
-}
-
-.diffBadge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: #fef3c7;
-  color: #92400e;
-}
-
 /* ── Controls ────────────────────────────────────────────────────────────── */
 .undoRow {
   display: flex;
   gap: 8px;
-}
-
-.settingsRow {
-  display: flex;
-  align-items: center;
-}
-
-.settingLabel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text2);
-  cursor: pointer;
-  user-select: none;
 }
 
 .btn {

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { WasmPuzzle } from "queens-puzzle-wasm";
 import { Board } from "../components/Board";
 import { SolvedBanner } from "../components/SolvedBanner";
+import { AboveBoard } from "../components/AboveBoard";
 import { initWasm } from "../initWasm";
 import type { HintState } from "../types";
 import {
@@ -209,7 +210,7 @@ export function SolvePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const locState = (location.state as LocationState | null) ?? null;
-  const { autoPlaceXs, setAutoPlaceXs } = useSettings();
+  const { autoPlaceXs } = useSettings();
 
   const puzzleRef = useRef<WasmPuzzle | null>(null);
   const [ready, setReady] = useState(false);
@@ -224,6 +225,8 @@ export function SolvePage() {
   const [initialized, setInitialized] = useState(false);
   const [frozenHint, setFrozenHint] = useState<HintState | null>(null);
   const frozenHintRef = useRef<HintState | null>(null);
+  const [puzzleUnique, setPuzzleUnique] = useState(false);
+  const validityWorkerRef = useRef<Worker | null>(null);
 
   // Keep ref in sync so handlers can read current hint without stale closure
   useEffect(() => { frozenHintRef.current = frozenHint; }, [frozenHint]);
@@ -275,9 +278,24 @@ export function SolvePage() {
         frozenHintRef.current = initialHint;
         setFrozenHint(initialHint);
         setReady(true);
+        setPuzzleUnique(false);
+        const vWorker = new Worker(new URL("../analysisWorker.ts", import.meta.url), { type: "module" });
+        validityWorkerRef.current = vWorker;
+        const capturedJson = rawJson;
+        vWorker.onmessage = (e: MessageEvent<{ count: number }>) => {
+          if (e.data.count === 1) setPuzzleUnique(true);
+          validityWorkerRef.current = null;
+          vWorker.terminate();
+        };
+        vWorker.onerror = () => { validityWorkerRef.current = null; vWorker.terminate(); };
+        vWorker.postMessage({ json: capturedJson });
       })
       .catch((err: unknown) => { setInitialized(true); setError(String(err)); });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      validityWorkerRef.current?.terminate();
+      validityWorkerRef.current = null;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -420,6 +438,21 @@ export function SolvePage() {
     setFrozenHint(next);
   }, [future]);
 
+  const handleReset = useCallback(() => {
+    const puzzle = puzzleRef.current;
+    if (!puzzle) return;
+    const n = puzzle.n();
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) puzzle.set_cell_state(r, c, 0);
+    setPlayerStates(readStates(puzzle));
+    setPast([]);
+    setFuture([]);
+    setSolved(false);
+    const next = computeNextHint(puzzle);
+    frozenHintRef.current = next;
+    setFrozenHint(next);
+  }, []);
+
   const handleContinueInPlay = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
@@ -436,6 +469,8 @@ export function SolvePage() {
   const difficulty = puzzleRef.current?.difficulty() ?? null;
   const hintInvolvedSet = frozenHint?.involved;
   const hintChangesSet = frozenHint ? new Set(frozenHint.changes.keys()) : undefined;
+  const boardPx = cellSize * regions.length;
+  const colWidth = Math.max(boardPx, 280);
 
   return (
     <div className={styles.page}>
@@ -443,27 +478,13 @@ export function SolvePage() {
 
         {/* ── Board column ── */}
         <div className={styles.boardCol}>
-          {/* Puzzle meta */}
-          {(puzzleMeta.name || puzzleMeta.source || difficulty) && (
-            <div className={styles.puzzleMeta}>
-              {puzzleMeta.name && (
-                <span className={styles.metaName}>{puzzleMeta.name}</span>
-              )}
-              {puzzleMeta.name && puzzleMeta.source && (
-                <span className={styles.metaSep}>·</span>
-              )}
-              {puzzleMeta.source && <span>by {puzzleMeta.source}</span>}
-              {(puzzleMeta.name || puzzleMeta.source) && difficulty && (
-                <span className={styles.metaSep}>·</span>
-              )}
-              {difficulty && (
-                <>
-                  <span>Difficulty:</span>
-                  <span className={styles.diffBadge}>{difficulty}</span>
-                </>
-              )}
-            </div>
-          )}
+          <AboveBoard
+            width={colWidth}
+            meta={puzzleMeta}
+            difficulty={difficulty}
+            puzzleUnique={puzzleUnique}
+            onReset={handleReset}
+          />
 
           {/* Board */}
           <div style={{ position: "relative" }}>
@@ -481,34 +502,24 @@ export function SolvePage() {
             />
           </div>
 
-          <SolvedBanner solved={solved} />
+          <div style={{ width: colWidth, maxWidth: "100%" }}>
+            <SolvedBanner solved={solved} />
 
-          {/* Undo / Redo */}
-          <div className={styles.undoRow}>
-            <button className={styles.btn} onClick={handleUndo} disabled={past.length === 0}>
-              ↩ Undo
-            </button>
-            <button className={styles.btn} onClick={handleRedo} disabled={future.length === 0}>
-              ↪ Redo
+            {/* Undo / Redo */}
+            <div className={styles.undoRow}>
+              <button className={styles.btn} onClick={handleUndo} disabled={past.length === 0}>
+                ↩ Undo
+              </button>
+              <button className={styles.btn} onClick={handleRedo} disabled={future.length === 0}>
+                ↪ Redo
+              </button>
+            </div>
+
+            {/* Continue in Play */}
+            <button className={`${styles.btn} ${styles.btnAccent}`} onClick={handleContinueInPlay}>
+              Continue in Play →
             </button>
           </div>
-
-          {/* Settings */}
-          <div className={styles.settingsRow}>
-            <label className={styles.settingLabel}>
-              <input
-                type="checkbox"
-                checked={autoPlaceXs}
-                onChange={(e) => setAutoPlaceXs(e.target.checked)}
-              />
-              Auto-place ✕
-            </label>
-          </div>
-
-          {/* Continue in Play */}
-          <button className={`${styles.btn} ${styles.btnAccent}`} onClick={handleContinueInPlay}>
-            Continue in Play →
-          </button>
 
           {/* Mobile: rules panel below board */}
           <div className={styles.mobileRules}>
