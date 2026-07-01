@@ -319,3 +319,10 @@ test.describe("Solver page: navigation", () => {
     await expect(page.locator("[data-testid='board']")).toBeVisible();
   });
 });
+
+test.describe("Solver page: unique badge", () => {
+  test("shows '✓ Unique' badge for a unique puzzle", async ({ page }) => {
+    await directToSolver(page);
+    await expect(page.locator("text=✓ Unique")).toBeVisible({ timeout: 8_000 });
+  });
+});

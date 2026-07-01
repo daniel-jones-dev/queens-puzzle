@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { WasmPuzzle } from "queens-puzzle-wasm";
 import { Board } from "../components/Board";
 import { SolvedBanner } from "../components/SolvedBanner";
-import { SettingsPanel } from "../components/SettingsPanel";
+import { AboveBoard } from "../components/AboveBoard";
 import { initWasm } from "../initWasm";
 import type { HintState } from "../types";
 import {
@@ -225,7 +225,8 @@ export function SolvePage() {
   const [initialized, setInitialized] = useState(false);
   const [frozenHint, setFrozenHint] = useState<HintState | null>(null);
   const frozenHintRef = useRef<HintState | null>(null);
-  const [solverSettingsOpen, setSolverSettingsOpen] = useState(false);
+  const [puzzleUnique, setPuzzleUnique] = useState(false);
+  const validityWorkerRef = useRef<Worker | null>(null);
 
   // Keep ref in sync so handlers can read current hint without stale closure
   useEffect(() => { frozenHintRef.current = frozenHint; }, [frozenHint]);
@@ -277,9 +278,24 @@ export function SolvePage() {
         frozenHintRef.current = initialHint;
         setFrozenHint(initialHint);
         setReady(true);
+        setPuzzleUnique(false);
+        const vWorker = new Worker(new URL("../analysisWorker.ts", import.meta.url), { type: "module" });
+        validityWorkerRef.current = vWorker;
+        const capturedJson = rawJson;
+        vWorker.onmessage = (e: MessageEvent<{ count: number }>) => {
+          if (e.data.count === 1) setPuzzleUnique(true);
+          validityWorkerRef.current = null;
+          vWorker.terminate();
+        };
+        vWorker.onerror = () => { validityWorkerRef.current = null; vWorker.terminate(); };
+        vWorker.postMessage({ json: capturedJson });
       })
       .catch((err: unknown) => { setInitialized(true); setError(String(err)); });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      validityWorkerRef.current?.terminate();
+      validityWorkerRef.current = null;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -454,6 +470,7 @@ export function SolvePage() {
   const hintInvolvedSet = frozenHint?.involved;
   const hintChangesSet = frozenHint ? new Set(frozenHint.changes.keys()) : undefined;
   const boardPx = cellSize * regions.length;
+  const colWidth = Math.max(boardPx, 280);
 
   return (
     <div className={styles.page}>
@@ -461,45 +478,13 @@ export function SolvePage() {
 
         {/* ── Board column ── */}
         <div className={styles.boardCol}>
-          {/* Above-board: puzzle meta + top-right controls */}
-          <div className={styles.aboveBoard} style={{ width: Math.max(boardPx, 280), maxWidth: "100%" }}>
-            <div className={styles.puzzleMeta}>
-              {(puzzleMeta.name || puzzleMeta.source) && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  {puzzleMeta.name && <span className={styles.metaName}>{puzzleMeta.name}</span>}
-                  {puzzleMeta.name && puzzleMeta.source && <span className={styles.metaSep}>·</span>}
-                  {puzzleMeta.source && <span>by {puzzleMeta.source}</span>}
-                </div>
-              )}
-              {difficulty && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span>Difficulty:</span>
-                  <span className={styles.diffBadge}>{difficulty}</span>
-                </div>
-              )}
-            </div>
-            <div className={styles.topControls}>
-              <div className={styles.settingsAnchor}>
-                <button
-                  className={styles.iconBtn}
-                  onClick={() => setSolverSettingsOpen((v) => !v)}
-                  aria-label="Settings"
-                  title="Settings"
-                >
-                  ⚙
-                </button>
-                {solverSettingsOpen && <SettingsPanel onClose={() => setSolverSettingsOpen(false)} />}
-              </div>
-              <button
-                className={styles.iconBtn}
-                onClick={handleReset}
-                aria-label="Reset"
-                title="Reset puzzle"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
+          <AboveBoard
+            width={colWidth}
+            meta={puzzleMeta}
+            difficulty={difficulty}
+            puzzleUnique={puzzleUnique}
+            onReset={handleReset}
+          />
 
           {/* Board */}
           <div style={{ position: "relative" }}>
@@ -517,22 +502,24 @@ export function SolvePage() {
             />
           </div>
 
-          <SolvedBanner solved={solved} />
+          <div style={{ width: colWidth, maxWidth: "100%" }}>
+            <SolvedBanner solved={solved} />
 
-          {/* Undo / Redo */}
-          <div className={styles.undoRow}>
-            <button className={styles.btn} onClick={handleUndo} disabled={past.length === 0}>
-              ↩ Undo
-            </button>
-            <button className={styles.btn} onClick={handleRedo} disabled={future.length === 0}>
-              ↪ Redo
+            {/* Undo / Redo */}
+            <div className={styles.undoRow}>
+              <button className={styles.btn} onClick={handleUndo} disabled={past.length === 0}>
+                ↩ Undo
+              </button>
+              <button className={styles.btn} onClick={handleRedo} disabled={future.length === 0}>
+                ↪ Redo
+              </button>
+            </div>
+
+            {/* Continue in Play */}
+            <button className={`${styles.btn} ${styles.btnAccent}`} onClick={handleContinueInPlay}>
+              Continue in Play →
             </button>
           </div>
-
-          {/* Continue in Play */}
-          <button className={`${styles.btn} ${styles.btnAccent}`} onClick={handleContinueInPlay}>
-            Continue in Play →
-          </button>
 
           {/* Mobile: rules panel below board */}
           <div className={styles.mobileRules}>

@@ -566,7 +566,7 @@ export function EditorPage() {
       {/* Desktop two-column layout */}
       <div className={styles.layout}>
         {/* Left: board + toolbar + actions */}
-        <div className={styles.boardCol} style={{ maxWidth: n * cellSize }}>
+        <div className={styles.boardCol} style={{ minWidth: Math.max(n * cellSize, 280) }}>
           {/* Board */}
           <Board
             regions={regions}
