@@ -502,7 +502,7 @@ export function SolvePage() {
             />
           </div>
 
-          <div style={{ width: colWidth, maxWidth: "100%" }}>
+          <div className={styles.belowBoard} style={{ width: colWidth, maxWidth: "100%" }}>
             <SolvedBanner solved={solved} />
 
             {/* Undo / Redo */}
