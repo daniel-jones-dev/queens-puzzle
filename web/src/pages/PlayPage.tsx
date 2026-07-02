@@ -396,7 +396,7 @@ export function PlayPage() {
     const rawInvolved = wasmHint.involved();
     for (let i = 0; i < rawInvolved.length; i += 2)
       involved.add(`${rawInvolved[i]},${rawInvolved[i + 1]}`);
-    setHint({ description: wasmHint.description(), changes, involved });
+    setHint({ codeName: wasmHint.name(), description: wasmHint.description(), changes, involved });
     setNoHintMsg(false);
   }, []);
 
@@ -449,12 +449,16 @@ export function PlayPage() {
   const handleShare = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
-    const encoded = toBase64Url(puzzle.to_json());
+    const base = JSON.parse(puzzle.to_json()) as Record<string, unknown>;
+    if (puzzleMeta.name) base.name = puzzleMeta.name;
+    if (puzzleMeta.source) base.source = puzzleMeta.source;
+    if (puzzleMeta.date) base.date = puzzleMeta.date;
+    const encoded = toBase64Url(JSON.stringify(base));
     const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
     navigator.clipboard.writeText(url).catch(() => {});
     setShareToast(true);
     setTimeout(() => setShareToast(false), 2000);
-  }, []);
+  }, [puzzleMeta]);
 
   const handleOpenInSolver = useCallback(() => {
     const puzzle = puzzleRef.current;
@@ -510,7 +514,7 @@ export function PlayPage() {
   const boardPx = cellSize * n;
   const minWidth = Math.max(boardPx, 280);
   const hintInvolvedSet = hint?.involved;
-  const hintChangesSet = hint ? new Set(hint.changes.keys()) : undefined;
+  const hintChangesSet = hint?.changes;
   const difficulty = puzzleRef.current?.difficulty() ?? null;
 
   return (
@@ -543,6 +547,11 @@ export function PlayPage() {
       {/* Below-board area */}
       <div className={styles.belowBoard} style={{ width: minWidth, maxWidth: "100%" }}>
         <SolvedBanner solved={showBanner} />
+        {showBanner && (
+          <button className={styles.btn} style={{ width: "100%" }} onClick={() => setGeneratePending(true)}>
+            New puzzle
+          </button>
+        )}
 
         {urlError && <WarningBanner msg={urlError} onDismiss={() => setUrlError(null)} />}
         {playValidityWarning && (
@@ -590,9 +599,6 @@ export function PlayPage() {
 
         {/* Actions */}
         <div className={styles.actionRow}>
-          <button className={styles.btn} onClick={() => setGeneratePending(true)}>
-            New puzzle
-          </button>
           <button className={styles.btn} onClick={handleOpenInSolver}>
             Open in Solver
           </button>

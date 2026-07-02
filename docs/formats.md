@@ -41,14 +41,21 @@ import/export), and the CLI's `--json` flag.
 
 ```json
 {
+  "name":    "Wednesday's Puzzle",
+  "source":  "Daniel Jones",
+  "date":    "2026-06-29",
   "regions": [[0, 0, 1, 1], [0, 2, 1, 1], ...],
   "states":  [[0, 0, 0, 0], [0, 1, 2, 0], ...]
 }
 ```
 
+- `name` — human-readable puzzle title (optional).
+- `source` — attribution / author (optional).
+- `date` — ISO 8601 date the puzzle was created or generated, e.g. `"2026-06-29"` (optional).
 - `regions[row][col]` — 0-based region index, or `null` for an unassigned cell (editor mode only).
 - `states[row][col]` — `0` Unknown, `1` Queen, `2` Empty.
 - `states` is omitted when all cells are Unknown (i.e. an unsolved puzzle with no progress).
 - `n` is inferred from `regions.length`; the board is always square.
+- All optional fields are omitted when not set; the solver and generator do not emit them.
 
 Implemented in `core/src/io/json.rs`.

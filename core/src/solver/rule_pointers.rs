@@ -43,6 +43,11 @@ impl Rule for Pointers {
             }
 
             return Some(RuleResult {
+                code_name: if self.check_row {
+                    "region_spans_row"
+                } else {
+                    "region_spans_col"
+                },
                 changes: other_unknowns
                     .into_iter()
                     .map(|cell| (cell, Empty))

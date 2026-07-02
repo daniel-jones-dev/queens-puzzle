@@ -77,10 +77,9 @@ test.describe("Solver page: loading", () => {
 // ── Rules panel ─────────────────────────────────────────────────────────────
 
 test.describe("Solver page: rules panel", () => {
-  test("shows all four rule categories", async ({ page }) => {
+  test("shows all three rule difficulty categories", async ({ page }) => {
     await openSolverFromPlay(page);
     const panel = desktopPanel(page);
-    await expect(panel.locator("text=Basic")).toBeVisible();
     await expect(panel.locator("text=Easy")).toBeVisible();
     await expect(panel.locator("text=Medium")).toBeVisible();
     await expect(panel.locator("text=Hard")).toBeVisible();

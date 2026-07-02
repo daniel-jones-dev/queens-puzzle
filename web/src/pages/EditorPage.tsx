@@ -629,10 +629,11 @@ export function EditorPage() {
             </button>
           </div>
 
-          {/* Action row 1 */}
+          {/* Row 1: Undo · Redo · Clear */}
           <div className={styles.actionsRow}>
             <button
               className={styles.btn}
+              style={{ flex: 1 }}
               onClick={handleUndo}
               disabled={editorPast.length === 0}
             >
@@ -640,14 +641,43 @@ export function EditorPage() {
             </button>
             <button
               className={styles.btn}
+              style={{ flex: 1 }}
               onClick={handleRedo}
               disabled={editorFuture.length === 0}
             >
               ↪ Redo
             </button>
-            <div className={styles.dividerV} />
+            <button
+              className={styles.btn}
+              style={{ flex: 1 }}
+              onClick={() => {
+                const hasWork = regions.some((row) => row.some((c) => c !== null));
+                if (hasWork) setClearPending(true);
+                else doClearBoard();
+              }}
+            >
+              Clear board
+            </button>
+          </div>
+
+          {/* Row 2: Size · Generate · Shuffle */}
+          <div className={styles.actionsRow}>
+            <div style={{ flex: 1, position: "relative", display: "flex" }}>
+              <button className={styles.btn} style={{ flex: 1 }}>Size: {n}×{n} ▾</button>
+              <select
+                value={n}
+                onChange={(e) => handleSizeChange(Number(e.target.value))}
+                aria-label="Board size"
+                style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%" }}
+              >
+                {Array.from({ length: 9 }, (_, i) => i + 4).map((sz) => (
+                  <option key={sz} value={sz}>{sz}×{sz}</option>
+                ))}
+              </select>
+            </div>
             <button
               className={`${styles.btn} ${styles.btnPrimary}`}
+              style={{ flex: 1 }}
               onClick={() => {
                 const hasWork = regions.some((row) => row.some((c) => c !== null));
                 if (hasWork) setGeneratePending(true);
@@ -660,47 +690,26 @@ export function EditorPage() {
             </button>
             <button
               className={`${styles.btn} ${styles.btnPrimary}`}
+              style={{ flex: 1 }}
               onClick={handleShuffleQueens}
               title="Scatter non-attacking queens as single-cell regions"
             >
               Shuffle queens
             </button>
-            <button
-              className={styles.btn}
-              onClick={() => {
-                const hasWork = regions.some((row) => row.some((c) => c !== null));
-                if (hasWork) setClearPending(true);
-                else doClearBoard();
-              }}
-            >
-              Clear board
-            </button>
           </div>
 
-          {/* Action row 2 */}
+          {/* Row 3: Share · Open in Play */}
           <div className={styles.actionsRow}>
-            <div style={{ position: "relative", display: "inline-flex" }}>
-              <button className={styles.btn}>Size: {n}×{n} ▾</button>
-              <select
-                value={n}
-                onChange={(e) => handleSizeChange(Number(e.target.value))}
-                aria-label="Board size"
-                style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%" }}
-              >
-                {Array.from({ length: 9 }, (_, i) => i + 4).map((sz) => (
-                  <option key={sz} value={sz}>{sz}×{sz}</option>
-                ))}
-              </select>
-            </div>
-            <div className={styles.dividerV} />
             <button
               className={`${styles.btn}${exportToast ? ` ${styles.btnToast}` : ""}`}
+              style={{ flex: 1 }}
               onClick={handleExport}
             >
               {exportToast ? "✓ Copied!" : "Share / Export"}
             </button>
             <button
               className={`${styles.btn} ${styles.btnPrimary}`}
+              style={{ flex: 1 }}
               onClick={handleOpenInPlay}
             >
               Open in Play ↗

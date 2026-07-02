@@ -63,6 +63,7 @@ export function hintComplete(puzzle: WasmPuzzle, changes: Map<string, number>): 
 export interface PuzzleMeta {
   name?: string;
   source?: string;
+  date?: string;
 }
 
 export function parsePuzzleMeta(json: string): PuzzleMeta {
@@ -71,6 +72,7 @@ export function parsePuzzleMeta(json: string): PuzzleMeta {
     return {
       name: typeof obj.name === "string" ? obj.name : undefined,
       source: typeof obj.source === "string" ? obj.source : undefined,
+      date: typeof obj.date === "string" ? obj.date : undefined,
     };
   } catch {
     return {};

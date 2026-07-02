@@ -11,7 +11,7 @@ interface Props {
   locked?: boolean;
   cellSize?: number;
   hintInvolved?: Set<string>;
-  hintChanges?: Set<string>;
+  hintChanges?: Map<string, number>;
   editMode?: boolean;
   onCellPaint?: (row: number, col: number) => void;
   onPaintStart?: (row: number, col: number) => void;
@@ -33,7 +33,10 @@ const CHECKERBOARD_STYLE = {
   backgroundColor: "#e4e4e4",
 };
 
-interface Segment { x1: number; y1: number; x2: number; y2: number }
+interface Segment {
+  x1: number; y1: number; x2: number; y2: number;
+  adj: [[number, number], [number, number]];
+}
 
 function regionBorderSegments(regions: (number | null)[][], cellSize: number): Segment[] {
   const n = regions.length;
@@ -43,11 +46,11 @@ function regionBorderSegments(regions: (number | null)[][], cellSize: number): S
       const reg = regions[r][c];
       if (c < n - 1 && regions[r][c + 1] !== reg) {
         const x = (c + 1) * cellSize;
-        segs.push({ x1: x, y1: r * cellSize, x2: x, y2: (r + 1) * cellSize });
+        segs.push({ x1: x, y1: r * cellSize, x2: x, y2: (r + 1) * cellSize, adj: [[r, c], [r, c + 1]] });
       }
       if (r < n - 1 && regions[r + 1][c] !== reg) {
         const y = (r + 1) * cellSize;
-        segs.push({ x1: c * cellSize, y1: y, x2: (c + 1) * cellSize, y2: y });
+        segs.push({ x1: c * cellSize, y1: y, x2: (c + 1) * cellSize, y2: y, adj: [[r, c], [r + 1, c]] });
       }
     }
   }
@@ -91,6 +94,15 @@ export function Board({
 
   const segments = regionBorderSegments(regions, cellSize);
   const boardPx = n * cellSize;
+  const inHintMode = !!hintInvolved;
+
+  function isSegDimmed(s: Segment): boolean {
+    if (!inHintMode) return false;
+    return s.adj.every(([r, c]) => {
+      const key = `${r},${c}`;
+      return !hintInvolved!.has(key) && !hintChanges?.has(key);
+    });
+  }
 
   return (
     <div
@@ -161,8 +173,8 @@ export function Board({
           const cellKey = `${r},${c}`;
           const state = cellStates[r]?.[c] ?? 0;
           const clashing = state === 1 && clashingSet.has(cellKey);
-          const inHintMode = !!hintInvolved;
-          const hasHintChange = !!hintChanges?.has(cellKey);
+          const hintChangeState = hintChanges?.get(cellKey); // undefined | 1 (queen) | 2 (cross)
+          const hasHintChange = hintChangeState !== undefined;
           const isDimmed = inHintMode && !hintInvolved!.has(cellKey) && !hasHintChange;
 
           const isNull = region === null;
@@ -181,7 +193,6 @@ export function Board({
                 cursor: locked ? "default" : editMode ? "crosshair" : "pointer",
                 borderRight: c === n - 1 ? "none" : BORDER_THIN,
                 borderBottom: r === n - 1 ? "none" : BORDER_THIN,
-                opacity: isDimmed ? 0.35 : 1,
                 position: "relative",
               }}
             >
@@ -203,13 +214,22 @@ export function Board({
                   ✕
                 </span>
               )}
-              {hasHintChange && (
+              {isDimmed && (
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
-                    border: "3px solid #27ae60",
-                    boxSizing: "border-box",
+                    background: state !== 0 ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.42)",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
+              {hintChangeState === 2 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "repeating-linear-gradient(-45deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 2px, transparent 2px, transparent 8px)",
                     pointerEvents: "none",
                   }}
                 />
@@ -249,7 +269,7 @@ export function Board({
           <line
             key={i}
             x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-            stroke="rgba(0,0,0,0.5)"
+            stroke={isSegDimmed(s) ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.5)"}
             strokeWidth={2.5}
             strokeLinecap="square"
           />

@@ -5,6 +5,15 @@ use serde::{Deserialize, Serialize};
 /// The canonical puzzle interchange format used by the web UI, WASM API, and URL sharing.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PuzzleJson {
+    /// Human-readable puzzle name; omitted by the solver/generator output
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Attribution; omitted by the solver/generator output
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    /// ISO 8601 date the puzzle was created or generated (YYYY-MM-DD); omitted by solver output
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
     /// `regions[row][col]` — region index (0-based) or `null` for an unassigned cell
     pub regions: Vec<Vec<Option<u8>>>,
     /// `states[row][col]` — 0 = Unknown, 1 = Queen, 2 = Empty; omitted when all Unknown
@@ -44,7 +53,13 @@ impl PuzzleJson {
             )
         };
 
-        PuzzleJson { regions, states }
+        PuzzleJson {
+            name: None,
+            source: None,
+            date: None,
+            regions,
+            states,
+        }
     }
 }
 

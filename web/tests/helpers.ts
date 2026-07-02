@@ -26,6 +26,27 @@ export async function clickCell(
   await page.waitForTimeout(30);
 }
 
+/**
+ * Solve the current Play puzzle by repeatedly requesting and applying hints.
+ * Stops when the solved banner appears or no more hints are available.
+ */
+export async function solveViaHints(page: Page) {
+  const hintBtn = page.locator("button:has-text('Hint')");
+  for (let i = 0; i < 50; i++) {
+    if (await page.locator("text=Congratulations").isVisible()) break;
+    if (!await hintBtn.isVisible()) break;
+    await hintBtn.click();
+    await page.waitForTimeout(600);
+    const applyBtn = page.locator("button:has-text('Apply')").first();
+    if (await applyBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await applyBtn.click();
+      await page.waitForTimeout(200);
+    } else {
+      break;
+    }
+  }
+}
+
 /** Drag-paint across the entire first row of the board. */
 export async function dragPaintFirstRow(page: Page, board: Locator) {
   const bb = await board.boundingBox();
