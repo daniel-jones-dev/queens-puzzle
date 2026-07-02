@@ -543,6 +543,11 @@ export function PlayPage() {
       {/* Below-board area */}
       <div className={styles.belowBoard} style={{ width: minWidth, maxWidth: "100%" }}>
         <SolvedBanner solved={showBanner} />
+        {showBanner && (
+          <button className={styles.btn} style={{ width: "100%" }} onClick={() => setGeneratePending(true)}>
+            New puzzle
+          </button>
+        )}
 
         {urlError && <WarningBanner msg={urlError} onDismiss={() => setUrlError(null)} />}
         {playValidityWarning && (
@@ -590,9 +595,6 @@ export function PlayPage() {
 
         {/* Actions */}
         <div className={styles.actionRow}>
-          <button className={styles.btn} onClick={() => setGeneratePending(true)}>
-            New puzzle
-          </button>
           <button className={styles.btn} onClick={handleOpenInSolver}>
             Open in Solver
           </button>
