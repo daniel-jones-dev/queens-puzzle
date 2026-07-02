@@ -5,42 +5,49 @@
  * Run with: npx playwright test tests/generate.test.ts
  */
 import { test, expect } from "@playwright/test";
-import { freshLoad, clickCell } from "./helpers";
+import { freshLoad, clickCell, solveViaHints } from "./helpers";
 
 // ── Play page: New puzzle ─────────────────────────────────────────────────────
 
 test.describe("Play: new puzzle", () => {
-  test("'New puzzle' button opens the generate modal", async ({ page }) => {
+  test("'New puzzle' button is hidden until puzzle is solved", async ({ page }) => {
     await freshLoad(page);
+    await expect(page.locator("button:has-text('New puzzle')")).not.toBeVisible();
+    await solveViaHints(page);
+    await expect(page.locator("text=Congratulations")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("button:has-text('New puzzle')")).toBeVisible();
+  });
+
+  test("'New puzzle' button opens the generate modal after solving", async ({ page }) => {
+    await freshLoad(page);
+    await solveViaHints(page);
+    await expect(page.locator("button:has-text('New puzzle')")).toBeVisible({ timeout: 5_000 });
     await page.locator("button:has-text('New puzzle')").click();
     await expect(page.locator("text=New random puzzle")).toBeVisible();
     await expect(page.locator("select")).toBeVisible();
   });
 
-  test("modal cancel leaves the current puzzle intact", async ({ page }) => {
+  test("modal cancel after solving leaves the solved puzzle intact", async ({ page }) => {
     await freshLoad(page);
-
-    // Place a cross so we can detect the puzzle hasn't changed
-    const board = page.locator("[data-testid='board']").first();
-    const bb = await board.boundingBox();
-    if (!bb) throw new Error("board not found");
-    await clickCell(page, board, bb.width / 7, 3, 3);
-    await expect(board.locator("[class*='cross']").first()).toBeVisible();
+    await solveViaHints(page);
+    await expect(page.locator("button:has-text('New puzzle')")).toBeVisible({ timeout: 5_000 });
 
     await page.locator("button:has-text('New puzzle')").click();
     await expect(page.locator("text=New random puzzle")).toBeVisible();
     await page.locator("button:has-text('Cancel')").click();
     await page.waitForTimeout(150);
 
-    // Cross is still there — puzzle unchanged
+    // Modal gone, solved banner still visible
     await expect(page.locator("text=New random puzzle")).not.toBeVisible();
-    await expect(board.locator("[class*='cross']").first()).toBeVisible();
+    await expect(page.locator("text=Congratulations")).toBeVisible();
   });
 
   test("generating a 5×5 puzzle replaces the board with no player marks", async ({
     page,
   }) => {
     await freshLoad(page);
+    await solveViaHints(page);
+    await expect(page.locator("button:has-text('New puzzle')")).toBeVisible({ timeout: 5_000 });
 
     await page.locator("button:has-text('New puzzle')").click();
     await expect(page.locator("text=New random puzzle")).toBeVisible();
