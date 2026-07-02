@@ -219,17 +219,7 @@ export function Board({
                   style={{
                     position: "absolute",
                     inset: 0,
-                    background: "rgba(0,0,0,0.42)",
-                    pointerEvents: "none",
-                  }}
-                />
-              )}
-              {inHintMode && !isDimmed && (
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "rgba(0,0,0,0.1)",
+                    background: state !== 0 ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.42)",
                     pointerEvents: "none",
                   }}
                 />

@@ -449,12 +449,16 @@ export function PlayPage() {
   const handleShare = useCallback(() => {
     const puzzle = puzzleRef.current;
     if (!puzzle) return;
-    const encoded = toBase64Url(puzzle.to_json());
+    const base = JSON.parse(puzzle.to_json()) as Record<string, unknown>;
+    if (puzzleMeta.name) base.name = puzzleMeta.name;
+    if (puzzleMeta.source) base.source = puzzleMeta.source;
+    if (puzzleMeta.date) base.date = puzzleMeta.date;
+    const encoded = toBase64Url(JSON.stringify(base));
     const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
     navigator.clipboard.writeText(url).catch(() => {});
     setShareToast(true);
     setTimeout(() => setShareToast(false), 2000);
-  }, []);
+  }, [puzzleMeta]);
 
   const handleOpenInSolver = useCallback(() => {
     const puzzle = puzzleRef.current;
