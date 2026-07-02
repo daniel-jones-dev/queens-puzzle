@@ -9,6 +9,9 @@ use std::collections::HashSet;
 pub struct MarkQueen;
 
 impl MarkQueen {
+    /// Checks if a block of cells in a Queens Puzzle contains exactly one cell in the `Unknown` state
+    /// and no cells in the `Queen` state. Returns `Some(Cell)` with the single `Unknown` cell,
+    /// otherwise returns `None`.
     fn check_block_has_single_unknown_and_no_queen(
         &self,
         puzzle: &QueensPuzzle,
@@ -48,6 +51,7 @@ impl Rule for MarkQueen {
                         block_name(block_type, block_index),
                         cell_name(single_unknown_cell)
                     ),
+                    hint: format!("All other cells in this {block_type} are eliminated"),
                 });
             }
         }

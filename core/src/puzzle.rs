@@ -13,6 +13,7 @@ pub enum State {
     Empty,
 }
 
+#[derive(Copy, Clone, PartialEq)]
 pub enum BlockType {
     Column,
     Row,

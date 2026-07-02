@@ -26,6 +26,7 @@ impl Rule for MarkEmpty {
                     the same row, column, region and neighbouring cells must be empty",
                         cell_name(queen_cell)
                     ),
+                    hint: "Queens cannot be placed in the same row, column, or region, and may not touch diagonally".to_string(),
                 });
             }
         }

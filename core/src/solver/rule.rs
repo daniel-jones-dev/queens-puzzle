@@ -12,6 +12,8 @@ pub struct RuleResult {
     pub involved: Vec<Cell>,
     /// Human-readable explanation
     pub description: String,
+    /// Human-readable short description ie hint
+    pub hint: String,
 }
 
 impl RuleResult {
