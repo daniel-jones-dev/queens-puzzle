@@ -25,6 +25,29 @@ jobs:
       - name: Test
         run: cargo test --verbose
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Cargo audit
+        run: cargo audit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+      - name: npm audit
+        run: npm audit --audit-level=high
+        working-directory: web
+
   lint-web:
     name: Lint & typecheck web
     runs-on: ubuntu-latest
