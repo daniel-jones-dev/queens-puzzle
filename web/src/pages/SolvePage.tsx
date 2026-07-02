@@ -468,7 +468,7 @@ export function SolvePage() {
 
   const difficulty = puzzleRef.current?.difficulty() ?? null;
   const hintInvolvedSet = frozenHint?.involved;
-  const hintChangesSet = frozenHint ? new Set(frozenHint.changes.keys()) : undefined;
+  const hintChangesSet = frozenHint?.changes;
   const boardPx = cellSize * regions.length;
   const colWidth = Math.max(boardPx, 280);
 

@@ -510,7 +510,7 @@ export function PlayPage() {
   const boardPx = cellSize * n;
   const minWidth = Math.max(boardPx, 280);
   const hintInvolvedSet = hint?.involved;
-  const hintChangesSet = hint ? new Set(hint.changes.keys()) : undefined;
+  const hintChangesSet = hint?.changes;
   const difficulty = puzzleRef.current?.difficulty() ?? null;
 
   return (
