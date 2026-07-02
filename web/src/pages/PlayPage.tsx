@@ -396,7 +396,7 @@ export function PlayPage() {
     const rawInvolved = wasmHint.involved();
     for (let i = 0; i < rawInvolved.length; i += 2)
       involved.add(`${rawInvolved[i]},${rawInvolved[i + 1]}`);
-    setHint({ description: wasmHint.description(), changes, involved });
+    setHint({ codeName: wasmHint.name(), description: wasmHint.description(), changes, involved });
     setNoHintMsg(false);
   }, []);
 

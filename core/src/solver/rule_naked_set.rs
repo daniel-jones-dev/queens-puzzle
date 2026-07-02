@@ -43,6 +43,7 @@ impl Rule for NakedSet {
             }
 
             return Some(RuleResult {
+                code_name: "naked_set",
                 changes: common_connected_unknowns
                     .into_iter()
                     .map(|cell| (cell, State::Empty))
