@@ -17,6 +17,10 @@ queens-puzzle/
 
 The root `Cargo.toml` is simultaneously the workspace root and the CLI binary package.
 
+## Git
+
+The `main` branch is protected — never push directly to it. All changes go through branches and PRs.
+
 ## Build commands
 
 ```bash
