@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-orange.svg)](https://doc.rust-lang.org/edition-guide/rust-2024/)
 
+**[Try the web app →](https://daniel-jones-dev.github.io/queens-puzzle/)**
+
 A solver and generator for the **Queens** puzzle game (as made popular by LinkedIn).
 
 This tool can solve any puzzle: using logical deduction steps the way a person would to rate its difficulty, or using
