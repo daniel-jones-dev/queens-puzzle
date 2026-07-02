@@ -304,6 +304,7 @@ export function GeneratorPage() {
 
     worker.onmessage = (e: MessageEvent<GeneratorWorkerOut>) => {
       const msg = e.data;
+      if (msg.type === "error") return;
       setWorkerStates((prev) =>
         prev.map((w) =>
           w.id === id ? { ...w, tried: msg.tried, lastSeed: msg.seed } : w,

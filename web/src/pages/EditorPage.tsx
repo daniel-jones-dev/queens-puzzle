@@ -427,6 +427,12 @@ export function EditorPage() {
 
     worker.onmessage = (e: MessageEvent<GeneratorWorkerOut>) => {
       if (generateWorkerRef.current !== worker) return;
+      if (e.data.type === "error") {
+        worker.terminate();
+        generateWorkerRef.current = null;
+        setGenerating(false);
+        return;
+      }
       worker.terminate();
       generateWorkerRef.current = null;
       try {
