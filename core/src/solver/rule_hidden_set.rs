@@ -29,6 +29,7 @@ impl Rule for HiddenSet {
                 .map(|(region, _)| {
                     region
                         .iter()
+                        .filter(|cell| puzzle[*cell] == State::Unknown)
                         .map(|cell| cell.row)
                         .collect::<HashSet<usize>>()
                 })
@@ -52,6 +53,7 @@ impl Rule for HiddenSet {
                     .map(|(region, _)| {
                         region
                             .iter()
+                            .filter(|cell| puzzle[*cell] == State::Unknown)
                             .map(|cell| cell.col)
                             .collect::<HashSet<usize>>()
                     })

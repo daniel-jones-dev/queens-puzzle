@@ -14,7 +14,7 @@ impl Rule for NakedSet {
                 .into_iter()
                 .filter(|cell| puzzle[cell] == State::Unknown)
                 .collect::<Vec<_>>();
-            if unknown_cells.len() <= self.n {
+            if unknown_cells.len() > self.n {
                 continue;
             }
 
