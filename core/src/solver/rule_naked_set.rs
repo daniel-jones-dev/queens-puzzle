@@ -54,6 +54,7 @@ impl Rule for NakedSet {
                 must be empty",
                     block_name(block_type, block_index)
                 ),
+                hint: format!("The highlighted {block_type} must contain a queen. A queen in the striped cells blocks this {block_type}.", )
             });
         }
         None

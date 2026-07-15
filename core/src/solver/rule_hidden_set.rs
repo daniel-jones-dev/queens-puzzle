@@ -110,6 +110,7 @@ impl Rule for HiddenSet {
                             .collect(),
                         involved: involved_cells.into_iter().collect(),
                         description,
+                        hint: format!("Each highlighted region needs a queen. No room remains for queens from other regions in these {row_or_cols}."),
                     });
                 }
             }

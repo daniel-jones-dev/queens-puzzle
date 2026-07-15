@@ -51,7 +51,7 @@ impl Rule for MarkQueen {
                         block_name(block_type, block_index),
                         cell_name(single_unknown_cell)
                     ),
-                    hint: format!("All other cells in this {block_type} are eliminated"),
+                    hint: format!("All other cells in this {block_type} are eliminated."),
                 });
             }
         }

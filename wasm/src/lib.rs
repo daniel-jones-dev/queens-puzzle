@@ -85,7 +85,7 @@ impl WasmPuzzle {
     pub fn next_hint(&self) -> Option<WasmHint> {
         solver::next_hint(&self.inner).map(|result| WasmHint {
             code_name: result.code_name.to_owned(),
-            description: result.description,
+            description: result.hint,
             changes: result
                 .changes
                 .iter()

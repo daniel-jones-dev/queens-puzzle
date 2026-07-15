@@ -63,7 +63,7 @@ impl Rule for Pointers {
                         column_name(row_or_col)
                     }
                 ),
-                hint: "The highlighted region must contain a queen. A queen in the striped cells blocks this column.".to_string(),
+                hint: format!("The highlighted region must contain a queen. A queen in the striped cells blocks this {}.", if self.check_row { "row" } else { "column" }).to_string(),
             });
         }
         None
