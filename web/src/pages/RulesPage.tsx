@@ -59,7 +59,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
+const DIFFICULTIES = ["Trivial", "Easy", "Medium", "Hard"] as const;
 
 export function RulesPage() {
   return (

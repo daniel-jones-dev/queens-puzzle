@@ -33,7 +33,7 @@ function computeNextHint(puzzle: WasmPuzzle): HintState | null {
   return { codeName: wasmHint.name(), description: wasmHint.description(), changes, involved };
 }
 
-const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
+const DIFFICULTIES = ["Trivial", "Easy", "Medium", "Hard"] as const;
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
