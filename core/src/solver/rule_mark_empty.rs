@@ -26,7 +26,9 @@ impl Rule for MarkEmpty {
                     the same row, column, region and neighbouring cells must be empty",
                         cell_name(queen_cell)
                     ),
-                    hint: "The queen blocks cells in the same row, column, region, or adjacent spots.".to_string(),
+                    hint:
+                        "The queen blocks cells in the same row, column, region, or adjacent spots."
+                            .to_string(),
                 });
             }
         }

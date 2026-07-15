@@ -121,3 +121,72 @@ impl Rule for HiddenSet {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cell;
+    use crate::io::json;
+
+    /// Generated 8×8 puzzle (seed 2176039665), partway through solving: the yellow (6) and
+    /// grey (7) regions' remaining unknown cells are confined to the rightmost two columns
+    /// (G and H, index 6 and 7), so (2, 6) — the only other unknown cell in those columns —
+    /// must be empty.
+    fn build_test_puzzle() -> QueensPuzzle {
+        let json = r#"{"regions":[[0,1,1,3,3,3,6,6],[0,0,1,3,3,6,6,6],[0,0,0,5,3,3,3,6],[0,0,2,5,5,3,6,6],[0,0,2,2,5,5,6,6],[2,0,0,2,2,5,5,6],[2,2,2,2,7,7,7,7],[2,2,2,2,4,7,7,7]],"states":[[2,0,0,2,2,0,0,0],[2,2,0,0,2,2,0,0],[0,0,0,0,2,0,0,0],[0,0,0,0,2,0,0,0],[0,2,0,0,2,0,0,0],[0,2,2,0,2,0,2,2],[2,2,2,2,2,2,0,0],[2,2,2,2,1,2,2,2]]}"#;
+        json::parse(json).unwrap()
+    }
+
+    #[test]
+    fn fires_on_rightmost_two_columns() {
+        let puzzle = build_test_puzzle();
+        let result = HiddenSet { n: 2 }.check(&puzzle).expect("rule should fire");
+
+        assert_eq!(result.code_name, "hidden_set");
+        assert!(result
+            .changes
+            .iter()
+            .all(|(_, state)| *state == State::Empty));
+        assert_eq!(
+            result
+                .changes
+                .into_iter()
+                .map(|(cell, _)| cell)
+                .collect::<HashSet<_>>(),
+            HashSet::from([cell![2, 6]])
+        );
+
+        let expected_involved: HashSet<Cell> = [
+            cell![0, 6],
+            cell![0, 7],
+            cell![1, 5],
+            cell![1, 6],
+            cell![1, 7],
+            cell![2, 7],
+            cell![3, 6],
+            cell![3, 7],
+            cell![4, 6],
+            cell![4, 7],
+            cell![5, 7],
+            cell![6, 4],
+            cell![6, 5],
+            cell![6, 6],
+            cell![6, 7],
+            cell![7, 5],
+            cell![7, 6],
+            cell![7, 7],
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            result.involved.into_iter().collect::<HashSet<_>>(),
+            expected_involved
+        );
+    }
+
+    #[test]
+    fn does_not_fire_for_smaller_n() {
+        let puzzle = build_test_puzzle();
+        assert!(HiddenSet { n: 1 }.check(&puzzle).is_none());
+    }
+}
